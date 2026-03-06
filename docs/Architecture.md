@@ -554,6 +554,15 @@ CREATE TABLE auth_providers (
 
 The web app is centered around an interactive map. The map component is the primary UI element, with overlaid panels for trip details, search, and filters.
 
+**Implementation requirements for `MapContainer.tsx`:**
+- Use `useRef` + `useEffect` pattern — store map instance in a ref, initialize in `useEffect(fn, [])`, **always return a cleanup function that calls `map.remove()`** to prevent WebGL context leaks on route changes
+- Import `'mapbox-gl/dist/mapbox-gl.css'` — the map canvas is invisible without it
+- Use Mapbox GL JS **v3.x**: pass `accessToken` in the Map constructor rather than setting `mapboxgl.accessToken` globally
+- `VITE_MAPBOX_ACCESS_TOKEN` must be a public `pk.*` token with URL restrictions configured per environment in the Mapbox dashboard; the Directions API proxy uses a server-side `sk.*` token that never reaches the browser
+
+**Layer ordering — user content must render on top:**
+All app-generated layers (trip routes, waypoints, user position) must be added after the base style loads and appended without a `beforeId` so they sit above POI symbols. A route line covering a café icon is acceptable; a POI icon covering a route line is not.
+
 ```
 ┌───────────────────────────────────────┐
 │ ┌─────┐                    ┌───────┐ │

@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+tmp/
+*.exe
+.turbo/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Go
+apps/api/tmp/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/settings.json
+
+# Coverage
+coverage/
+*.out
+
+# Lock files (pnpm uses pnpm-lock.yaml, not this)
+skills-lock.json
