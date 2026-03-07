@@ -77,7 +77,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: npx turbo build --filter=web
+      - run: npx turbo build --filter=@mtamta/web
 
   lint:
     runs-on: ubuntu-latest
@@ -117,7 +117,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: npx turbo build --filter=web
+      - run: npx turbo build --filter=@mtamta/web
       - name: Deploy web to Cloudflare Pages
         run: npx wrangler pages deploy apps/web/dist --project-name=mtamta
         env:

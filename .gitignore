@@ -7,6 +7,11 @@ dist/
 tmp/
 *.exe
 .turbo/
+tsconfig.tsbuildinfo
+
+# TypeScript compiled output in source dirs
+apps/web/src/**/*.js
+packages/shared/src/**/*.js
 
 # Environment
 .env

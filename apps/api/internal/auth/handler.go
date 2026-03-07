@@ -61,7 +61,7 @@ func (h *Handler) Google(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.service.SignInWithGoogle(r.Context(), req.IDToken)
 	if err != nil {
-		respond.Error(w, http.StatusUnauthorized, "AUTH_FAILED", err.Error())
+		respond.Error(w, http.StatusUnauthorized, "AUTH_FAILED", "authentication failed")
 		return
 	}
 
@@ -81,7 +81,7 @@ func (h *Handler) Apple(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.service.SignInWithApple(r.Context(), req.IDToken)
 	if err != nil {
-		respond.Error(w, http.StatusUnauthorized, "AUTH_FAILED", err.Error())
+		respond.Error(w, http.StatusUnauthorized, "AUTH_FAILED", "authentication failed")
 		return
 	}
 
