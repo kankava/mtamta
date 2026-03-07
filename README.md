@@ -33,10 +33,12 @@ mtamta/
 
 ## Requirements
 
-- **Go** 1.23+
+- **Go** 1.24+
 - **Node.js** 22+
 - **pnpm** 9+ (via corepack: `corepack enable && corepack prepare pnpm@9.15.0 --activate`)
 - **Docker** (for PostgreSQL + Redis)
+- **air** (optional, for `make dev` hot reload): `go install github.com/air-verse/air@latest`
+- **psql** (optional, for `make seed`): install `postgresql-client` for your OS
 
 ## Getting Started
 

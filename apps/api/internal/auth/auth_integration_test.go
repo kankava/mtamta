@@ -4,12 +4,14 @@ package auth_test
 
 import (
 	"context"
+	"crypto/rsa"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-migrate/migrate/v4"
@@ -25,9 +27,15 @@ import (
 
 const testJWTSecret = "integration-test-secret-32bytes!"
 
-// setupTestRouter creates a fully wired chi router against real Postgres + Redis.
-// It uses a mock Google verifier that always succeeds.
-func setupTestRouter(t *testing.T) http.Handler {
+// testEnv holds shared infrastructure for integration tests.
+type testEnv struct {
+	router     http.Handler
+	rsaKey     *rsa.PrivateKey
+	rsaKeyKid  string
+	clientID   string
+}
+
+func setupTestEnv(t *testing.T) *testEnv {
 	t.Helper()
 
 	databaseURL := os.Getenv("DATABASE_URL")
@@ -59,14 +67,17 @@ func setupTestRouter(t *testing.T) http.Handler {
 		m.Close()
 	})
 
-	userRepo := user.NewRepository(pool)
-	authRepo := auth.NewRepository(pool, redisClient)
+	// Generate a test RSA key pair for signing mock Google ID tokens.
+	rsaKey, jwk := auth.GenerateTestRSAKey(t)
+	clientID := "test-client-id"
 
-	// Use a mock Google verifier that accepts any token.
-	mockJWKS := &mockGoogleJWKS{}
-	googleVerifier := auth.NewGoogleVerifierWithJWKS("test-client-id", mockJWKS)
+	// Mock JWKS that returns our test key.
+	mockJWKS := &staticJWKS{keys: []auth.JSONWebKey{jwk}}
+	googleVerifier := auth.NewGoogleVerifierWithJWKS(clientID, mockJWKS)
 	appleVerifier := auth.NewAppleVerifierWithJWKS("test-apple-id", mockJWKS)
 
+	userRepo := user.NewRepository(pool)
+	authRepo := auth.NewRepository(pool, redisClient)
 	authService := auth.NewService(authRepo, userRepo, testJWTSecret, googleVerifier, appleVerifier)
 	authHandler := auth.NewHandler(authService, false)
 	userService := user.NewService(userRepo)
@@ -91,218 +102,156 @@ func setupTestRouter(t *testing.T) http.Handler {
 		r.Get("/api/v1/users/me", userHandler.GetMe)
 	})
 
-	return r
+	return &testEnv{
+		router:    r,
+		rsaKey:    rsaKey,
+		rsaKeyKid: jwk.Kid,
+		clientID:  clientID,
+	}
 }
 
-// mockGoogleJWKS is a JWKS client that returns keys for a test RSA key.
-// For integration tests we bypass the verifier entirely by sending a real
-// signed token using the test key.
-type mockGoogleJWKS struct{}
-
-func (m *mockGoogleJWKS) Keys(_ context.Context) ([]auth.JSONWebKey, error) {
-	// Return the key from the shared test helper.
-	// In integration tests, we rely on the fact that the handler calls
-	// service.SignInWithGoogle which calls googleVerifier.Verify.
-	// We need a real RSA key pair to sign tokens.
-	return nil, nil
+// staticJWKS returns a fixed set of keys.
+type staticJWKS struct {
+	keys []auth.JSONWebKey
 }
 
-// signInWithGoogle sends a POST to /api/v1/auth/google and returns the response.
-func signInWithGoogle(t *testing.T, router http.Handler, idToken string) *httptest.ResponseRecorder {
-	t.Helper()
+func (s *staticJWKS) Keys(_ context.Context) ([]auth.JSONWebKey, error) {
+	return s.keys, nil
+}
+
+func TestIntegration_FullAuthFlow(t *testing.T) {
+	env := setupTestEnv(t)
+
+	// Step 1: Sign a mock Google ID token and POST to /auth/google.
+	idToken := auth.SignGoogleToken(t, env.rsaKey, env.rsaKeyKid,
+		env.clientID, "accounts.google.com",
+		"google-integration-sub", "inttest@example.com", "Integration Tester",
+		time.Now().Add(time.Hour))
+
 	body := `{"id_token":"` + idToken + `"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/google", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-	return w
-}
+	env.router.ServeHTTP(w, req)
 
-func TestIntegration_FullAuthFlow(t *testing.T) {
-	// For a proper integration test, we need the Google verifier to actually
-	// verify the token. Since we can't easily create a real Google token,
-	// we test the full HTTP flow using a specially constructed test.
-	//
-	// This test verifies the HTTP layer: cookie handling, request routing,
-	// response shapes, and the refresh/logout flow.
-
-	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		t.Skip("DATABASE_URL not set, skipping integration test")
-	}
-	redisURL := os.Getenv("REDIS_URL")
-	if redisURL == "" {
-		t.Skip("REDIS_URL not set, skipping integration test")
+	if w.Code != http.StatusOK {
+		t.Fatalf("POST /auth/google: status = %d, want 200; body: %s", w.Code, w.Body.String())
 	}
 
-	ctx := context.Background()
-	pool := db.New(ctx, databaseURL)
-	t.Cleanup(pool.Close)
-
-	redisClient := cache.New(redisURL)
-	t.Cleanup(func() { redisClient.Close() })
-
-	// Run migrations
-	m, err := migrate.New("file://../../migrations", databaseURL)
-	if err != nil {
-		t.Fatalf("create migrator: %v", err)
+	// Verify response body has access_token and user.
+	var authResp struct {
+		AccessToken string         `json:"access_token"`
+		User        map[string]any `json:"user"`
 	}
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		t.Fatalf("migrate up: %v", err)
+	if err := json.NewDecoder(w.Body).Decode(&authResp); err != nil {
+		t.Fatalf("decode auth response: %v", err)
 	}
-	t.Cleanup(func() {
-		m.Down()
-		m.Close()
-	})
-
-	// Create a user + refresh token directly via the repository layer.
-	userRepo := user.NewRepository(pool)
-	authRepo := auth.NewRepository(pool, redisClient)
-
-	email := "integration-test@example.com"
-	testUser, err := userRepo.Create(ctx, &user.User{
-		DisplayName: "Integration Tester",
-		Email:       &email,
-	})
-	if err != nil {
-		t.Fatalf("create test user: %v", err)
+	if authResp.AccessToken == "" {
+		t.Fatal("expected non-empty access_token")
+	}
+	if authResp.User["display_name"] != "Integration Tester" {
+		t.Errorf("user.display_name = %v, want %q", authResp.User["display_name"], "Integration Tester")
 	}
 
-	// Issue tokens directly to test the HTTP endpoints.
-	accessToken, err := auth.IssueAccessToken(testUser.ID, email, testJWTSecret)
-	if err != nil {
-		t.Fatalf("issue access token: %v", err)
-	}
-
-	refreshToken, err := auth.IssueRefreshToken()
-	if err != nil {
-		t.Fatalf("issue refresh token: %v", err)
-	}
-	if err := authRepo.StoreRefreshToken(ctx, refreshToken, testUser.ID); err != nil {
-		t.Fatalf("store refresh token: %v", err)
-	}
-
-	// Build a minimal router for testing HTTP endpoints.
-	authService := auth.NewService(authRepo, userRepo, testJWTSecret, nil, nil)
-	authHandler := auth.NewHandler(authService, false)
-	userService := user.NewService(userRepo)
-	userHandler := user.NewHandler(userService)
-
-	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
-	r.Post("/api/v1/auth/refresh", authHandler.Refresh)
-	r.Post("/api/v1/auth/logout", authHandler.Logout)
-
-	jwtValidator := func(tok string) (string, string, error) {
-		claims, err := auth.ValidateAccessToken(tok, testJWTSecret)
-		if err != nil {
-			return "", "", err
+	// Verify Set-Cookie: refresh_token; HttpOnly.
+	var refreshCookie *http.Cookie
+	for _, c := range w.Result().Cookies() {
+		if c.Name == "refresh_token" {
+			refreshCookie = c
+			break
 		}
-		return claims.UserID, claims.Email, nil
 	}
-	r.Group(func(r chi.Router) {
-		r.Use(middleware.Authenticate(jwtValidator))
-		r.Get("/api/v1/users/me", userHandler.GetMe)
-	})
+	if refreshCookie == nil {
+		t.Fatal("expected Set-Cookie: refresh_token")
+	}
+	if !refreshCookie.HttpOnly {
+		t.Error("refresh_token cookie should be HttpOnly")
+	}
+	if refreshCookie.Path != "/api/v1/auth" {
+		t.Errorf("cookie Path = %q, want /api/v1/auth", refreshCookie.Path)
+	}
 
-	// Test 1: GET /api/v1/users/me with valid access token
-	t.Run("GetMe with valid token", func(t *testing.T) {
+	// Step 2: Use the access token to GET /users/me.
+	t.Run("GetMe with token from Google sign-in", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/users/me", nil)
-		req.Header.Set("Authorization", "Bearer "+accessToken)
+		req.Header.Set("Authorization", "Bearer "+authResp.AccessToken)
 		w := httptest.NewRecorder()
-		r.ServeHTTP(w, req)
+		env.router.ServeHTTP(w, req)
 
 		if w.Code != http.StatusOK {
 			t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
 		}
 
-		var body map[string]any
-		if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
-			t.Fatalf("decode body: %v", err)
-		}
-		if body["id"] != testUser.ID {
-			t.Errorf("id = %v, want %v", body["id"], testUser.ID)
+		var user map[string]any
+		json.NewDecoder(w.Body).Decode(&user)
+		if user["email"] != "inttest@example.com" {
+			t.Errorf("email = %v, want %q", user["email"], "inttest@example.com")
 		}
 	})
 
-	// Test 2: Refresh via cookie
+	// Step 3: Refresh via cookie.
 	t.Run("Refresh via cookie", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", nil)
-		req.AddCookie(&http.Cookie{Name: "refresh_token", Value: refreshToken})
+		req.AddCookie(refreshCookie)
 		w := httptest.NewRecorder()
-		r.ServeHTTP(w, req)
+		env.router.ServeHTTP(w, req)
 
 		if w.Code != http.StatusOK {
 			t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
 		}
 
-		var body map[string]any
-		if err := json.NewDecoder(w.Body).Decode(&body); err != nil {
-			t.Fatalf("decode body: %v", err)
-		}
-		if body["access_token"] == nil || body["access_token"] == "" {
+		var resp map[string]any
+		json.NewDecoder(w.Body).Decode(&resp)
+		if resp["access_token"] == nil || resp["access_token"] == "" {
 			t.Error("expected non-empty access_token in refresh response")
 		}
 
-		// Check Set-Cookie header
-		cookies := w.Result().Cookies()
+		// Verify new refresh cookie is set.
 		found := false
-		for _, c := range cookies {
+		for _, c := range w.Result().Cookies() {
 			if c.Name == "refresh_token" {
 				found = true
-				if !c.HttpOnly {
-					t.Error("refresh_token cookie should be HttpOnly")
-				}
-				if c.Path != "/api/v1/auth" {
-					t.Errorf("cookie Path = %q, want /api/v1/auth", c.Path)
-				}
 			}
 		}
 		if !found {
-			t.Error("expected Set-Cookie: refresh_token in response")
+			t.Error("expected Set-Cookie: refresh_token in refresh response")
 		}
 	})
 
-	// Test 3: Logout flow
-	t.Run("Logout clears cookie and invalidates token", func(t *testing.T) {
-		// Issue a new refresh token for this sub-test.
-		rt, _ := auth.IssueRefreshToken()
-		authRepo.StoreRefreshToken(ctx, rt, testUser.ID)
-
-		// Logout
+	// Step 4: Logout clears cookie and invalidates token.
+	t.Run("Logout and verify invalidation", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/logout", nil)
-		req.AddCookie(&http.Cookie{Name: "refresh_token", Value: rt})
+		req.AddCookie(refreshCookie)
 		w := httptest.NewRecorder()
-		r.ServeHTTP(w, req)
+		env.router.ServeHTTP(w, req)
 
 		if w.Code != http.StatusNoContent {
 			t.Fatalf("logout status = %d, want 204", w.Code)
 		}
 
-		// Check cookie is cleared
-		cookies := w.Result().Cookies()
-		for _, c := range cookies {
+		// Verify cookie is cleared.
+		for _, c := range w.Result().Cookies() {
 			if c.Name == "refresh_token" && c.MaxAge != -1 {
 				t.Error("expected MaxAge=-1 to clear the cookie")
 			}
 		}
 
-		// Test 4: Refresh token reuse after logout should fail
+		// Refresh with the same token should now fail.
 		req2 := httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", nil)
-		req2.AddCookie(&http.Cookie{Name: "refresh_token", Value: rt})
+		req2.AddCookie(refreshCookie)
 		w2 := httptest.NewRecorder()
-		r.ServeHTTP(w2, req2)
+		env.router.ServeHTTP(w2, req2)
 
 		if w2.Code != http.StatusUnauthorized {
 			t.Errorf("refresh after logout: status = %d, want 401", w2.Code)
 		}
 	})
 
-	// Test 5: Request ID propagation
+	// Step 5: Request ID propagation.
 	t.Run("Request ID propagation", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", nil)
 		w := httptest.NewRecorder()
-		r.ServeHTTP(w, req)
+		env.router.ServeHTTP(w, req)
 
 		rid := w.Header().Get("X-Request-ID")
 		if rid == "" {

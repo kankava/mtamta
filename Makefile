@@ -1,7 +1,11 @@
 .PHONY: dev test db-migrate db-reset seed lint
 
+-include .env
+export
+
 dev: ## Start docker services + API (air) + Vite dev server
 	docker compose up -d
+	@command -v air >/dev/null 2>&1 || { echo "Error: 'air' not found. Install: go install github.com/air-verse/air@latest"; exit 1; }
 	cd apps/api && air &
 	pnpm dev --filter=@mtamta/web
 
@@ -25,4 +29,5 @@ db-reset: ## Wipe database and re-run migrations + seed
 	$(MAKE) seed
 
 seed: ## Load seed data
+	@command -v psql >/dev/null 2>&1 || { echo "Error: 'psql' not found. Install postgresql-client for your OS."; exit 1; }
 	psql "$$DATABASE_URL" < data/seed/users.sql
