@@ -46,11 +46,7 @@ func (h *Handler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fields := UpdateFields{
-		DisplayName: req.DisplayName,
-		Bio:         req.Bio,
-		AvatarURL:   req.AvatarURL,
-	}
+	fields := UpdateFields(req)
 
 	u, err := h.service.UpdateMe(r.Context(), userID, fields)
 	if err != nil {

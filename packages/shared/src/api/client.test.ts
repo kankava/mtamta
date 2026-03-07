@@ -90,7 +90,7 @@ describe('createApiClient', () => {
     })
     vi.stubGlobal('fetch', mockFetch)
 
-    const { client, onRefresh, onAuthFailure } = makeClient()
+    const { client, onRefresh, onAuthFailure: _onAuthFailure } = makeClient()
     onRefresh.mockResolvedValue('new-token')
 
     await expect(client.get('/users/me')).rejects.toThrow()
@@ -106,8 +106,7 @@ describe('createApiClient', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 404,
-      json: () =>
-        Promise.resolve({ error: { code: 'NOT_FOUND', message: 'user not found' } }),
+      json: () => Promise.resolve({ error: { code: 'NOT_FOUND', message: 'user not found' } }),
     })
     vi.stubGlobal('fetch', mockFetch)
 

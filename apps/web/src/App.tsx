@@ -3,8 +3,7 @@ import { GoogleLogin } from '@react-oauth/google'
 import { useAuthStore } from './stores/authStore'
 
 export default function App() {
-  const { user, isLoading, signInWithGoogle, signOut, restoreSession } =
-    useAuthStore()
+  const { user, isLoading, signInWithGoogle, signOut, restoreSession } = useAuthStore()
 
   useEffect(() => {
     restoreSession()
@@ -12,7 +11,9 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <div
+        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}
+      >
         <p>Loading...</p>
       </div>
     )
@@ -20,7 +21,9 @@ export default function App() {
 
   if (!user) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <div
+        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}
+      >
         <GoogleLogin
           onSuccess={(response) => {
             if (response.credential) {
@@ -37,7 +40,14 @@ export default function App() {
 
   return (
     <div>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem' }}>
+      <header
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '1rem',
+        }}
+      >
         <h1>mtamta</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <span>{user.display_name}</span>

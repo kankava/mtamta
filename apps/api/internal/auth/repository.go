@@ -45,7 +45,7 @@ func (r *Repository) CreateUserWithProvider(ctx context.Context, displayName, em
 	if err != nil {
 		return nil, fmt.Errorf("begin tx: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer tx.Rollback(ctx) //nolint:errcheck // rollback after commit is a no-op
 
 	const insertUser = `
 		INSERT INTO users (display_name, email)

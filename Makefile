@@ -14,7 +14,7 @@ test: ## Run all tests
 	pnpm test
 
 lint: ## Run linters
-	cd apps/api && go vet ./...
+	cd apps/api && golangci-lint run ./...
 	pnpm lint
 
 db-migrate: ## Run pending migrations

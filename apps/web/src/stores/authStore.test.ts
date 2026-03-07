@@ -41,7 +41,8 @@ describe('authStore', () => {
     }
 
     // First call is refresh (raw fetch), second is apiClient.get which also uses fetch
-    const mockFetch = vi.fn()
+    const mockFetch = vi
+      .fn()
       .mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ access_token: 'restored-token' }),

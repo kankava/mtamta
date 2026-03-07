@@ -62,11 +62,11 @@ func main() {
 	m, err := migrate.New("file://migrations", cfg.DatabaseURL)
 	if err != nil {
 		slog.Error("failed to create migrator", "error", err)
-		os.Exit(1)
+		os.Exit(1) //nolint:gocritic // startup failure, defers not critical
 	}
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		slog.Error("migration failed", "error", err)
-		os.Exit(1)
+		os.Exit(1) //nolint:gocritic // startup failure, defers not critical
 	}
 	m.Close()
 	slog.Info("migrations applied")

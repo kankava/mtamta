@@ -24,20 +24,23 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to create migrator: %v", err)
 	}
-	defer m.Close()
 
 	switch direction {
 	case "up":
 		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+			m.Close()
 			log.Fatalf("migration up failed: %v", err)
 		}
 	case "down":
 		if err := m.Down(); err != nil && err != migrate.ErrNoChange {
+			m.Close()
 			log.Fatalf("migration down failed: %v", err)
 		}
 	default:
+		m.Close()
 		log.Fatalf("unknown direction %q: use 'up' or 'down'", direction)
 	}
 
+	m.Close()
 	log.Printf("migrations %s: done", direction)
 }

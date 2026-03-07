@@ -87,8 +87,10 @@ jobs:
         with:
           go-version: '1.24'
           cache-dependency-path: apps/api/go.sum
-      - run: go vet ./...
-        working-directory: apps/api
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: apps/api
       - uses: pnpm/action-setup@v4
         with:
           version: 9
@@ -98,6 +100,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      - run: pnpm format:check
 
   deploy:
     needs: [test-api, test-web, build-web, lint]

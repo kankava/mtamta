@@ -16,7 +16,11 @@ export function createInMemoryTokenStorage(): TokenStorage {
   let accessToken: string | null = null
   return {
     getAccessToken: () => accessToken,
-    setAccessToken: (t) => { accessToken = t },
-    clear: () => { accessToken = null },
+    setAccessToken: (t) => {
+      accessToken = t
+    },
+    clear: () => {
+      accessToken = null
+    },
   }
 }
