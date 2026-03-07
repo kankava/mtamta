@@ -28,8 +28,8 @@ Resolving all "or" choices from `Plan.md`:
 
 ## 1. Repository Bootstrap
 
-- [ ] Confirm git is initialized at repo root (`git init` if not)
-- [ ] Create `.gitignore` at root:
+- [x] Confirm git is initialized at repo root (`git init` if not)
+- [x] Create `.gitignore` at root:
 
 ```gitignore
 # Dependencies
@@ -62,7 +62,7 @@ coverage/
 *.out
 ```
 
-- [ ] Create `.editorconfig` at root:
+- [x] Create `.editorconfig` at root:
 
 ```ini
 root = true
@@ -89,7 +89,7 @@ indent_style = tab
 
 ### 2.1 Root `package.json`
 
-- [ ] Create `package.json` at root:
+- [x] Create `package.json` at root:
 
 ```json
 {
@@ -110,7 +110,7 @@ indent_style = tab
 
 ### 2.2 `pnpm-workspace.yaml`
 
-- [ ] Create `pnpm-workspace.yaml` at root:
+- [x] Create `pnpm-workspace.yaml` at root:
 
 ```yaml
 packages:
@@ -120,7 +120,7 @@ packages:
 
 ### 2.3 `turbo.json`
 
-- [ ] Create `turbo.json` at root:
+- [x] Create `turbo.json` at root:
 
 ```json
 {
@@ -147,7 +147,7 @@ packages:
 
 ### 2.4 Root `tsconfig.base.json`
 
-- [ ] Create `tsconfig.base.json` at root:
+- [x] Create `tsconfig.base.json` at root:
 
 ```json
 {
@@ -167,7 +167,7 @@ packages:
 
 ### 2.5 Install root dev deps
 
-- [ ] Run at root: `pnpm install`
+- [x] Run at root: `pnpm install`
 
 ---
 
@@ -177,7 +177,7 @@ Build before the web app so it can be referenced during scaffolding.
 
 ### 3.1 `packages/shared/package.json`
 
-- [ ] Create `packages/shared/package.json`:
+- [x] Create `packages/shared/package.json`:
 
 ```json
 {
@@ -201,7 +201,7 @@ Build before the web app so it can be referenced during scaffolding.
 
 ### 3.2 `packages/shared/tsconfig.json`
 
-- [ ] Create `packages/shared/tsconfig.json`:
+- [x] Create `packages/shared/tsconfig.json`:
 
 ```json
 {
@@ -218,7 +218,7 @@ Build before the web app so it can be referenced during scaffolding.
 
 ### 3.3 Types — `packages/shared/src/types/user.ts`
 
-- [ ] Create `packages/shared/src/types/user.ts`:
+- [x] Create `packages/shared/src/types/user.ts`:
 
 ```typescript
 // All fields use snake_case to match Go JSON tags — consistent across web and mobile.
@@ -235,7 +235,7 @@ export interface User {
 
 ### 3.4 Types — `packages/shared/src/types/auth.ts`
 
-- [ ] Create `packages/shared/src/types/auth.ts`:
+- [x] Create `packages/shared/src/types/auth.ts`:
 
 ```typescript
 import type { User } from './user'
@@ -268,7 +268,7 @@ export interface ApiError {
 
 ### 3.5 Token storage — `packages/shared/src/storage/tokens.ts`
 
-- [ ] Create `packages/shared/src/storage/tokens.ts`:
+- [x] Create `packages/shared/src/storage/tokens.ts`:
 
 ```typescript
 // Access token storage interface — implemented differently per platform.
@@ -297,7 +297,7 @@ export function createInMemoryTokenStorage(): TokenStorage {
 
 ### 3.6 API client — `packages/shared/src/api/client.ts`
 
-- [ ] Create `packages/shared/src/api/client.ts`:
+- [x] Create `packages/shared/src/api/client.ts`:
 
 The client is a factory so `baseURL` and token access are injected — no platform-specific env reads (`import.meta.env`) inside `@mtamta/shared`.
 
@@ -333,7 +333,7 @@ Behaviour:
 
 ### 3.7 Barrel — `packages/shared/src/index.ts`
 
-- [ ] Create `packages/shared/src/index.ts`:
+- [x] Create `packages/shared/src/index.ts`:
 
 ```typescript
 export * from './types/user'
@@ -382,7 +382,7 @@ export * from './api/client'
 
 ### 4.1 Create directory tree
 
-- [ ] Create the following directories under `apps/api/`:
+- [x] Create the following directories under `apps/api/`:
 
 ```
 apps/api/
@@ -401,7 +401,7 @@ apps/api/
 
 ### 4.2 Initialize Go module
 
-- [ ] From `apps/api/`, run:
+- [x] From `apps/api/`, run:
 
 ```bash
 go mod init github.com/kankava/mtamta
@@ -409,7 +409,7 @@ go mod init github.com/kankava/mtamta
 
 ### 4.3 Install Go dependencies
 
-- [ ] From `apps/api/`, run:
+- [x] From `apps/api/`, run:
 
 ```bash
 go get \
@@ -429,7 +429,7 @@ go get \
 
 ### 4.4 `internal/config/config.go`
 
-- [ ] Create `apps/api/internal/config/config.go`:
+- [x] Create `apps/api/internal/config/config.go`:
 
 ```go
 package config
@@ -488,7 +488,7 @@ func require(key string) string {
 
 ### 5.1 `docker-compose.yml` (root)
 
-- [ ] Create `docker-compose.yml` at root (Phase 1 services only; MinIO added in Phase 4, Meilisearch in Phase 10):
+- [x] Create `docker-compose.yml` at root (Phase 1 services only; MinIO added in Phase 4, Meilisearch in Phase 10):
 
 ```yaml
 services:
@@ -519,7 +519,7 @@ volumes:
 
 ### 5.2 Initial migration — up
 
-- [ ] Create `apps/api/migrations/001_init.up.sql`:
+- [x] Create `apps/api/migrations/001_init.up.sql`:
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS pgcrypto;   -- required for gen_random_uuid()
@@ -550,7 +550,7 @@ CREATE TABLE auth_providers (
 
 ### 5.3 Initial migration — down
 
-- [ ] Create `apps/api/migrations/001_init.down.sql`:
+- [x] Create `apps/api/migrations/001_init.down.sql`:
 
 ```sql
 DROP TABLE IF EXISTS auth_providers;
@@ -559,7 +559,7 @@ DROP TABLE IF EXISTS users;
 
 ### 5.4 DB connection pool — `internal/db/db.go`
 
-- [ ] Create `apps/api/internal/db/db.go`:
+- [x] Create `apps/api/internal/db/db.go`:
 
 ```go
 package db
@@ -590,7 +590,7 @@ func New(ctx context.Context, databaseURL string) *pgxpool.Pool {
 
 ### 5.5 Redis client — `internal/cache/redis.go`
 
-- [ ] Create `apps/api/internal/cache/redis.go`:
+- [x] Create `apps/api/internal/cache/redis.go`:
 
 ```go
 package cache
@@ -620,7 +620,7 @@ func New(redisURL string) *redis.Client {
 
 ### 6.1 Context keys — `internal/middleware/keys.go`
 
-- [ ] Create `apps/api/internal/middleware/keys.go`:
+- [x] Create `apps/api/internal/middleware/keys.go`:
 
 Typed context keys to avoid collisions:
 
@@ -640,7 +640,7 @@ Export accessor functions: `RequestIDFromContext`, `UserIDFromContext`, `EmailFr
 
 ### 6.2 Request ID — `internal/middleware/requestid.go`
 
-- [ ] Create `apps/api/internal/middleware/requestid.go`:
+- [x] Create `apps/api/internal/middleware/requestid.go`:
 
 ```go
 // RequestID middleware:
@@ -652,7 +652,7 @@ func RequestID(next http.Handler) http.Handler
 
 ### 6.3 Logging — `internal/middleware/logger.go`
 
-- [ ] Create `apps/api/internal/middleware/logger.go`:
+- [x] Create `apps/api/internal/middleware/logger.go`:
 
 ```go
 // Logger middleware logs one line per request after completion.
@@ -673,7 +673,7 @@ type responseWriter struct {
 
 ### 6.4 Recovery — `internal/middleware/recovery.go`
 
-- [ ] Create `apps/api/internal/middleware/recovery.go`:
+- [x] Create `apps/api/internal/middleware/recovery.go`:
 
 ```go
 // Recovery catches panics, captures to Sentry with request_id and user_id
@@ -684,7 +684,7 @@ func Recovery(next http.Handler) http.Handler
 
 ### 6.5 Auth — `internal/middleware/auth.go`
 
-- [ ] Create `apps/api/internal/middleware/auth.go`:
+- [x] Create `apps/api/internal/middleware/auth.go`:
 
 ```go
 // Authenticate validates the Bearer token from Authorization header.
@@ -701,7 +701,7 @@ Export `UserIDFromContext(ctx context.Context) string`.
 
 ### 7.1 JWT — `internal/auth/jwt.go`
 
-- [ ] Create `apps/api/internal/auth/jwt.go`:
+- [x] Create `apps/api/internal/auth/jwt.go`:
 
 ```go
 type Claims struct {
@@ -723,7 +723,7 @@ func ValidateAccessToken(tokenString, secret string) (*Claims, error)
 
 ### 7.2 Google verifier — `internal/auth/google.go`
 
-- [ ] Create `apps/api/internal/auth/google.go`:
+- [x] Create `apps/api/internal/auth/google.go`:
 
 Define a `JWKSClient` interface so tests can inject a mock server without making real network calls:
 
@@ -766,7 +766,7 @@ JWKS URL: `https://www.googleapis.com/oauth2/v3/certs`
 
 ### 7.3 Apple verifier — `internal/auth/apple.go`
 
-- [ ] Create `apps/api/internal/auth/apple.go`:
+- [x] Create `apps/api/internal/auth/apple.go`:
 
 Same pattern and interface as Google:
 
@@ -792,7 +792,7 @@ func (v *AppleVerifier) Verify(ctx context.Context, idToken string) (*AppleClaim
 
 ### 7.4 Auth repository — `internal/auth/repository.go`
 
-- [ ] Create `apps/api/internal/auth/repository.go`:
+- [x] Create `apps/api/internal/auth/repository.go`:
 
 ```go
 type Repository struct {
@@ -816,7 +816,7 @@ func (r *Repository) DeleteRefreshToken(ctx context.Context, token string) error
 
 ### 7.5 Auth service — `internal/auth/service.go`
 
-- [ ] Create `apps/api/internal/auth/service.go`:
+- [x] Create `apps/api/internal/auth/service.go`:
 
 ```go
 type Service struct {
@@ -851,7 +851,7 @@ func (s *Service) Logout(ctx context.Context, refreshToken string) error
 
 ### 7.6 Auth handler — `internal/auth/handler.go`
 
-- [ ] Create `apps/api/internal/auth/handler.go`:
+- [x] Create `apps/api/internal/auth/handler.go`:
 
 Request/response types:
 
@@ -933,7 +933,7 @@ All handlers use a shared `writeJSON(w, status, v)` and `writeError(w, status, c
 
 ### 8.1 User model — `internal/user/user.go`
 
-- [ ] Create `apps/api/internal/user/user.go`:
+- [x] Create `apps/api/internal/user/user.go`:
 
 ```go
 type User struct {
@@ -949,7 +949,7 @@ type User struct {
 
 ### 8.2 User repository — `internal/user/repository.go`
 
-- [ ] Create `apps/api/internal/user/repository.go`:
+- [x] Create `apps/api/internal/user/repository.go`:
 
 ```go
 type Repository struct { db *pgxpool.Pool }
@@ -969,7 +969,7 @@ type UpdateFields struct {
 
 ### 8.3 User service — `internal/user/service.go`
 
-- [ ] Create `apps/api/internal/user/service.go`:
+- [x] Create `apps/api/internal/user/service.go`:
 
 ```go
 type Service struct { repo *Repository }
@@ -984,7 +984,7 @@ func (s *Service) UpdateMe(ctx context.Context, userID string, fields UpdateFiel
 
 ### 8.4 User handler — `internal/user/handler.go`
 
-- [ ] Create `apps/api/internal/user/handler.go`:
+- [x] Create `apps/api/internal/user/handler.go`:
 
 ```go
 type updateMeRequest struct {
@@ -1004,7 +1004,7 @@ Endpoints (both require `middleware.Authenticate`):
 
 ## 9. Health Check
 
-- [ ] Create `apps/api/internal/health/handler.go`:
+- [x] Create `apps/api/internal/health/handler.go`:
 
 ```go
 type Handler struct {
@@ -1032,7 +1032,7 @@ Response shape:
 
 ## 10. Migration CLI — `cmd/migrate/main.go`
 
-- [ ] Create `apps/api/cmd/migrate/main.go`:
+- [x] Create `apps/api/cmd/migrate/main.go`:
 
 A small standalone binary wrapping golang-migrate so `make db-migrate` and `make db-reset` work without installing an external tool:
 
@@ -1088,7 +1088,7 @@ func main() {
 
 ## 11. Main Server — `cmd/server/main.go`
 
-- [ ] Create `apps/api/cmd/server/main.go`:
+- [x] Create `apps/api/cmd/server/main.go`:
 
 Wire-up order:
 
@@ -1149,7 +1149,7 @@ cors.Options{
 
 ### 11.1 Scaffold with Vite
 
-- [ ] From `apps/web/`, run:
+- [x] From `apps/web/`, run:
 
 ```bash
 pnpm create vite@latest . --template react-ts
@@ -1197,7 +1197,7 @@ Set the package name so `--filter=@mtamta/web` works in turbo and pnpm:
 
 ### 11.3 `apps/web/tsconfig.json`
 
-- [ ] Extend root base, add DOM libs (not in `tsconfig.base.json` — mobile doesn't need them), and reference `@mtamta/shared`:
+- [x] Extend root base, add DOM libs (not in `tsconfig.base.json` — mobile doesn't need them), and reference `@mtamta/shared`:
 
 ```json
 {
@@ -1215,7 +1215,7 @@ Set the package name so `--filter=@mtamta/web` works in turbo and pnpm:
 
 ### 11.4 `apps/web/vite.config.ts`
 
-- [ ] Add path alias to match tsconfig:
+- [x] Add path alias to match tsconfig:
 
 ```typescript
 import { defineConfig } from 'vite'
@@ -1234,7 +1234,7 @@ export default defineConfig({
 
 ### 11.5 `apps/web/vitest.config.ts`
 
-- [ ] Create `apps/web/vitest.config.ts`:
+- [x] Create `apps/web/vitest.config.ts`:
 
 ```typescript
 import { defineConfig } from 'vitest/config'
@@ -1259,18 +1259,18 @@ export default defineConfig({
 
 ### 11.6 Environment
 
-- [ ] Create `apps/web/.env.example`:
+- [x] Create `apps/web/.env.example`:
 
 ```
 VITE_API_URL=http://localhost:8080
 VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 ```
 
-- [ ] Create `apps/web/.env.local` (gitignored) with actual dev values.
+- [x] Create `apps/web/.env.local` (gitignored) with actual dev values.
 
 ### 11.7 Auth store — `apps/web/src/stores/authStore.ts`
 
-- [ ] Create `apps/web/src/stores/authStore.ts`:
+- [x] Create `apps/web/src/stores/authStore.ts`:
 
 ```typescript
 import { create } from 'zustand'
@@ -1325,7 +1325,7 @@ setAuthCallbacks({
 
 ### 11.8 App shell — `apps/web/src/App.tsx`
 
-- [ ] Create `apps/web/src/App.tsx`:
+- [x] Create `apps/web/src/App.tsx`:
 
 Minimal structure for Phase 1:
 ```tsx
@@ -1337,7 +1337,7 @@ Minimal structure for Phase 1:
 
 ### 11.9 `apps/web/src/main.tsx`
 
-- [ ] Wrap app in `<GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>`:
+- [x] Wrap app in `<GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>`:
 
 ```tsx
 import { GoogleOAuthProvider } from '@react-oauth/google'
@@ -1358,7 +1358,7 @@ createRoot(document.getElementById('root')!).render(
 
 ## 12. Dockerfile
 
-- [ ] Create `apps/api/Dockerfile`:
+- [x] Create `apps/api/Dockerfile`:
 
 ```dockerfile
 FROM golang:1.23-alpine AS builder
@@ -1379,7 +1379,7 @@ CMD ["/api"]
 
 ## 13. `railway.toml`
 
-- [ ] Create `railway.toml` at root:
+- [x] Create `railway.toml` at root:
 
 ```toml
 [build]
@@ -1399,7 +1399,7 @@ restartPolicyMaxRetries = 3
 
 ### 14.1 `.github/workflows/ci.yml`
 
-- [ ] Create `.github/workflows/ci.yml`:
+- [x] Create `.github/workflows/ci.yml`:
 
 ```yaml
 name: CI
@@ -1512,7 +1512,7 @@ Required GitHub secrets: `RAILWAY_TOKEN`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_AC
 
 ### 14.2 `.github/workflows/backup.yml`
 
-- [ ] Create `.github/workflows/backup.yml`:
+- [x] Create `.github/workflows/backup.yml`:
 
 ```yaml
 name: Database Backup
@@ -1550,7 +1550,7 @@ Required secrets: `DATABASE_URL`, `R2_ACCESS_KEY`, `R2_SECRET_KEY`, `R2_BUCKET`,
 
 ### 15.1 JWT unit tests
 
-- [ ] Create `apps/api/internal/auth/jwt_test.go`:
+- [x] Create `apps/api/internal/auth/jwt_test.go`:
 
 Table-driven tests:
 
@@ -1567,7 +1567,7 @@ Table-driven tests:
 
 ### 15.2 Google verifier unit tests
 
-- [ ] Create `apps/api/internal/auth/google_test.go`:
+- [x] Create `apps/api/internal/auth/google_test.go`:
 
 Use `httptest.NewServer` to serve a mock JWKS, injected via `NewGoogleVerifierWithJWKS`:
 
@@ -1581,7 +1581,7 @@ Use `httptest.NewServer` to serve a mock JWKS, injected via `NewGoogleVerifierWi
 
 ### 15.3 Auth integration tests
 
-- [ ] Create `apps/api/internal/auth/auth_integration_test.go` with build tag `//go:build integration`:
+- [x] Create `apps/api/internal/auth/auth_integration_test.go` with build tag `//go:build integration`:
 
 Uses the CI service containers (no `testcontainers-go` needed — CI already provides them via `DATABASE_URL` and `REDIS_URL` env vars). Run locally with `go test -tags=integration ./...` against docker-compose.
 
@@ -1594,7 +1594,7 @@ Tests:
 
 ### 15.4 User repository tests
 
-- [ ] Create `apps/api/internal/user/repository_test.go` with build tag `//go:build integration`:
+- [x] Create `apps/api/internal/user/repository_test.go` with build tag `//go:build integration`:
 
 - `Create` then `FindByID` round-trip — all fields match
 - `Update` display_name → `FindByID` → new name returned
@@ -1602,7 +1602,7 @@ Tests:
 
 ### 15.5 API client unit tests — `packages/shared/src/api/client.test.ts`
 
-- [ ] Create `packages/shared/src/api/client.test.ts` (Vitest):
+- [x] Create `packages/shared/src/api/client.test.ts` (Vitest):
 
 Tests cover the retry-on-401 behavior of `createApiClient` and, critically, the non-recursion guarantee.
 
@@ -1658,7 +1658,7 @@ These three methods have their own tests in `apps/web/src/stores/authStore.test.
 
 ### 16.1 `Makefile` (root)
 
-- [ ] Create `Makefile` at root:
+- [x] Create `Makefile` at root:
 
 ```makefile
 .PHONY: dev test db-migrate db-reset seed lint
@@ -1693,7 +1693,7 @@ seed: ## Load seed data
 
 ### 16.2 Air config — `apps/api/.air.toml`
 
-- [ ] Create `apps/api/.air.toml`:
+- [x] Create `apps/api/.air.toml`:
 
 ```toml
 root = "."
@@ -1712,7 +1712,7 @@ time = false
 
 ### 16.3 `.env.example` (root)
 
-- [ ] Create `.env.example` at root:
+- [x] Create `.env.example` at root:
 
 ```env
 # Core
@@ -1739,7 +1739,7 @@ SENTRY_DSN=
 
 ### 16.4 Seed data — `data/seed/users.sql`
 
-- [ ] Create `data/seed/users.sql` with 3 demo users and their auth_providers rows:
+- [x] Create `data/seed/users.sql` with 3 demo users and their auth_providers rows:
 
 ```sql
 INSERT INTO users (id, display_name, email, bio) VALUES
@@ -1851,25 +1851,25 @@ mtamta/
 
 From `Plan.md` — verify each before declaring Phase 1 complete:
 
-- [ ] `make dev` starts all services (docker-compose + API hot reload + Vite dev server)
-- [ ] `make seed` loads seed data without errors
-- [ ] JWT unit tests pass: valid, expired, malformed, wrong-secret cases
-- [ ] Integration test: mock Google ID token → access token in body + `Set-Cookie: refresh_token; HttpOnly` → authenticated request succeeds
-- [ ] `POST /api/v1/auth/google` with valid ID token returns 200 with `{ access_token, user }` body and `Set-Cookie: refresh_token; HttpOnly; SameSite=Lax; Path=/api/v1/auth`
-- [ ] `POST /api/v1/auth/apple` with valid ID token returns 200 with `{ access_token, user }` body and sets refresh cookie
-- [ ] `POST /api/v1/auth/refresh` with valid refresh cookie returns 200 with new `{ access_token }` (no body token needed)
-- [ ] `POST /api/v1/auth/logout` returns 204 and invalidates the refresh token
-- [ ] `GET /api/v1/users/me` with valid JWT returns current user
-- [ ] `PATCH /api/v1/users/me` updates display name and bio
-- [ ] Web app renders, allows Google Sign-In, displays logged-in user's name
-- [ ] Database migrations run cleanly on fresh TimescaleDB+PostGIS instance
-- [ ] `@mtamta/shared` types and API client importable from `apps/web`
-- [ ] Every API response includes `X-Request-ID` header; all log lines include the same ID
-- [ ] API logs structured JSON in production with `request_id`, `method`, `path`, `status`, `duration_ms`, `user_id`
-- [ ] Errors captured in Sentry with request ID, user ID, and stack trace
-- [ ] `GET /api/v1/health` returns 200 when both postgres and redis are up; 503 if either is down
-- [ ] GitHub Actions CI passes on push (`go test`, `turbo build`, `go vet`, `tsc`)
-- [ ] Merging to `main` auto-deploys API to Railway and web to Cloudflare Pages
+- [x] `make dev` starts all services (docker-compose + API hot reload + Vite dev server)
+- [x] `make seed` loads seed data without errors
+- [x] JWT unit tests pass: valid, expired, malformed, wrong-secret cases
+- [x] Integration test: mock Google ID token → access token in body + `Set-Cookie: refresh_token; HttpOnly` → authenticated request succeeds
+- [x] `POST /api/v1/auth/google` with valid ID token returns 200 with `{ access_token, user }` body and `Set-Cookie: refresh_token; HttpOnly; SameSite=Lax; Path=/api/v1/auth`
+- [x] `POST /api/v1/auth/apple` with valid ID token returns 200 with `{ access_token, user }` body and sets refresh cookie
+- [x] `POST /api/v1/auth/refresh` with valid refresh cookie returns 200 with new `{ access_token }` (no body token needed)
+- [x] `POST /api/v1/auth/logout` returns 204 and invalidates the refresh token
+- [x] `GET /api/v1/users/me` with valid JWT returns current user
+- [x] `PATCH /api/v1/users/me` updates display name and bio
+- [x] Web app renders, allows Google Sign-In, displays logged-in user's name
+- [x] Database migrations run cleanly on fresh TimescaleDB+PostGIS instance
+- [x] `@mtamta/shared` types and API client importable from `apps/web`
+- [x] Every API response includes `X-Request-ID` header; all log lines include the same ID
+- [x] API logs structured JSON in production with `request_id`, `method`, `path`, `status`, `duration_ms`, `user_id`
+- [x] Errors captured in Sentry with request ID, user ID, and stack trace
+- [x] `GET /api/v1/health` returns 200 when both postgres and redis are up; 503 if either is down
+- [x] GitHub Actions CI passes on push (`go test`, `turbo build`, `go vet`, `tsc`)
+- [x] Merging to `main` auto-deploys API to Railway and web to Cloudflare Pages
 
 ---
 
