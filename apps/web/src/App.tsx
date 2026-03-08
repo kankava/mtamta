@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { GoogleLogin } from '@react-oauth/google'
 import { useAuthStore } from './stores/authStore'
-import MapPage from './map/MapPage'
+
+const MapPage = lazy(() => import('./map/MapPage'))
 
 export default function App() {
   const { user, isLoading, restoreSession } = useAuthStore()
@@ -29,18 +30,26 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<MapPage />} />
+        <Route
+          path="/"
+          element={
+            <Suspense fallback={<div style={centeredStyle}>Loading map…</div>}>
+              <MapPage />
+            </Suspense>
+          }
+        />
       </Routes>
     </BrowserRouter>
   )
 }
 
 function LoginScreen() {
-  const { signInWithGoogle } = useAuthStore()
+  const { signInWithGoogle, error } = useAuthStore()
 
   return (
     <div style={centeredStyle}>
       <h1 style={{ marginBottom: '24px' }}>mtamta</h1>
+      {error && <p style={{ color: '#dc2626', marginBottom: '16px' }}>{error}</p>}
       <GoogleLogin
         onSuccess={(response) => {
           if (response.credential) {

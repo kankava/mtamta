@@ -78,7 +78,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 
 	userRepo := user.NewRepository(pool)
 	authRepo := auth.NewRepository(pool, redisClient)
-	authService := auth.NewService(authRepo, userRepo, testJWTSecret, googleVerifier, appleVerifier)
+	authService := auth.NewService(authRepo, userRepo, testJWTSecret, googleVerifier, appleVerifier, nil)
 	authHandler := auth.NewHandler(authService, false)
 	userService := user.NewService(userRepo)
 	userHandler := user.NewHandler(userService)
@@ -101,6 +101,62 @@ func setupTestEnv(t *testing.T) *testEnv {
 		r.Use(middleware.Authenticate(jwtValidator))
 		r.Get("/api/v1/users/me", userHandler.GetMe)
 	})
+
+	return &testEnv{
+		router:    r,
+		rsaKey:    rsaKey,
+		rsaKeyKid: jwk.Kid,
+		clientID:  clientID,
+	}
+}
+
+// setupTestEnvWithAllowlist creates an environment where only allowedEmails can sign up.
+func setupTestEnvWithAllowlist(t *testing.T, allowedEmails []string) *testEnv {
+	t.Helper()
+
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("DATABASE_URL not set, skipping integration test")
+	}
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		t.Skip("REDIS_URL not set, skipping integration test")
+	}
+
+	ctx := context.Background()
+	pool := db.New(ctx, databaseURL)
+	t.Cleanup(pool.Close)
+
+	redisClient := cache.New(redisURL)
+	t.Cleanup(func() { redisClient.Close() })
+
+	m, err := migrate.New("file://../../migrations", databaseURL)
+	if err != nil {
+		t.Fatalf("create migrator: %v", err)
+	}
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		t.Fatalf("migrate up: %v", err)
+	}
+	t.Cleanup(func() {
+		m.Down()
+		m.Close()
+	})
+
+	rsaKey, jwk := auth.GenerateTestRSAKey(t)
+	clientID := "test-client-id"
+
+	mockJWKS := &staticJWKS{keys: []auth.JSONWebKey{jwk}}
+	googleVerifier := auth.NewGoogleVerifierWithJWKS(clientID, mockJWKS)
+	appleVerifier := auth.NewAppleVerifierWithJWKS("test-apple-id", mockJWKS)
+
+	userRepo := user.NewRepository(pool)
+	authRepo := auth.NewRepository(pool, redisClient)
+	authService := auth.NewService(authRepo, userRepo, testJWTSecret, googleVerifier, appleVerifier, allowedEmails)
+	authHandler := auth.NewHandler(authService, false)
+
+	r := chi.NewRouter()
+	r.Use(middleware.RequestID)
+	r.Post("/api/v1/auth/google", authHandler.Google)
 
 	return &testEnv{
 		router:    r,
@@ -259,6 +315,56 @@ func TestIntegration_FullAuthFlow(t *testing.T) {
 		}
 		if len(rid) < 32 {
 			t.Errorf("X-Request-ID = %q, expected UUID-like string", rid)
+		}
+	})
+}
+
+func TestIntegration_AllowlistBlocks(t *testing.T) {
+	env := setupTestEnvWithAllowlist(t, []string{"allowed@example.com"})
+
+	// Blocked email → 403
+	t.Run("blocked email returns 403", func(t *testing.T) {
+		idToken := auth.SignGoogleToken(t, env.rsaKey, env.rsaKeyKid,
+			env.clientID, "accounts.google.com",
+			"blocked-sub", "stranger@example.com", "Stranger",
+			time.Now().Add(time.Hour))
+
+		body := `{"id_token":"` + idToken + `"}`
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/google", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		env.router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusForbidden {
+			t.Fatalf("status = %d, want 403; body: %s", w.Code, w.Body.String())
+		}
+
+		var resp struct {
+			Error struct {
+				Code string `json:"code"`
+			} `json:"error"`
+		}
+		json.NewDecoder(w.Body).Decode(&resp)
+		if resp.Error.Code != "SIGNUP_DISABLED" {
+			t.Errorf("code = %v, want SIGNUP_DISABLED", resp.Error.Code)
+		}
+	})
+
+	// Allowed email → 200
+	t.Run("allowed email returns 200", func(t *testing.T) {
+		idToken := auth.SignGoogleToken(t, env.rsaKey, env.rsaKeyKid,
+			env.clientID, "accounts.google.com",
+			"allowed-sub", "allowed@example.com", "Allowed User",
+			time.Now().Add(time.Hour))
+
+		body := `{"id_token":"` + idToken + `"}`
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/google", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		env.router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
 		}
 	})
 }

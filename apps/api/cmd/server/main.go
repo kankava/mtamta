@@ -79,7 +79,7 @@ func main() {
 	authRepo := auth.NewRepository(pool, redisClient)
 	googleVerifier := auth.NewGoogleVerifier(cfg.GoogleClientID)
 	appleVerifier := auth.NewAppleVerifier(cfg.AppleClientID)
-	authService := auth.NewService(authRepo, userRepo, cfg.JWTSecret, googleVerifier, appleVerifier)
+	authService := auth.NewService(authRepo, userRepo, cfg.JWTSecret, googleVerifier, appleVerifier, cfg.AllowedEmails)
 	authHandler := auth.NewHandler(authService, cfg.Env == "production")
 
 	healthHandler := health.NewHandler(pool, redisClient)

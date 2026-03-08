@@ -5,3 +5,8 @@ var (
 	GenerateTestRSAKey = generateTestRSAKey
 	SignGoogleToken    = signGoogleToken
 )
+
+// IsEmailAllowed exposes isEmailAllowed for unit testing.
+func (s *Service) IsEmailAllowed(email string) bool {
+	return s.isEmailAllowed(email)
+}

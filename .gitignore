@@ -31,6 +31,7 @@ Thumbs.db
 # IDE
 .idea/
 .vscode/settings.json
+.claude/settings.json
 
 # Coverage
 coverage/

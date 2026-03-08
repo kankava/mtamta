@@ -4,9 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/kankava/mtamta/internal/user"
 )
+
+// ErrSignUpDisabled is returned when a new user tries to sign up but their
+// email is not in the allowlist.
+var ErrSignUpDisabled = errors.New("sign-up is restricted")
 
 type Service struct {
 	repo           *Repository
@@ -14,15 +19,23 @@ type Service struct {
 	jwtSecret      string
 	googleVerifier *GoogleVerifier
 	appleVerifier  *AppleVerifier
+	allowedEmails  map[string]struct{} // if non-empty, only these emails can create accounts
 }
 
-func NewService(repo *Repository, userRepo *user.Repository, jwtSecret string, google *GoogleVerifier, apple *AppleVerifier) *Service {
+func NewService(repo *Repository, userRepo *user.Repository, jwtSecret string, google *GoogleVerifier, apple *AppleVerifier, allowedEmails []string) *Service {
+	em := make(map[string]struct{}, len(allowedEmails))
+	for _, e := range allowedEmails {
+		if e = strings.TrimSpace(strings.ToLower(e)); e != "" {
+			em[e] = struct{}{}
+		}
+	}
 	return &Service{
 		repo:           repo,
 		userRepo:       userRepo,
 		jwtSecret:      jwtSecret,
 		googleVerifier: google,
 		appleVerifier:  apple,
+		allowedEmails:  em,
 	}
 }
 
@@ -54,6 +67,9 @@ func (s *Service) signInOrCreate(ctx context.Context, provider, providerUID, ema
 		return nil, fmt.Errorf("looking up provider: %w", err)
 	}
 	if u == nil {
+		if !s.isEmailAllowed(email) {
+			return nil, ErrSignUpDisabled
+		}
 		u, err = s.repo.CreateUserWithProvider(ctx, displayName, email, provider, providerUID)
 		if err != nil {
 			return nil, fmt.Errorf("creating user: %w", err)
@@ -91,6 +107,16 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string) (*AuthResult
 
 func (s *Service) Logout(ctx context.Context, refreshToken string) error {
 	return s.repo.DeleteRefreshToken(ctx, refreshToken)
+}
+
+// isEmailAllowed returns true if sign-up is unrestricted (empty allowlist)
+// or if the email is in the allowlist.
+func (s *Service) isEmailAllowed(email string) bool {
+	if len(s.allowedEmails) == 0 {
+		return true // no restriction
+	}
+	_, ok := s.allowedEmails[strings.ToLower(email)]
+	return ok
 }
 
 func (s *Service) issueTokens(ctx context.Context, u *user.User) (*AuthResult, error) {

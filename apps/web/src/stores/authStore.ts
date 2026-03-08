@@ -5,6 +5,7 @@ import { tokenStorage, apiClient, setAuthCallbacks } from '../lib/api'
 interface AuthStore {
   user: User | null
   isLoading: boolean
+  error: string | null
   refresh: () => Promise<string | null>
   signInWithGoogle: (idToken: string) => Promise<void>
   signOut: () => Promise<void>
@@ -20,6 +21,7 @@ let refreshPromise: Promise<string | null> | null = null
 export const useAuthStore = create<AuthStore>((set) => ({
   user: null,
   isLoading: true,
+  error: null,
 
   refresh(): Promise<string | null> {
     if (refreshPromise) return refreshPromise
@@ -45,11 +47,21 @@ export const useAuthStore = create<AuthStore>((set) => ({
   },
 
   async signInWithGoogle(idToken: string): Promise<void> {
-    const data = await apiClient.post<AuthResponse>('/api/v1/auth/google', {
-      id_token: idToken,
-    })
-    tokenStorage.setAccessToken(data.access_token)
-    set({ user: data.user })
+    set({ error: null })
+    try {
+      const data = await apiClient.post<AuthResponse>('/api/v1/auth/google', {
+        id_token: idToken,
+      })
+      tokenStorage.setAccessToken(data.access_token)
+      set({ user: data.user })
+    } catch (err) {
+      const status = (err as { status?: number }).status
+      const message =
+        status === 403
+          ? 'Sign-up is currently restricted.'
+          : 'Sign-in failed. Please try again.'
+      set({ error: message })
+    }
   },
 
   async signOut(): Promise<void> {

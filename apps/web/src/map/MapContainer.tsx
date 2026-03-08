@@ -64,6 +64,16 @@ export default function MapContainer() {
 
     map.on('load', () => {
       addTerrainSource(map)
+
+      // Apply terrain if already enabled in store (e.g. persisted state).
+      const state = useMapStore.getState()
+      if (state.terrainEnabled) {
+        map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration: state.terrainExaggeration })
+        if (!map.getLayer(SKY_LAYER_ID)) {
+          map.addLayer(SKY_LAYER as mapboxgl.LayerSpecification)
+        }
+      }
+
       setMapReady(true)
       setMapInstance(map)
     })

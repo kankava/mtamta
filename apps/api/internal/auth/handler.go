@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/kankava/mtamta/internal/respond"
@@ -61,6 +62,10 @@ func (h *Handler) Google(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.service.SignInWithGoogle(r.Context(), req.IDToken)
 	if err != nil {
+		if errors.Is(err, ErrSignUpDisabled) {
+			respond.Error(w, http.StatusForbidden, "SIGNUP_DISABLED", "sign-up is restricted")
+			return
+		}
 		respond.Error(w, http.StatusUnauthorized, "AUTH_FAILED", "authentication failed")
 		return
 	}
@@ -81,6 +86,10 @@ func (h *Handler) Apple(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.service.SignInWithApple(r.Context(), req.IDToken)
 	if err != nil {
+		if errors.Is(err, ErrSignUpDisabled) {
+			respond.Error(w, http.StatusForbidden, "SIGNUP_DISABLED", "sign-up is restricted")
+			return
+		}
 		respond.Error(w, http.StatusUnauthorized, "AUTH_FAILED", "authentication failed")
 		return
 	}

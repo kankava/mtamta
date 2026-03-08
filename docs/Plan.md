@@ -710,6 +710,7 @@ apps/web/src/
 
 ### Acceptance Criteria
 
+- [ ] Open sign-ups: remove `ALLOWED_EMAILS` restriction on Railway (currently locked to owner email only)
 - [ ] User can view other users' profiles with their public trips
 - [ ] User can follow/unfollow other users
 - [ ] User can like and save trips; counts update in real time
