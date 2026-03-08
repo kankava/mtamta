@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -21,4 +22,15 @@ func New(ctx context.Context, databaseURL string) *pgxpool.Pool {
 		panic("database ping failed: " + err.Error())
 	}
 	return pool
+}
+
+// MigrateURL converts a postgresql:// or postgres:// URL to pgx5:// so that
+// golang-migrate can match it to the registered pgx/v5 driver.
+func MigrateURL(databaseURL string) string {
+	for _, prefix := range []string{"postgresql://", "postgres://"} {
+		if strings.HasPrefix(databaseURL, prefix) {
+			return "pgx5://" + databaseURL[len(prefix):]
+		}
+	}
+	return databaseURL
 }

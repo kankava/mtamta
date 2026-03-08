@@ -7,6 +7,8 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+
+	"github.com/kankava/mtamta/internal/db"
 )
 
 func main() {
@@ -20,7 +22,7 @@ func main() {
 		log.Fatal("DATABASE_URL is required")
 	}
 
-	m, err := migrate.New("file://migrations", databaseURL)
+	m, err := migrate.New("file://migrations", db.MigrateURL(databaseURL))
 	if err != nil {
 		log.Fatalf("failed to create migrator: %v", err)
 	}

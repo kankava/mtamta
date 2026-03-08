@@ -28,7 +28,7 @@ func setupRepo(t *testing.T) *user.Repository {
 	pool := db.New(ctx, databaseURL)
 	t.Cleanup(pool.Close)
 
-	m, err := migrate.New("file://../../migrations", databaseURL)
+	m, err := migrate.New("file://../../migrations", db.MigrateURL(databaseURL))
 	if err != nil {
 		t.Fatalf("create migrator: %v", err)
 	}

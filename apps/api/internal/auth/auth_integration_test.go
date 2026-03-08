@@ -55,7 +55,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 	t.Cleanup(func() { redisClient.Close() })
 
 	// Run migrations
-	m, err := migrate.New("file://../../migrations", databaseURL)
+	m, err := migrate.New("file://../../migrations", db.MigrateURL(databaseURL))
 	if err != nil {
 		t.Fatalf("create migrator: %v", err)
 	}
@@ -130,7 +130,7 @@ func setupTestEnvWithAllowlist(t *testing.T, allowedEmails []string) *testEnv {
 	redisClient := cache.New(redisURL)
 	t.Cleanup(func() { redisClient.Close() })
 
-	m, err := migrate.New("file://../../migrations", databaseURL)
+	m, err := migrate.New("file://../../migrations", db.MigrateURL(databaseURL))
 	if err != nil {
 		t.Fatalf("create migrator: %v", err)
 	}

@@ -57,9 +57,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
     } catch (err) {
       const status = (err as { status?: number }).status
       const message =
-        status === 403
-          ? 'Sign-up is currently restricted.'
-          : 'Sign-in failed. Please try again.'
+        status === 403 ? 'Sign-up is currently restricted.' : 'Sign-in failed. Please try again.'
       set({ error: message })
     }
   },
