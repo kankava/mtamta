@@ -25,9 +25,20 @@ export function useTopoAutoSelect(map: mapboxgl.Map | null): void {
       handler()
     }
 
+    // Re-run detection when topoSourceManual flips to false (reset to auto)
+    let prevManual = useMapStore.getState().topoSourceManual
+    const unsubscribe = useMapStore.subscribe((state) => {
+      const manual = state.topoSourceManual
+      if (prevManual && !manual) {
+        handler()
+      }
+      prevManual = manual
+    })
+
     map.on('moveend', handler)
     return () => {
       map.off('moveend', handler)
+      unsubscribe()
     }
   }, [map])
 }

@@ -52,7 +52,7 @@ func (s *SentinelProvider) ServeTile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	season := r.URL.Query().Get("season")
-	if season == "" {
+	if season != "winter" {
 		season = "summer"
 	}
 	yearStr := r.URL.Query().Get("year")

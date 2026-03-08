@@ -277,7 +277,7 @@ apps/web/src/
 
 ### Features
 
-- Country-specific topographic base layers (swisstopo, IGN, basemap.at, BKG, Kartverket, USGS) with viewport-based auto-selection, OpenTopoMap as intermediate fallback, and Mapbox Outdoors as global default
+- Country-specific topographic base layers (swisstopo, IGN, basemap.at, BKG, Kartverket, USGS) with viewport-based auto-selection and Mapbox Outdoors as global default
 - Seasonal satellite imagery (summer/winter) via Copernicus Sentinel-2, proxied through backend
 - Coupled season modes (winter/summer toggle auto-switches satellite variant, swisstopo variant, and seasonal overlays)
 - swisstopo winter base map variant with ski touring and snowshoe route overlays
@@ -285,7 +285,7 @@ apps/web/src/
 
 ### Sub-milestones
 
-- **3a — Country topo providers**: Source catalog, bounding boxes, auto-selection, attribution, OpenTopoMap fallback (tasks 1, 2, 3)
+- **3a — Country topo providers**: Source catalog, bounding boxes, auto-selection, attribution (tasks 1, 2, 3)
 - **3b — Backend proxy & caching**: Tile proxy for IGN/OpenTopoMap/Sentinel-2, Redis caching (tasks 4, 5, 6)
 - **3c — Seasonal & overlays**: Sentinel-2 satellite imagery, coupled season modes, swisstopo winter variant, OpenSnowMap pistes
 
@@ -294,7 +294,7 @@ apps/web/src/
 1. **Country topographic source catalog** (`packages/map-core/`)
    - Country-specific topographic source catalog: tile URLs, WMTS endpoints, max zoom, API key requirements, license/attribution per source
    - Country bounding box definitions for viewport-based auto-selection (Switzerland, France, Austria, Germany, Norway, USA)
-   - OpenTopoMap configuration as intermediate global topo fallback
+   - OpenTopoMap configuration as a manually-selectable global topo source
    - Dynamic attribution strings per topo source
    - Sentinel-2 seasonal satellite configuration: WMS URL template, season date ranges, MAXCC values
    - swisstopo winter variant: `ch.swisstopo.pixelkarte-farbe-winter` layer ID and tile URL
@@ -327,7 +327,7 @@ apps/web/src/
    - Proxy endpoint for OpenTopoMap tiles: `GET /api/v1/tiles/opentopomap/{z}/{x}/{y}` — proxy with Redis cache (`tile:opentopomap:{z}:{x}:{y}`, 24h TTL) to stay within OpenTopoMap's ~2 req/sec fair-use limit
    - swisstopo winter variant: swap tile URL when season mode = winter and viewport is in Switzerland
    - swisstopo winter sport overlays: ski touring + snowshoe route layers, enabled in winter mode
-   - Proxy endpoint for Sentinel-2 seasonal tiles: `GET /api/v1/tiles/sentinel/{season}/{z}/{x}/{y}` (Instance ID not exposed to client)
+   - Proxy endpoint for Sentinel-2 seasonal tiles: `GET /api/v1/tiles/sentinel/{z}/{x}/{y}?season=winter&year=2024` (Instance ID not exposed to client)
    - Redis caching for Sentinel-2 tiles: `sentinel:{season}:{year}:{z}:{x}:{y}`, 7-day TTL
    - OpenSnowMap pistes overlay source integration
 
@@ -367,7 +367,7 @@ apps/web/src/map/
 
 - [ ] When viewport is over Switzerland, swisstopo topo map is auto-suggested or auto-applied
 - [ ] Country-specific topo sources render correctly as raster tile layers for all 6 supported countries
-- [ ] OpenTopoMap is used as fallback when viewport is outside supported countries
+- [ ] Mapbox Outdoors is used as default when viewport is outside supported countries
 - [ ] User can manually override the auto-selected topo source via the layer panel
 - [ ] Map attribution updates dynamically to reflect the active topo source
 - [ ] IGN tiles are proxied through the backend (API key not exposed to client)

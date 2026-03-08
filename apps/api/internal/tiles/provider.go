@@ -11,6 +11,7 @@ import (
 type Provider struct {
 	ID          string
 	UpstreamURL string            // Go template with %d for z, x, y
+	FormatOrder string            // "zxy" or "zyx" — order of Sprintf args (default "zxy")
 	CacheTTL    time.Duration     // Redis cache duration
 	CachePrefix string            // Redis key prefix
 	Headers     map[string]string // Extra headers for upstream requests
@@ -25,6 +26,7 @@ func BuildProviders(cfg *config.Config) map[string]*Provider {
 	providers["opentopomap"] = &Provider{
 		ID:          "opentopomap",
 		UpstreamURL: "https://tile.opentopomap.org/%d/%d/%d.png",
+		FormatOrder: "zxy",
 		CacheTTL:    24 * time.Hour,
 		CachePrefix: "tile:otm",
 		Headers: map[string]string{
@@ -32,11 +34,12 @@ func BuildProviders(cfg *config.Config) map[string]*Provider {
 		},
 	}
 
-	// IGN France — needs API key
+	// IGN France — needs API key (WMTS uses TILEMATRIX/TILEROW/TILECOL = z/y/x)
 	if cfg.IGNApiKey != "" {
 		providers["ign"] = &Provider{
 			ID:          "ign",
 			UpstreamURL: fmt.Sprintf("https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX=%%d&TILEROW=%%d&TILECOL=%%d&apikey=%s", cfg.IGNApiKey),
+			FormatOrder: "zyx",
 			CacheTTL:    24 * time.Hour,
 			CachePrefix: "tile:ign",
 			Headers:     map[string]string{},

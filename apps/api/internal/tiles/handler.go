@@ -67,8 +67,13 @@ func (h *Handler) ServeTile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch from upstream
-	upstreamURL := fmt.Sprintf(provider.UpstreamURL, z, y, x)
+	// Fetch from upstream — format order depends on provider
+	var upstreamURL string
+	if provider.FormatOrder == "zyx" {
+		upstreamURL = fmt.Sprintf(provider.UpstreamURL, z, y, x)
+	} else {
+		upstreamURL = fmt.Sprintf(provider.UpstreamURL, z, x, y)
+	}
 	data, contentType, err := h.fetchUpstream(ctx, upstreamURL, provider.Headers)
 	if err != nil {
 		slog.Error("tile fetch failed", "provider", providerID, "error", err)

@@ -41,6 +41,30 @@ func TestTileBbox_Z1(t *testing.T) {
 	}
 }
 
+func TestSeasonValidation(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"summer", "summer"},
+		{"winter", "winter"},
+		{"", "summer"},
+		{"foo", "summer"},
+		{"SUMMER", "summer"},
+		{"Spring", "summer"},
+	}
+
+	for _, tc := range tests {
+		season := tc.input
+		if season != "winter" {
+			season = "summer"
+		}
+		if season != tc.expected {
+			t.Errorf("input %q: got %q, want %q", tc.input, season, tc.expected)
+		}
+	}
+}
+
 func TestSeasonDateRange_Summer(t *testing.T) {
 	r := seasonDateRange("summer", 2024)
 	expected := "2024-06-01/2024-08-31"

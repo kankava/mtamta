@@ -20,6 +20,7 @@ packages/shared/src/**/*.js
 
 # Go
 apps/api/tmp/
+*.test
 
 # Logs
 *.log

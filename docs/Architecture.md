@@ -598,7 +598,7 @@ Layers are toggled via the UI and managed through the shared `map-core` package.
 |---|---|---|---|
 | **Base** | Topographic | Vector | Mapbox Outdoors v12 (`mapbox://styles/mapbox/outdoors-v12`) |
 | **Base** | Satellite | Raster | Mapbox Satellite Streets v12 (`mapbox://styles/mapbox/satellite-streets-v12`) |
-| **Base** | Country Topographic | Raster (WMTS/XYZ) | National mapping agency tiles, auto-selected by viewport (swisstopo, IGN, basemap.at, BKG, Kartverket, USGS); OpenTopoMap intermediate fallback; Mapbox Outdoors global default |
+| **Base** | Country Topographic | Raster (WMTS/XYZ) | National mapping agency tiles, auto-selected by viewport (swisstopo, IGN, basemap.at, BKG, Kartverket, USGS); OpenTopoMap manually-selectable global topo source; Mapbox Outdoors global default |
 | **Base** | Satellite — Summer | Raster (WMS) | Sentinel-2 via Copernicus Sentinel Hub (Jun–Aug composite, 10m, MAXCC=20); proxied through backend |
 | **Base** | Satellite — Winter | Raster (WMS) | Sentinel-2 via Copernicus Sentinel Hub (Dec–Feb composite, 10m, MAXCC=30); proxied through backend |
 | **Base** | 3D Terrain | DEM | Mapbox Terrain-DEM v1 (`mapbox.mapbox-terrain-dem-v1`) |
@@ -681,7 +681,7 @@ Layers are toggled via the UI and managed through the shared `map-core` package.
 | Satellite Streets v12 | `mapbox://styles/mapbox/satellite-streets-v12` | Satellite with road/label overlays |
 | Custom Winter | `mapbox://styles/{username}/winter` | Snow-tinted terrain, blue water, white roads (built in Mapbox Studio from Outdoors base) |
 | Custom Summer | `mapbox://styles/{username}/summer` | Green vegetation emphasis (built in Mapbox Studio from Outdoors base) |
-| OpenTopoMap | `https://tile.opentopomap.org/{z}/{x}/{y}.png` | Outdoor-focused intermediate topo fallback (raster XYZ, max z19, CC-BY-SA) |
+| OpenTopoMap | `https://tile.opentopomap.org/{z}/{x}/{y}.png` | Outdoor-focused manually-selectable topo source (raster XYZ, max z19, CC-BY-SA) |
 | Sentinel-2 Summer | Copernicus Sentinel Hub WMS (proxied) | Seasonal satellite composite: Jun–Aug, 10m, MAXCC ≤20% |
 | Sentinel-2 Winter | Copernicus Sentinel Hub WMS (proxied) | Seasonal satellite composite: Dec–Feb, 10m, MAXCC ≤30% |
 
@@ -731,7 +731,7 @@ Both Mapbox GL JS and `@rnmapbox/maps` support 3D terrain natively. Combined wit
 
 #### Country-Specific Topographic Maps
 
-National mapping agencies provide high-detail topographic maps that significantly exceed Mapbox Outdoors quality for their respective regions. These are added as raster tile sources (WMTS/XYZ) and function as alternative base layers within the "Topographic" category. Mapbox Outdoors remains the global default; OpenTopoMap is an intermediate outdoor-focused fallback.
+National mapping agencies provide high-detail topographic maps that significantly exceed Mapbox Outdoors quality for their respective regions. These are added as raster tile sources (WMTS/XYZ) and function as alternative base layers within the "Topographic" category. Mapbox Outdoors remains the global default; OpenTopoMap is available as a manually-selectable outdoor-focused topo source.
 
 | Source | Region | Tile URL / Endpoint | Type | Max Zoom | API Key | License |
 |---|---|---|---|---|---|---|
@@ -777,7 +777,7 @@ Copernicus Sentinel-2 imagery (10m resolution) provides seasonal satellite views
 **Free tier**: 10,000 processing units/month, 10,000 requests/month
 
 **WMS URL template** (proxied through Go backend):
-`GET /api/v1/tiles/sentinel/{season}/{z}/{x}/{y}`
+`GET /api/v1/tiles/sentinel/{z}/{x}/{y}?season=winter&year=2024`
 
 Backend constructs WMS request:
 ```
@@ -1633,7 +1633,7 @@ All user-uploaded files are stored in S3-compatible storage (AWS S3, MinIO, Clou
 | `GET` | `/api/v1/map/trips` | Get trips within bounding box |
 | `GET` | `/api/v1/map/pois` | Get POIs within bounding box |
 | `GET` | `/api/v1/tiles/{layer}/{z}/{x}/{y}` | Get custom overlay tile |
-| `GET` | `/api/v1/tiles/sentinel/{season}/{z}/{x}/{y}` | Get seasonal satellite tile (proxied Sentinel Hub) |
+| `GET` | `/api/v1/tiles/sentinel/{z}/{x}/{y}?season=winter&year=2024` | Get seasonal satellite tile (proxied Sentinel Hub) |
 | `GET` | `/api/v1/map/crags` | Get crags within bounding box |
 | `POST` | `/api/v1/routes/directions` | Proxy Mapbox Directions API (walking profile). Accepts waypoints, returns snapped route + distance |
 
