@@ -203,8 +203,7 @@ mtamta/
    - Mapbox access token configuration
    - Base style: Mapbox Outdoors v12 (`mapbox://styles/mapbox/outdoors-v12`)
    - Satellite style: Mapbox Satellite Streets v12 (`mapbox://styles/mapbox/satellite-streets-v12`)
-   - Winter style: Custom Mapbox Studio style (built from Outdoors base — snow-tinted, blue water, white roads)
-   - Summer style: Custom Mapbox Studio style (built from Outdoors base — green vegetation emphasis)
+   - Winter/summer toggle mechanism (placeholder — both resolve to Outdoors v12 in Phase 2; custom Mapbox Studio styles in Phase 3)
    - Layer registry: metadata for each toggleable layer (see Architecture.md Layer Catalog)
    - 3D terrain source: `mapbox.mapbox-terrain-dem-v1` (Terrain-DEM v1, 512px tiles, max z14, default exaggeration 1.5)
 
@@ -260,7 +259,7 @@ apps/web/src/
 
 - [ ] Map renders full-screen on page load at a default location
 - [ ] User can switch between topographic and satellite base layers
-- [ ] User can toggle winter/summer mode and the map style updates
+- [ ] User can toggle winter/summer mode and the map style updates (placeholder — both resolve to Outdoors v12 until custom Mapbox Studio styles are created in Phase 3)
 - [ ] 3D terrain can be enabled; tilting the map shows terrain relief
 - [ ] Map state (center, zoom, layers) persists across style switches
 - [ ] Layer panel shows all available layers with toggle controls

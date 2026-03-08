@@ -7,6 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@mtamta/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
+      '@mtamta/map-core': path.resolve(__dirname, '../../packages/map-core/src/index.ts'),
     },
   },
 })

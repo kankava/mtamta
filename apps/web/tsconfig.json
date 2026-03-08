@@ -4,7 +4,8 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "paths": {
-      "@mtamta/shared": ["../../packages/shared/src/index.ts"]
+      "@mtamta/shared": ["../../packages/shared/src/index.ts"],
+      "@mtamta/map-core": ["../../packages/map-core/src/index.ts"]
     }
   },
   "include": ["src"]

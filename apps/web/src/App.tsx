@@ -1,62 +1,64 @@
 import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { GoogleLogin } from '@react-oauth/google'
 import { useAuthStore } from './stores/authStore'
+import MapPage from './map/MapPage'
 
 export default function App() {
-  const { user, isLoading, signInWithGoogle, signOut, restoreSession } = useAuthStore()
+  const { user, isLoading, restoreSession } = useAuthStore()
 
   useEffect(() => {
     restoreSession()
   }, [restoreSession])
 
+  // Loading state — session restoration in progress
   if (isLoading) {
     return (
-      <div
-        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}
-      >
+      <div style={centeredStyle}>
         <p>Loading...</p>
       </div>
     )
   }
 
+  // Not authenticated — show login screen
   if (!user) {
-    return (
-      <div
-        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}
-      >
-        <GoogleLogin
-          onSuccess={(response) => {
-            if (response.credential) {
-              signInWithGoogle(response.credential)
-            }
-          }}
-          onError={() => {
-            console.error('Google Sign-In failed')
-          }}
-        />
-      </div>
-    )
+    return <LoginScreen />
   }
 
+  // Authenticated — render the map app
   return (
-    <div>
-      <header
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '1rem',
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<MapPage />} />
+      </Routes>
+    </BrowserRouter>
+  )
+}
+
+function LoginScreen() {
+  const { signInWithGoogle } = useAuthStore()
+
+  return (
+    <div style={centeredStyle}>
+      <h1 style={{ marginBottom: '24px' }}>mtamta</h1>
+      <GoogleLogin
+        onSuccess={(response) => {
+          if (response.credential) {
+            signInWithGoogle(response.credential)
+          }
         }}
-      >
-        <h1>mtamta</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span>{user.display_name}</span>
-          <button onClick={() => signOut()}>Sign out</button>
-        </div>
-      </header>
-      <main style={{ padding: '1rem' }}>
-        <p>Welcome, {user.display_name}</p>
-      </main>
+        onError={() => {
+          console.error('Google Sign-In failed')
+        }}
+      />
     </div>
   )
+}
+
+const centeredStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  alignItems: 'center',
+  height: '100vh',
 }
