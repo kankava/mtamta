@@ -23,6 +23,7 @@ import (
 	"github.com/kankava/mtamta/internal/db"
 	"github.com/kankava/mtamta/internal/health"
 	"github.com/kankava/mtamta/internal/middleware"
+	"github.com/kankava/mtamta/internal/tiles"
 	"github.com/kankava/mtamta/internal/user"
 )
 
@@ -84,6 +85,10 @@ func main() {
 
 	healthHandler := health.NewHandler(pool, redisClient)
 
+	// Tile proxy (Phase 3)
+	tileProviders := tiles.BuildProviders(cfg)
+	tileHandler := tiles.NewHandler(tileProviders, redisClient)
+
 	// Router
 	r := chi.NewRouter()
 
@@ -108,6 +113,15 @@ func main() {
 	r.Post("/api/v1/auth/apple", authHandler.Apple)
 	r.Post("/api/v1/auth/refresh", authHandler.Refresh)
 	r.Post("/api/v1/auth/logout", authHandler.Logout)
+
+	// Tile proxy (public, no auth)
+	r.Get("/api/v1/tiles/{provider}/{z}/{x}/{y}", tileHandler.ServeTile)
+	if cfg.SentinelHubInstanceID != "" {
+		sentinelProvider := tiles.NewSentinelProvider(
+			cfg.SentinelHubInstanceID, cfg.SentinelHubClientID, cfg.SentinelHubSecret, redisClient,
+		)
+		r.Get("/api/v1/tiles/sentinel/{z}/{x}/{y}", sentinelProvider.ServeTile)
+	}
 
 	// Authenticated routes
 	jwtValidator := func(tok string) (string, string, error) {

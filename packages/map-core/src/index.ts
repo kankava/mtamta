@@ -21,3 +21,11 @@ export {
 } from './terrain'
 export { LAYER_REGISTRY, getAvailableLayers, getLayersByCategory } from './layers'
 export type { LayerCategory, LayerDefinition } from './layers'
+export {
+  TOPO_SOURCES,
+  OVERLAY_SOURCES,
+  findTopoSourceForPoint,
+  getTopoSource,
+  resolveTopoTileUrl,
+} from './topo'
+export type { TopoSourceId, TopoSourceDef, OverlaySourceDef } from './topo'

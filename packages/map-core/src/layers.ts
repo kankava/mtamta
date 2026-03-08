@@ -40,6 +40,30 @@ export const LAYER_REGISTRY: LayerDefinition[] = [
     phase: 2,
     available: true,
   },
+  {
+    id: 'topo-overlay',
+    name: 'Topo Overlay',
+    category: 'overlay',
+    description: 'Country-specific topographic raster tiles over Mapbox base',
+    phase: 3,
+    available: true,
+  },
+  {
+    id: 'pistes',
+    name: 'Ski Pistes',
+    category: 'overlay',
+    description: 'OpenSnowMap ski piste overlay (winter)',
+    phase: 3,
+    available: true,
+  },
+  {
+    id: 'satellite-seasonal',
+    name: 'Seasonal Satellite',
+    category: 'base',
+    description: 'Sentinel-2 seasonal satellite imagery',
+    phase: 3,
+    available: true,
+  },
 ]
 
 /** Return only layers that are available in the current build */

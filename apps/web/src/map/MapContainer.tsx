@@ -12,6 +12,26 @@ import {
 } from '@mtamta/map-core'
 import { useMapStore } from '../stores/mapStore'
 import MapControls from './MapControls'
+import { useTopoAutoSelect } from './useTopoAutoSelect'
+import { useRasterOverlays, applyAllRasterOverlays } from './useRasterOverlays'
+
+/**
+ * Re-add terrain source, terrain exaggeration, sky layer,
+ * and all raster overlays after a style swap.
+ */
+function applyPostStyleLoad(map: mapboxgl.Map) {
+  addTerrainSource(map)
+
+  const state = useMapStore.getState()
+  if (state.terrainEnabled) {
+    map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration: state.terrainExaggeration })
+    if (!map.getLayer(SKY_LAYER_ID)) {
+      map.addLayer(SKY_LAYER as mapboxgl.LayerSpecification)
+    }
+  }
+
+  applyAllRasterOverlays(map)
+}
 
 export default function MapContainer() {
   const mapRef = useRef<mapboxgl.Map | null>(null)
@@ -35,6 +55,10 @@ export default function MapContainer() {
 
   // Track whether the initial style has loaded (to skip redundant setStyle on mount)
   const initialStyleRef = useRef(true)
+
+  // Phase 3 hooks
+  useTopoAutoSelect(mapInstance)
+  useRasterOverlays(mapInstance)
 
   // --- Map initialization ---
   useEffect(() => {
@@ -63,17 +87,7 @@ export default function MapContainer() {
     mapRef.current = map
 
     map.on('load', () => {
-      addTerrainSource(map)
-
-      // Apply terrain if already enabled in store (e.g. persisted state).
-      const state = useMapStore.getState()
-      if (state.terrainEnabled) {
-        map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration: state.terrainExaggeration })
-        if (!map.getLayer(SKY_LAYER_ID)) {
-          map.addLayer(SKY_LAYER as mapboxgl.LayerSpecification)
-        }
-      }
-
+      applyPostStyleLoad(map)
       setMapReady(true)
       setMapInstance(map)
     })
@@ -115,14 +129,7 @@ export default function MapContainer() {
 
     // After style replacement, all sources/layers are gone.
     map.once('style.load', () => {
-      addTerrainSource(map)
-      if (useMapStore.getState().terrainEnabled) {
-        const state = useMapStore.getState()
-        map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration: state.terrainExaggeration })
-        if (!map.getLayer(SKY_LAYER_ID)) {
-          map.addLayer(SKY_LAYER as mapboxgl.LayerSpecification)
-        }
-      }
+      applyPostStyleLoad(map)
     })
   }, [baseLayer, season])
 
