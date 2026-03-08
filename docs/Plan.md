@@ -283,6 +283,12 @@ apps/web/src/
 - swisstopo winter base map variant with ski touring and snowshoe route overlays
 - OpenSnowMap pistes overlay (global ski piste + lift layer)
 
+### Sub-milestones
+
+- **3a — Country topo providers**: Source catalog, bounding boxes, auto-selection, attribution, OpenTopoMap fallback (tasks 1, 2, 3)
+- **3b — Backend proxy & caching**: Tile proxy for IGN/OpenTopoMap/Sentinel-2, Redis caching (tasks 4, 5, 6)
+- **3c — Seasonal & overlays**: Sentinel-2 satellite imagery, coupled season modes, swisstopo winter variant, OpenSnowMap pistes
+
 ### Technical Tasks
 
 1. **Country topographic source catalog** (`packages/map-core/`)
@@ -543,6 +549,8 @@ packages/shared/src/types/
    - Proactive token refresh when expiry < 7 days
    - Failed syncs: `sync_status='failed'` + error_message, retried next cycle
    - Initial sync on connect: last 30 days of activities
+
+> **Architecture note**: Background goroutines within the API process are sufficient for Phase 5's single-provider sync. Before Phase 8 (multiple concurrent ingest pipelines), extract schedulers into a dedicated worker binary (`cmd/worker/`) to avoid overloading the web API process and enable independent scaling.
 
 5. **API endpoints**
    - `GET /api/v1/integrations/providers` — list available providers + connection status
@@ -828,6 +836,8 @@ apps/web/src/map/
 - Satellite-derived snow cover overlay: Copernicus HR-WSI (Europe, 20m) + NOAA NOHRSC (USA)
 
 ### Technical Tasks
+
+> **Prerequisite**: Extract background job scheduler into `cmd/worker/` (see Phase 5 note). Phase 8 pipelines run in the worker process, not the API.
 
 1. **Data ingestion pipeline** (`apps/api/internal/ingest/`)
    - `scheduler.go` — cron-like scheduler for periodic fetches
