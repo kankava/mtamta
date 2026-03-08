@@ -9,8 +9,8 @@ dev: ## Start docker services + API (air) + Vite dev server
 	cd apps/api && air &
 	pnpm dev --filter=@mtamta/web
 
-test: ## Run all tests
-	cd apps/api && go test ./...
+test: ## Run all tests (unit + integration; requires docker services running)
+	cd apps/api && go test -tags=integration ./...
 	pnpm test
 
 lint: ## Run linters
