@@ -60,7 +60,7 @@ export const TOPO_SOURCES: TopoSourceDef[] = [
     name: 'basemap.at',
     country: 'AT',
     bbox: [9.53, 46.37, 17.16, 49.02],
-    tileUrl: 'https://maps.wien.gv.at/basemap/bmaporthofoto30cm/normal/google3857/{z}/{y}/{x}.jpeg',
+    tileUrl: 'https://maps.wien.gv.at/basemap/bmaphidpi/normal/google3857/{z}/{y}/{x}.jpeg',
     attribution: '&copy; <a href="https://basemap.at">basemap.at</a>',
     maxZoom: 19,
     tileSize: 256,

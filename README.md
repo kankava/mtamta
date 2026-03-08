@@ -113,6 +113,10 @@ This starts Docker services, the Go API with [air](https://github.com/air-verse/
 | `APPLE_CLIENT_ID` | No | `""` | Apple OAuth client ID |
 | `WEB_ORIGIN` | No | `http://localhost:5173` | Allowed CORS origin |
 | `SENTRY_DSN` | No | `""` | Sentry error tracking DSN |
+| `IGN_API_KEY` | No | `""` | IGN Géoplateforme API key for France topo tiles |
+| `SENTINEL_HUB_INSTANCE_ID` | No | `""` | Sentinel Hub WMS instance ID for satellite tiles |
+| `SENTINEL_HUB_CLIENT_ID` | No | `""` | Sentinel Hub OAuth client ID |
+| `SENTINEL_HUB_CLIENT_SECRET` | No | `""` | Sentinel Hub OAuth client secret |
 
 ### Web (`/apps/web/.env.local`)
 

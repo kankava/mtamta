@@ -297,7 +297,7 @@ apps/web/src/
    - OpenTopoMap configuration as a manually-selectable global topo source
    - Dynamic attribution strings per topo source
    - Sentinel-2 seasonal satellite configuration: WMS URL template, season date ranges, MAXCC values
-   - swisstopo winter variant: `ch.swisstopo.pixelkarte-farbe-winter` layer ID and tile URL
+   - swisstopo winter variant: `ch.swisstopo.pixelkarte-grau` layer ID and tile URL
    - swisstopo winter sport overlay configs: ski touring routes, snowshoe routes
    - OpenSnowMap pistes tile source configuration
 
@@ -320,7 +320,7 @@ apps/web/src/
    - IGN Géoplateforme: register free API key, configure WMTS tile URL template
    - Viewport-to-country bounding box intersection check (point-in-rectangle, no geocoding needed)
    - Auto-selection logic: viewport center moves → detect country → suggest/switch topo source
-   - Overlap handling for border regions: prefer source whose bbox center is nearest to viewport center
+   - Overlap handling for border regions: smallest bbox wins (most specific/detailed source)
    - Attribution manager: swap attribution text when active topo source changes
    - Proxy endpoint for IGN tiles: `GET /api/v1/tiles/ign/{z}/{x}/{y}` (API key must not be exposed to client)
    - swisstopo, basemap.at, BKG, Kartverket, and USGS tiles loaded directly from source (no proxy needed — no API keys, generous rate limits)

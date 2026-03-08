@@ -90,7 +90,7 @@ func (s *SentinelProvider) ServeTile(w http.ResponseWriter, r *http.Request) {
 	// Build WMS request
 	bbox := tileBbox(z, x, y)
 	timeRange := seasonDateRange(season, year)
-	wmsURL := s.buildWMSURL(bbox, timeRange)
+	wmsURL := s.buildWMSURL(bbox, timeRange, season)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, wmsURL, nil)
 	if err != nil {
@@ -190,7 +190,11 @@ func (s *SentinelProvider) getToken(ctx context.Context) (string, error) {
 	return s.accessToken, nil
 }
 
-func (s *SentinelProvider) buildWMSURL(bbox string, timeRange string) string {
+func (s *SentinelProvider) buildWMSURL(bbox string, timeRange string, season string) string {
+	maxCC := "20"
+	if season == "winter" {
+		maxCC = "30"
+	}
 	params := url.Values{
 		"SERVICE": {"WMS"},
 		"REQUEST": {"GetMap"},
@@ -202,7 +206,7 @@ func (s *SentinelProvider) buildWMSURL(bbox string, timeRange string) string {
 		"HEIGHT":  {"256"},
 		"FORMAT":  {"image/png"},
 		"TIME":    {timeRange},
-		"MAXCC":   {"20"},
+		"MAXCC":   {maxCC},
 	}
 	return fmt.Sprintf("https://services.sentinel-hub.com/ogc/wms/%s?%s", s.instanceID, params.Encode())
 }

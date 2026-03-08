@@ -736,19 +736,22 @@ National mapping agencies provide high-detail topographic maps that significantl
 | Source | Region | Tile URL / Endpoint | Type | Max Zoom | API Key | License |
 |---|---|---|---|---|---|---|
 | swisstopo | Switzerland | `https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg` | XYZ (JPEG) | z21 | No | Free with attribution |
-| swisstopo (winter) | Switzerland | `https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe-winter/default/current/3857/{z}/{x}/{y}.jpeg` | XYZ (JPEG) | z21 | No | Free with attribution |
+| swisstopo (winter) | Switzerland | `https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-grau/default/current/3857/{z}/{x}/{y}.jpeg` | XYZ (JPEG) | z21 | No | Free with attribution |
 | IGN Géoplateforme | France | WMTS via `data.geopf.fr` (SCAN25, PLAN.IGN layers) | WMTS | z19 | Yes (free tier: 2M tiles/day) | Free with attribution |
 | basemap.at | Austria | WMTS via `basemap.at` (bmaphidpi layer) | WMTS | z19 | No | CC-BY 4.0 |
 | BKG TopPlusOpen | Germany | `https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web/default/WEBMERCATOR/{z}/{y}/{x}.png` | WMTS (PNG) | z26 | No | DL-DE-BY 2.0 |
-| Kartverket | Norway | WMTS via `opencache.statkart.no` (topo4 layer) + vector tiles | WMTS | z20 | No | CC-BY 4.0 |
+| Kartverket | Norway | WMTS via `opencache.statkart.no` (topo4 layer) | WMTS | z20 | No | CC-BY 4.0 |
 | USGS National Map | USA | WMTS via `basemap.nationalmap.gov` (USGSTopo layer) | WMTS | z16 | No | Public domain |
 | OpenTopoMap | Global | `https://tile.opentopomap.org/{z}/{x}/{y}.png` | XYZ (PNG) | z19 | No | CC-BY-SA 3.0 |
 
 **Auto-selection logic**: When the map viewport center falls within a country's bounding box, the system auto-suggests (or auto-switches, based on user preference) the corresponding country topo source:
 
 1. **Country-specific source** — if viewport center is within a supported country's bounds
-2. **OpenTopoMap** — if no country-specific source covers the viewport
-3. **Mapbox Outdoors v12** — global default and fallback
+2. **Mapbox Outdoors v12** — global default when no country-specific source matches
+
+OpenTopoMap is available as a manual selection but is not part of the auto-selection fallback chain.
+
+> **Why raster?** Country topo sources are pre-rendered cartographic products from national mapping agencies. Using their raster tiles gives expert-quality cartography (contour styling, hillshading, trail symbols, local labels) with zero styling effort. Vector tile alternatives exist for some providers but would require building and maintaining per-country Mapbox GL style specs — significant effort for marginal benefit when the goal is to overlay national topo quality on the Mapbox vector basemap.
 
 Country bounding boxes (approximate, stored in `packages/map-core`):
 
@@ -761,7 +764,7 @@ Country bounding boxes (approximate, stored in `packages/map-core`):
 | Norway | 57.96°N, 4.50°E → 71.19°N, 31.17°E |
 | USA | 24.40°N, -124.85°W → 49.38°N, -66.89°W |
 
-**Overlap handling**: When the viewport center falls within multiple countries' bounding boxes (e.g., border regions), prefer the source whose bounding box center is closest to the viewport center. User can always manually override via the layer panel.
+**Overlap handling**: When the viewport center falls within multiple countries' bounding boxes (e.g., border regions), prefer the source with the smallest bounding box (most specific/detailed source wins). User can always manually override via the layer panel.
 
 **Attribution**: Each source requires different attribution text. The map attribution control must dynamically update when the active topo source changes. Attribution strings are stored per-source in `packages/map-core`.
 
@@ -825,8 +828,8 @@ https://sh.dataspace.copernicus.eu/ogc/wms/{INSTANCE_ID}?
 | Trip routes | mtamta API (`/api/v1/map/trips`) | GeoJSON | Live. User-uploaded GPX tracks within viewport |
 | Climbing areas | OSM via Overpass API + OpenBeta | GeoJSON | Periodic. Query `sport=climbing`, `natural=cliff`. Supplemented with OpenBeta open-license data |
 | Climbing routes (crags) | mtamta API (`/api/v1/map/crags`) | GeoJSON | Live. User-contributed and OpenBeta-seeded crag locations with route counts |
-| Ski touring routes (CH) | swisstopo WMTS (`ch.swisstopo-karto.skitouren`) | Vector | Winter-only. Ski touring ascent/descent routes in Switzerland |
-| Snowshoe routes (CH) | swisstopo WMTS (`ch.swisstopo-karto.schneeschuhrouten`) | Vector | Winter-only. Snowshoe trails in Switzerland |
+| Ski touring routes (CH) | swisstopo WMTS (`ch.swisstopo-karto.skitouren`) | Raster overlay | Winter-only. Ski touring ascent/descent routes in Switzerland |
+| Snowshoe routes (CH) | swisstopo WMTS (`ch.swisstopo-karto.schneeschuhrouten`) | Raster overlay | Winter-only. Snowshoe trails in Switzerland |
 | Ski pistes (global) | OpenSnowMap (`tiles.opensnowmap.org/pistes/{z}/{x}/{y}.png`) | Raster overlay | Color-coded pistes + lifts worldwide (CC BY-SA) |
 
 #### Live Data Layers (auto-refresh)
