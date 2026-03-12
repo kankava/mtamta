@@ -1,5 +1,7 @@
 [build]
+builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
+watchPatterns = ["apps/api/**"]
 
 [deploy]
 startCommand = "/api"
