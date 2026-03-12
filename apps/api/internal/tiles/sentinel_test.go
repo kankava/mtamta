@@ -10,15 +10,8 @@ func TestTileBbox(t *testing.T) {
 	if bbox == "" {
 		t.Fatal("expected non-empty bbox")
 	}
-	// At z=0, there's one tile covering -20037508 to 20037508
-	expected := "-20037508.342789,0.000000,0.000000,20037508.342789"
-	// Actually z=0 x=0 y=0 covers the top-left quadrant... let me recalculate.
-	// n=1, tileSize = 40075016.685578488
-	// minX = -20037508 + 0*tileSize = -20037508
-	// maxX = -20037508 + tileSize = 20037508
-	// maxY = 20037508 - 0*tileSize = 20037508
-	// minY = 20037508 - tileSize = -20037508
-	expected = "-20037508.342789,-20037508.342789,20037508.342789,20037508.342789"
+	// z=0 x=0 y=0 is the single tile covering the full Web Mercator extent
+	expected := "-20037508.342789,-20037508.342789,20037508.342789,20037508.342789"
 	if bbox != expected {
 		t.Errorf("z=0 bbox mismatch:\n  got:  %s\n  want: %s", bbox, expected)
 	}
