@@ -5,7 +5,6 @@ import {
   resolveTopoTileUrl,
   OVERLAY_SOURCES,
 } from '@mtamta/map-core'
-import type { TopoSourceId, Season } from '@mtamta/map-core'
 import { useMapStore } from '../stores/mapStore'
 
 // Source/layer IDs
