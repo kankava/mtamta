@@ -97,16 +97,12 @@ jobs:
       - run: pnpm lint
       - run: pnpm format:check
 
-  deploy:
+  deploy-web:
     needs: [test-api, test-web, build-web, lint]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy API to Railway
-        run: npx @railway/cli up --service api
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
