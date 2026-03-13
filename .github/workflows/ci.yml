@@ -110,6 +110,10 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: npx turbo build --filter=@mtamta/web
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
+          VITE_MAPBOX_ACCESS_TOKEN: ${{ vars.VITE_MAPBOX_ACCESS_TOKEN }}
       - name: Deploy web to Cloudflare Pages
         run: npx wrangler pages deploy apps/web/dist --project-name=mtamta
         env:
