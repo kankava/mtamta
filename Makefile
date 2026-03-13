@@ -1,4 +1,4 @@
-.PHONY: dev test db-migrate db-reset seed lint
+.PHONY: dev test lint build check db-migrate db-reset seed
 
 -include .env
 export
@@ -10,12 +10,22 @@ dev: ## Start docker services + API (air) + Vite dev server
 	pnpm dev --filter=@mtamta/web
 
 test: ## Run all tests (unit + integration; requires docker services running)
+	cd apps/api && go test ./...
 	cd apps/api && go test -tags=integration ./...
 	pnpm test
 
 lint: ## Run linters
 	cd apps/api && golangci-lint run ./...
 	pnpm lint
+	pnpm format:check
+
+build: ## Build all packages
+	pnpm turbo build --filter=@mtamta/web
+
+check: ## Run all CI checks locally (test + lint + build)
+	$(MAKE) test
+	$(MAKE) lint
+	$(MAKE) build
 
 db-migrate: ## Run pending migrations
 	cd apps/api && DATABASE_URL="$$DATABASE_URL" go run ./cmd/migrate up

@@ -71,7 +71,8 @@ export const TOPO_SOURCES: TopoSourceDef[] = [
     name: 'TopPlusOpen',
     country: 'DE',
     bbox: [5.87, 47.27, 15.04, 55.06],
-    tileUrl: 'https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web/default/WEBMERCATOR/{z}/{y}/{x}.png',
+    tileUrl:
+      'https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web/default/WEBMERCATOR/{z}/{y}/{x}.png',
     attribution: '&copy; <a href="https://www.bkg.bund.de">BKG</a>',
     maxZoom: 18,
     tileSize: 256,
@@ -82,7 +83,8 @@ export const TOPO_SOURCES: TopoSourceDef[] = [
     name: 'Kartverket',
     country: 'NO',
     bbox: [4.65, 57.96, 31.17, 71.19],
-    tileUrl: 'https://opencache.statkart.no/gatekeeper/gk/gk.open_gmaps?layers=topo4&zoom={z}&x={x}&y={y}',
+    tileUrl:
+      'https://opencache.statkart.no/gatekeeper/gk/gk.open_gmaps?layers=topo4&zoom={z}&x={x}&y={y}',
     attribution: '&copy; <a href="https://www.kartverket.no">Kartverket</a>',
     maxZoom: 18,
     tileSize: 256,
@@ -179,9 +181,7 @@ function pointInBbox(lng: number, lat: number, bbox: [number, number, number, nu
  * OpenTopoMap (global fallback) is excluded from auto-selection.
  */
 export function findTopoSourceForPoint(lng: number, lat: number): TopoSourceId | null {
-  const candidates = TOPO_SOURCES.filter(
-    (s) => s.country !== '' && pointInBbox(lng, lat, s.bbox),
-  )
+  const candidates = TOPO_SOURCES.filter((s) => s.country !== '' && pointInBbox(lng, lat, s.bbox))
   if (candidates.length === 0) return null
 
   // Prefer the source with the smallest bounding box (most specific).

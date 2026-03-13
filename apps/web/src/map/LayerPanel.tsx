@@ -129,7 +129,9 @@ export default function LayerPanel() {
           </select>
           {topoSource && (
             <>
-              <label style={{ fontSize: '12px', color: '#666', marginTop: '4px', display: 'block' }}>
+              <label
+                style={{ fontSize: '12px', color: '#666', marginTop: '4px', display: 'block' }}
+              >
                 Opacity: {Math.round(topoOpacity * 100)}%
                 <input
                   type="range"

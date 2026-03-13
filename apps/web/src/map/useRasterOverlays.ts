@@ -1,10 +1,6 @@
 import { useEffect } from 'react'
 import mapboxgl from 'mapbox-gl'
-import {
-  getTopoSource,
-  resolveTopoTileUrl,
-  OVERLAY_SOURCES,
-} from '@mtamta/map-core'
+import { getTopoSource, resolveTopoTileUrl, OVERLAY_SOURCES } from '@mtamta/map-core'
 import { useMapStore } from '../stores/mapStore'
 
 // Source/layer IDs
