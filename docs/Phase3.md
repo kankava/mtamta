@@ -1,8 +1,10 @@
 # Phase 3: Map Sources & Overlays — Detailed Implementation Plan ✅
 
-> **Status: COMPLETE** — All 27 implementation items verified. Manual testing remaining.
+> **Status: COMPLETE** — All 27 implementation items + 3d UI redesign verified. Manual testing remaining.
 >
-> Country-specific topographic maps, seasonal satellite imagery, and ski-focused overlays. Split into 3 sub-milestones (3a → 3b → 3c). Complete tasks top-to-bottom within each sub-milestone.
+> Country-specific topographic maps, seasonal satellite imagery, and ski-focused overlays. Split into 4 sub-milestones (3a → 3b → 3c → 3d). Complete tasks top-to-bottom within each sub-milestone.
+>
+> **Note**: Sub-milestone 3d replaced `LayerPanel.tsx` and `StyleSwitcher.tsx` with a collapsible sidebar, and removed `topoOpacity` (full opacity always). References to those in 3a–3c are historical.
 
 ---
 
@@ -249,6 +251,58 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
 
 ---
 
+## Sub-milestone 3d — UI Redesign (Sidebar + Tailwind)
+
+### 1. Tailwind CSS v4 setup
+
+- [x] Install `tailwindcss` and `@tailwindcss/vite` as dev dependencies
+- [x] Add `tailwindcss()` plugin before `react()` in `vite.config.ts`
+- [x] Replace `index.css` with `@import "tailwindcss"` + `@theme` block for custom design tokens (surface, border, text, accent colors)
+
+### 2. Map store changes — `apps/web/src/stores/mapStore.ts`
+
+- [x] Add `sidebarOpen: boolean` (default: `true`) and `sidebarTab: 'basemaps' | 'overlays' | 'settings'` (default: `'basemaps'`)
+- [x] Add `BasemapPreset` type and `BASEMAP_PRESETS` lookup table (11 presets mapping to `baseLayer + season + topoSource + topoSourceManual`)
+- [x] Add `selectBasemap(preset)` action — atomically sets all four fields in a single `set()` call
+- [x] Remove `setBaseLayer`, `setSeason`, `setTopoOpacity`, `topoOpacity` — replaced by `selectBasemap`
+- [x] Add `setSidebarOpen`, `setSidebarTab` actions
+
+### 3. Sidebar components — `apps/web/src/map/sidebar/`
+
+- [x] `Sidebar.tsx` — collapsible left panel (320px, slide in/out), tab buttons, header with user info + sign out
+- [x] `BasemapsTab.tsx` — card grid: 4 global cards (Outdoors/Satellite × Summer/Winter) + 7 country topo cards (swisstopo summer/winter, IGN, basemap.at, BKG, Kartverket, USGS). Active card determined by matching current state
+- [x] `OverlaysTab.tsx` — toggle switches for pistes, ski touring (swisstopo only), snowshoe (swisstopo only), sentinel year selector (satellite only)
+- [x] `SettingsTab.tsx` — 3D terrain toggle + exaggeration slider
+
+### 4. AppLayout rewire — `apps/web/src/map/AppLayout.tsx`
+
+- [x] Replace `MapContainer + StyleSwitcher + LayerPanel + NavBar` with `MapContainer + Sidebar`
+- [x] NavBar content (user display name + sign out) moved into sidebar header
+- [x] All inline `React.CSSProperties` removed, Tailwind classes throughout
+
+### 5. useRasterOverlays cleanup — `apps/web/src/map/useRasterOverlays.ts`
+
+- [x] Remove `topoOpacity` subscription and separate opacity `useEffect`
+- [x] Hardcode topo opacity to `1`
+
+### 6. styles.ts simplification — `packages/map-core/src/styles.ts`
+
+- [x] Remove `SEASON_STYLE_OVERRIDES` — season does not affect Mapbox style URL
+- [x] Simplify `resolveStyleUrl` to return `STYLE_URLS[baseLayer]`
+
+### 7. Delete old files
+
+- [x] Delete `apps/web/src/map/LayerPanel.tsx`
+- [x] Delete `apps/web/src/map/StyleSwitcher.tsx`
+
+### 8. Tests — `apps/web/src/stores/mapStore.test.ts`
+
+- [x] Update tests: replace `setBaseLayer`/`setSeason` tests with `selectBasemap` tests
+- [x] Add tests for `setSidebarOpen`, `setSidebarTab`
+- [x] All 14 tests passing
+
+---
+
 ## Verification Checklist
 
 - [x] `cd packages/map-core && pnpm test` — 37/37 passed
@@ -257,18 +311,26 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
 - [x] `cd apps/web && pnpm build` — web app builds
 - [ ] Manual: open map over Switzerland → swisstopo auto-selected, tiles render
 - [ ] Manual: switch to satellite → topo overlay hidden
-- [ ] Manual: toggle winter mode → swisstopo switches to winter variant, pistes overlay appears
+- [ ] Manual: select "swisstopo Winter" card → swisstopo switches to winter variant, pistes overlay appears
 - [ ] Manual: proxy tiles load through `/api/v1/tiles/opentopomap/...` with Redis caching
+- [x] `cd apps/web && pnpm lint` — no TypeScript or ESLint errors (3d)
+- [x] `cd apps/web && pnpm test` — 14/14 tests pass (3d)
+- [ ] Manual: sidebar opens/collapses, map fills full width when collapsed (3d)
+- [ ] Manual: click each basemap card — map style and topo overlay change correctly (3d)
 
 ---
 
 ## Files Summary
 
-**New files (10):**
+**New files (14):**
 - `packages/map-core/src/topo.ts`
 - `packages/map-core/src/topo.test.ts`
 - `apps/web/src/map/useRasterOverlays.ts`
 - `apps/web/src/map/useTopoAutoSelect.ts`
+- `apps/web/src/map/sidebar/Sidebar.tsx` (3d)
+- `apps/web/src/map/sidebar/BasemapsTab.tsx` (3d)
+- `apps/web/src/map/sidebar/OverlaysTab.tsx` (3d)
+- `apps/web/src/map/sidebar/SettingsTab.tsx` (3d)
 - `apps/api/internal/tiles/provider.go`
 - `apps/api/internal/tiles/handler.go`
 - `apps/api/internal/tiles/handler_test.go`
@@ -276,12 +338,18 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
 - `apps/api/internal/tiles/sentinel.go`
 - `apps/api/internal/tiles/sentinel_test.go`
 
-**Modified files (8):**
+**Modified files (9):**
 - `packages/map-core/src/layers.ts`
 - `packages/map-core/src/layers.test.ts`
 - `packages/map-core/src/index.ts`
-- `apps/web/src/stores/mapStore.ts`
+- `packages/map-core/src/styles.ts` (3d — removed SEASON_STYLE_OVERRIDES)
+- `apps/web/src/stores/mapStore.ts` (3d — added sidebar state, selectBasemap)
 - `apps/web/src/map/MapContainer.tsx`
-- `apps/web/src/map/LayerPanel.tsx`
+- `apps/web/src/map/AppLayout.tsx` (3d — sidebar layout, Tailwind classes)
+- `apps/web/src/map/useRasterOverlays.ts` (3d — removed topoOpacity)
 - `apps/api/internal/config/config.go`
 - `apps/api/cmd/server/main.go`
+
+**Deleted files (2, in 3d):**
+- `apps/web/src/map/LayerPanel.tsx`
+- `apps/web/src/map/StyleSwitcher.tsx`

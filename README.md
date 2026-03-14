@@ -8,6 +8,7 @@ An outdoor adventure platform for logging, finding, and sharing extreme outdoor 
 |-------|-----------|---------|
 | Backend | Go (modular monolith), chi router, pgx/v5 | Go 1.24 |
 | Frontend | React + TypeScript + Vite | React 19, Vite 8 (Rolldown) |
+| Styling | Tailwind CSS (v4, Vite plugin) | 4.2 |
 | State | Zustand | 5 |
 | Maps | Mapbox GL JS | 3.20 |
 | Routing | React Router | 7 |

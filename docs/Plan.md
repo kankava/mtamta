@@ -210,8 +210,8 @@ mtamta/
 2. **Map component** (`apps/web/src/map/`)
    - `MapContainer.tsx` — Mapbox GL JS initialization, lifecycle management
    - `MapControls.tsx` — zoom, compass, pitch, geolocate
-   - `LayerPanel.tsx` — base layer selector + overlay toggles
-   - `StyleSwitcher.tsx` — winter/summer mode toggle
+   - `sidebar/Sidebar.tsx` — collapsible left sidebar with basemap/overlay/settings tabs
+   - Basemap cards atomically set base layer + season + topo source
    - 3D terrain toggle with exaggeration slider
    - Sky layer for atmospheric rendering in 3D mode
 
@@ -247,8 +247,11 @@ apps/web/src/
 ├── map/
 │   ├── MapContainer.tsx
 │   ├── MapControls.tsx
-│   ├── LayerPanel.tsx
-│   └── StyleSwitcher.tsx
+│   └── sidebar/
+│       ├── Sidebar.tsx
+│       ├── BasemapsTab.tsx
+│       ├── OverlaysTab.tsx
+│       └── SettingsTab.tsx
 ├── stores/
 │   └── mapStore.ts
 └── pages/
@@ -288,6 +291,7 @@ apps/web/src/
 - **3a — Country topo providers**: Source catalog, bounding boxes, auto-selection, attribution (tasks 1, 2, 3)
 - **3b — Backend proxy & caching**: Tile proxy for IGN/OpenTopoMap/Sentinel-2, Redis caching (tasks 4, 5, 6)
 - **3c — Seasonal & overlays**: Sentinel-2 satellite imagery, coupled season modes, swisstopo winter variant, OpenSnowMap pistes
+- **3d — UI Redesign**: Collapsible left sidebar replacing LayerPanel + StyleSwitcher, Tailwind CSS v4 migration, basemap cards that atomically set baseLayer + season + topoSource (no separate winter/summer toggle), NavBar moved into sidebar header, topoOpacity slider removed (full opacity always)
 
 ### Technical Tasks
 
@@ -368,7 +372,7 @@ apps/web/src/map/
 - [ ] When viewport is over Switzerland, swisstopo topo map is auto-suggested or auto-applied
 - [ ] Country-specific topo sources render correctly as raster tile layers for all 6 supported countries
 - [ ] Mapbox Outdoors is used as default when viewport is outside supported countries
-- [ ] User can manually override the auto-selected topo source via the layer panel
+- [ ] User can manually override the auto-selected topo source via the sidebar basemap cards
 - [ ] Map attribution updates dynamically to reflect the active topo source
 - [ ] IGN tiles are proxied through the backend (API key not exposed to client)
 - [ ] User can select Summer or Winter satellite view; seasonal Sentinel-2 imagery loads as raster tiles
@@ -779,7 +783,7 @@ apps/web/src/
 
 4. **Map integration**
    - Add slope angle, aspect, avalanche slope filter, sun exposure, flat/steep as raster tile sources in `packages/map-core`
-   - Toggle controls in the layer panel
+   - Toggle controls in the sidebar overlays tab
    - Opacity slider for overlay layers
    - Legend showing color scale (e.g., slope angle 0°–60°)
 

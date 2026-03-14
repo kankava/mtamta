@@ -69,7 +69,7 @@ function addRasterLayer(
 
 /** Apply topo overlay based on current store state */
 function applyTopoOverlay(map: mapboxgl.Map) {
-  const { topoSource, topoOpacity, baseLayer, season } = useMapStore.getState()
+  const { topoSource, baseLayer, season } = useMapStore.getState()
 
   // Remove existing topo layer
   removeSourceAndLayer(map, TOPO_RASTER_LAYER, TOPO_RASTER_SOURCE)
@@ -84,7 +84,7 @@ function applyTopoOverlay(map: mapboxgl.Map) {
   addRasterLayer(map, TOPO_RASTER_SOURCE, TOPO_RASTER_LAYER, tileUrl, {
     tileSize: sourceDef.tileSize,
     maxZoom: sourceDef.maxZoom,
-    opacity: topoOpacity,
+    opacity: 1,
     attribution: sourceDef.attribution,
   })
 }
@@ -157,7 +157,6 @@ export function applyAllRasterOverlays(map: mapboxgl.Map): void {
  */
 export function useRasterOverlays(map: mapboxgl.Map | null): void {
   const topoSource = useMapStore((s) => s.topoSource)
-  const topoOpacity = useMapStore((s) => s.topoOpacity)
   const baseLayer = useMapStore((s) => s.baseLayer)
   const season = useMapStore((s) => s.season)
   const overlayPistes = useMapStore((s) => s.overlayPistes)
@@ -189,12 +188,4 @@ export function useRasterOverlays(map: mapboxgl.Map | null): void {
       map.off('style.load', handler)
     }
   }, [map])
-
-  // Handle opacity changes without full re-add
-  useEffect(() => {
-    if (!map || !map.isStyleLoaded()) return
-    if (map.getLayer(TOPO_RASTER_LAYER)) {
-      map.setPaintProperty(TOPO_RASTER_LAYER, 'raster-opacity', topoOpacity)
-    }
-  }, [map, topoOpacity])
 }

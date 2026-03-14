@@ -436,7 +436,7 @@ Machine-readable codes: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ER
 **Frontend (Web)**:
 
 - **Unit tests**: Vitest for `packages/shared` logic (API client, type validation, utility functions)
-- **Component tests**: React Testing Library for key interactive components (GpxUploader, LayerPanel, SearchBar)
+- **Component tests**: React Testing Library for key interactive components (GpxUploader, Sidebar, SearchBar)
 - **No snapshot tests**: They add noise, break on every UI change, and catch nothing meaningful
 
 **E2E Tests** (Phase 12):
@@ -765,7 +765,7 @@ Country bounding boxes (approximate, stored in `packages/map-core`):
 | Norway | 57.96°N, 4.50°E → 71.19°N, 31.17°E |
 | USA | 24.40°N, -124.85°W → 49.38°N, -66.89°W |
 
-**Overlap handling**: When the viewport center falls within multiple countries' bounding boxes (e.g., border regions), prefer the source with the smallest bounding box (most specific/detailed source wins). User can always manually override via the layer panel.
+**Overlap handling**: When the viewport center falls within multiple countries' bounding boxes (e.g., border regions), prefer the source with the smallest bounding box (most specific/detailed source wins). User can always manually override via the sidebar basemap cards.
 
 **Attribution**: Each source requires different attribution text. The map attribution control must dynamically update when the active topo source changes. Attribution strings are stored per-source in `packages/map-core`.
 

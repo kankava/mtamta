@@ -8,6 +8,84 @@ import {
 } from '@mtamta/map-core'
 import type { BaseLayer, Season, TopoSourceId } from '@mtamta/map-core'
 
+export type BasemapPreset =
+  | 'outdoors-summer'
+  | 'outdoors-winter'
+  | 'satellite-summer'
+  | 'satellite-winter'
+  | 'swisstopo'
+  | 'swisstopo-winter'
+  | 'ign'
+  | 'basemap-at'
+  | 'bkg'
+  | 'kartverket'
+  | 'usgs'
+
+interface BasemapConfig {
+  baseLayer: BaseLayer
+  season: Season
+  topoSourceManual: boolean
+  topoSource: TopoSourceId | null
+}
+
+const BASEMAP_PRESETS: Record<BasemapPreset, BasemapConfig> = {
+  'outdoors-summer': {
+    baseLayer: 'outdoors',
+    season: 'summer',
+    topoSourceManual: false,
+    topoSource: null,
+  },
+  'outdoors-winter': {
+    baseLayer: 'outdoors',
+    season: 'winter',
+    topoSourceManual: false,
+    topoSource: null,
+  },
+  'satellite-summer': {
+    baseLayer: 'satellite',
+    season: 'summer',
+    topoSourceManual: false,
+    topoSource: null,
+  },
+  'satellite-winter': {
+    baseLayer: 'satellite',
+    season: 'winter',
+    topoSourceManual: false,
+    topoSource: null,
+  },
+  swisstopo: {
+    baseLayer: 'outdoors',
+    season: 'summer',
+    topoSourceManual: true,
+    topoSource: 'swisstopo',
+  },
+  'swisstopo-winter': {
+    baseLayer: 'outdoors',
+    season: 'winter',
+    topoSourceManual: true,
+    topoSource: 'swisstopo',
+  },
+  ign: { baseLayer: 'outdoors', season: 'summer', topoSourceManual: true, topoSource: 'ign' },
+  'basemap-at': {
+    baseLayer: 'outdoors',
+    season: 'summer',
+    topoSourceManual: true,
+    topoSource: 'basemap-at',
+  },
+  bkg: { baseLayer: 'outdoors', season: 'summer', topoSourceManual: true, topoSource: 'bkg' },
+  kartverket: {
+    baseLayer: 'outdoors',
+    season: 'summer',
+    topoSourceManual: true,
+    topoSource: 'kartverket',
+  },
+  usgs: { baseLayer: 'outdoors', season: 'summer', topoSourceManual: true, topoSource: 'usgs' },
+}
+
+export { BASEMAP_PRESETS }
+
+export type SidebarTab = 'basemaps' | 'overlays' | 'settings'
+
 interface MapState {
   // Viewport
   center: [number, number]
@@ -24,7 +102,6 @@ interface MapState {
   // Topo overlay (Phase 3)
   topoSource: TopoSourceId | null
   topoSourceManual: boolean
-  topoOpacity: number
 
   // Overlays (Phase 3)
   overlayPistes: boolean
@@ -33,6 +110,10 @@ interface MapState {
 
   // Seasonal satellite (Phase 3)
   sentinelYear: number
+
+  // Sidebar
+  sidebarOpen: boolean
+  sidebarTab: SidebarTab
 
   // Map readiness
   isMapReady: boolean
@@ -44,18 +125,18 @@ interface MapState {
     pitch: number
     bearing: number
   }) => void
-  setBaseLayer: (layer: BaseLayer) => void
-  setSeason: (season: Season) => void
+  selectBasemap: (preset: BasemapPreset) => void
   setTerrainEnabled: (enabled: boolean) => void
   setTerrainExaggeration: (exaggeration: number) => void
   setMapReady: (ready: boolean) => void
   setTopoSource: (source: TopoSourceId | null, manual?: boolean) => void
-  setTopoOpacity: (opacity: number) => void
   resetTopoSourceAuto: () => void
   setOverlayPistes: (enabled: boolean) => void
   setOverlaySkiTouring: (enabled: boolean) => void
   setOverlaySnowshoe: (enabled: boolean) => void
   setSentinelYear: (year: number) => void
+  setSidebarOpen: (open: boolean) => void
+  setSidebarTab: (tab: SidebarTab) => void
 }
 
 export const useMapStore = create<MapState>((set) => ({
@@ -71,7 +152,6 @@ export const useMapStore = create<MapState>((set) => ({
 
   topoSource: null,
   topoSourceManual: false,
-  topoOpacity: 0.85,
 
   overlayPistes: false,
   overlaySkiTouring: false,
@@ -79,20 +159,23 @@ export const useMapStore = create<MapState>((set) => ({
 
   sentinelYear: new Date().getFullYear(),
 
+  sidebarOpen: true,
+  sidebarTab: 'basemaps',
+
   isMapReady: false,
 
   setViewport: (viewport) => set(viewport),
-  setBaseLayer: (baseLayer) => set({ baseLayer }),
-  setSeason: (season) => set({ season }),
+  selectBasemap: (preset) => set(BASEMAP_PRESETS[preset]),
   setTerrainEnabled: (terrainEnabled) => set({ terrainEnabled }),
   setTerrainExaggeration: (terrainExaggeration) => set({ terrainExaggeration }),
   setMapReady: (isMapReady) => set({ isMapReady }),
   setTopoSource: (topoSource, manual) =>
     set(manual !== undefined ? { topoSource, topoSourceManual: manual } : { topoSource }),
-  setTopoOpacity: (topoOpacity) => set({ topoOpacity }),
   resetTopoSourceAuto: () => set({ topoSourceManual: false }),
   setOverlayPistes: (overlayPistes) => set({ overlayPistes }),
   setOverlaySkiTouring: (overlaySkiTouring) => set({ overlaySkiTouring }),
   setOverlaySnowshoe: (overlaySnowshoe) => set({ overlaySnowshoe }),
   setSentinelYear: (sentinelYear) => set({ sentinelYear }),
+  setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
+  setSidebarTab: (sidebarTab) => set({ sidebarTab }),
 }))

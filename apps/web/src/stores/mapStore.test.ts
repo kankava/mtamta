@@ -14,6 +14,10 @@ describe('mapStore', () => {
       season: 'summer',
       terrainEnabled: false,
       terrainExaggeration: DEFAULT_TERRAIN_EXAGGERATION,
+      topoSource: null,
+      topoSourceManual: false,
+      sidebarOpen: true,
+      sidebarTab: 'basemaps',
       isMapReady: false,
     })
   })
@@ -26,6 +30,8 @@ describe('mapStore', () => {
     expect(state.season).toBe('summer')
     expect(state.terrainEnabled).toBe(false)
     expect(state.isMapReady).toBe(false)
+    expect(state.sidebarOpen).toBe(true)
+    expect(state.sidebarTab).toBe('basemaps')
   })
 
   it('setViewport updates all viewport fields', () => {
@@ -42,16 +48,31 @@ describe('mapStore', () => {
     expect(state.bearing).toBe(45)
   })
 
-  it('setBaseLayer switches from outdoors to satellite', () => {
-    useMapStore.getState().setBaseLayer('satellite')
-    expect(useMapStore.getState().baseLayer).toBe('satellite')
+  it('selectBasemap sets baseLayer, season, and topo atomically', () => {
+    useMapStore.getState().selectBasemap('swisstopo-winter')
+    const state = useMapStore.getState()
+    expect(state.baseLayer).toBe('outdoors')
+    expect(state.season).toBe('winter')
+    expect(state.topoSource).toBe('swisstopo')
+    expect(state.topoSourceManual).toBe(true)
   })
 
-  it('setSeason toggles between summer and winter', () => {
-    useMapStore.getState().setSeason('winter')
-    expect(useMapStore.getState().season).toBe('winter')
-    useMapStore.getState().setSeason('summer')
-    expect(useMapStore.getState().season).toBe('summer')
+  it('selectBasemap outdoors-summer sets auto-detect mode', () => {
+    useMapStore.getState().selectBasemap('outdoors-summer')
+    const state = useMapStore.getState()
+    expect(state.baseLayer).toBe('outdoors')
+    expect(state.season).toBe('summer')
+    expect(state.topoSourceManual).toBe(false)
+  })
+
+  it('selectBasemap satellite clears topo source', () => {
+    useMapStore.getState().selectBasemap('swisstopo')
+    useMapStore.getState().selectBasemap('satellite-winter')
+    const state = useMapStore.getState()
+    expect(state.baseLayer).toBe('satellite')
+    expect(state.season).toBe('winter')
+    expect(state.topoSource).toBeNull()
+    expect(state.topoSourceManual).toBe(false)
   })
 
   it('setTerrainEnabled toggles terrain on and off', () => {
@@ -69,5 +90,19 @@ describe('mapStore', () => {
   it('setMapReady updates readiness flag', () => {
     useMapStore.getState().setMapReady(true)
     expect(useMapStore.getState().isMapReady).toBe(true)
+  })
+
+  it('setSidebarOpen toggles sidebar', () => {
+    useMapStore.getState().setSidebarOpen(false)
+    expect(useMapStore.getState().sidebarOpen).toBe(false)
+    useMapStore.getState().setSidebarOpen(true)
+    expect(useMapStore.getState().sidebarOpen).toBe(true)
+  })
+
+  it('setSidebarTab switches tabs', () => {
+    useMapStore.getState().setSidebarTab('overlays')
+    expect(useMapStore.getState().sidebarTab).toBe('overlays')
+    useMapStore.getState().setSidebarTab('settings')
+    expect(useMapStore.getState().sidebarTab).toBe('settings')
   })
 })

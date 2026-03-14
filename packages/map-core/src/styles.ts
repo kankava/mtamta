@@ -1,6 +1,4 @@
 // Mapbox-hosted style URLs. No bundled JSON — style switching uses setStyle(url).
-// Custom winter/summer styles (Mapbox Studio) are Phase 3+ work.
-// In Phase 2, both seasons resolve to the same Outdoors style.
 
 export type BaseLayer = 'outdoors' | 'satellite'
 export type Season = 'summer' | 'winter'
@@ -10,18 +8,11 @@ export const STYLE_URLS: Record<BaseLayer, string> = {
   satellite: 'mapbox://styles/mapbox/satellite-streets-v12',
 }
 
-// Placeholder: both seasons use the same style for now.
-// When custom Mapbox Studio styles are created, these will point to
-// mapbox://styles/{username}/winter and mapbox://styles/{username}/summer.
-const SEASON_STYLE_OVERRIDES: Record<Season, Partial<Record<BaseLayer, string>>> = {
-  summer: {},
-  winter: {},
-}
-
 /**
  * Resolve the Mapbox style URL for a given base layer and season.
- * Season overrides take precedence over the default base layer URL.
+ * Season does not currently affect the Mapbox style URL — topo winter
+ * variants are handled by tile URL switching in resolveTopoTileUrl.
  */
-export function resolveStyleUrl(baseLayer: BaseLayer, season: Season): string {
-  return SEASON_STYLE_OVERRIDES[season][baseLayer] ?? STYLE_URLS[baseLayer]
+export function resolveStyleUrl(baseLayer: BaseLayer, _season: Season): string {
+  return STYLE_URLS[baseLayer]
 }

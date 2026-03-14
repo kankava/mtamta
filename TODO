@@ -2,9 +2,16 @@
 
 ## Before Phase 4
 
-- [ ] Run Phase 3 manual checklist end-to-end (country auto-select, winter behavior, satellite/seasonal tiles, proxy cache HIT/MISS)
+- [ ] Manual: verify sidebar UI — open/close, all three tabs render, map fills width when collapsed
+- [ ] Manual: click each basemap card — map style, topo overlay, and season all change atomically
+- [ ] Manual: navigate to Switzerland → swisstopo auto-detected with "Outdoors Summer/Winter" cards
+- [ ] Manual: select "swisstopo Winter" → winter topo tiles load, ski touring/snowshoe toggles appear in Overlays tab
+- [ ] Manual: select "Satellite Winter" → Sentinel-2 winter tiles load
+- [ ] Manual: toggle overlays on/off — layers appear/disappear on map
+- [ ] Manual: toggle 3D terrain + adjust exaggeration slider
+- [ ] Manual: proxy tiles load through `/api/v1/tiles/opentopomap/...` with Redis caching (cache HIT/MISS headers)
 - [ ] Run full `go test ./internal/tiles/...` locally with Redis/network enabled
-- [ ] Add one lightweight e2e smoke test for map behavior (topo auto-select + season toggle + sentinel request)
+- [ ] Add one lightweight e2e smoke test for map behavior (topo auto-select + basemap card + sentinel request)
 - [ ] Decide if in-memory tile rate limiter is enough (single instance = fine; multi-instance = move to shared limiting)
 
 ## Soon
