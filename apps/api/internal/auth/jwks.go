@@ -58,6 +58,10 @@ func (c *httpJWKSClient) Keys(ctx context.Context) ([]JSONWebKey, error) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("JWKS request failed with status %d", resp.StatusCode)
+	}
+
 	var result struct {
 		Keys []JSONWebKey `json:"keys"`
 	}

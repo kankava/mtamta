@@ -41,7 +41,7 @@ func (v *GoogleVerifier) Verify(ctx context.Context, idToken string) (*GoogleCla
 	parsed, err := jwt.ParseWithClaims(
 		idToken,
 		&googleRawClaims{},
-		func(t *jwt.Token) (interface{}, error) {
+		func(t *jwt.Token) (any, error) {
 			if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
 				return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 			}
@@ -73,6 +73,10 @@ func (v *GoogleVerifier) Verify(ctx context.Context, idToken string) (*GoogleCla
 		return nil, fmt.Errorf("invalid Google token claims")
 	}
 
+	if !raw.EmailVerified {
+		return nil, fmt.Errorf("Google email is not verified")
+	}
+
 	sub, _ := raw.GetSubject()
 	return &GoogleClaims{
 		Sub:     sub,
@@ -84,7 +88,8 @@ func (v *GoogleVerifier) Verify(ctx context.Context, idToken string) (*GoogleCla
 
 type googleRawClaims struct {
 	jwt.RegisteredClaims
-	Email   string `json:"email"`
-	Name    string `json:"name"`
-	Picture string `json:"picture"`
+	Email         string `json:"email"`
+	EmailVerified bool   `json:"email_verified"`
+	Name          string `json:"name"`
+	Picture       string `json:"picture"`
 }

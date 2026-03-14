@@ -129,12 +129,13 @@ func parseTileCoords(r *http.Request) (z, x, y int, err error) {
 	if err != nil || z < 0 || z > 22 {
 		return 0, 0, 0, fmt.Errorf("invalid z: %s", chi.URLParam(r, "z"))
 	}
+	maxCoord := 1 << z
 	x, err = strconv.Atoi(chi.URLParam(r, "x"))
-	if err != nil || x < 0 {
+	if err != nil || x < 0 || x >= maxCoord {
 		return 0, 0, 0, fmt.Errorf("invalid x: %s", chi.URLParam(r, "x"))
 	}
 	y, err = strconv.Atoi(chi.URLParam(r, "y"))
-	if err != nil || y < 0 {
+	if err != nil || y < 0 || y >= maxCoord {
 		return 0, 0, 0, fmt.Errorf("invalid y: %s", chi.URLParam(r, "y"))
 	}
 	return z, x, y, nil

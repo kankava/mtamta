@@ -48,8 +48,9 @@ func signGoogleToken(t *testing.T, key *rsa.PrivateKey, kid, aud, iss, sub, emai
 			ExpiresAt: jwt.NewNumericDate(exp),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
-		Email: email,
-		Name:  name,
+		Email:         email,
+		EmailVerified: true,
+		Name:          name,
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	token.Header["kid"] = kid
@@ -168,6 +169,34 @@ func TestGoogleVerifier_HS256Token(t *testing.T) {
 	_, err := verifier.Verify(context.Background(), signed)
 	if err == nil {
 		t.Fatal("expected error for HS256 token (should be rejected)")
+	}
+}
+
+func TestGoogleVerifier_UnverifiedEmail(t *testing.T) {
+	key, jwk := generateTestRSAKey(t)
+	verifier := NewGoogleVerifierWithJWKS("test-client-id", &mockJWKSClient{keys: []JSONWebKey{jwk}})
+
+	claims := googleRawClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    "accounts.google.com",
+			Subject:   "sub-123",
+			Audience:  jwt.ClaimStrings{"test-client-id"},
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
+		Email:         "unverified@gmail.com",
+		EmailVerified: false,
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	token.Header["kid"] = "test-kid-1"
+	signed, err := token.SignedString(key)
+	if err != nil {
+		t.Fatalf("sign token: %v", err)
+	}
+
+	_, err = verifier.Verify(context.Background(), signed)
+	if err == nil {
+		t.Fatal("expected error for unverified email")
 	}
 }
 
