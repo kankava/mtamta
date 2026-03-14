@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -22,24 +23,32 @@ func main() {
 		log.Fatal("DATABASE_URL is required")
 	}
 
+	if err := runMigrations(databaseURL, direction); err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("migrations %s: done", direction)
+}
+
+func runMigrations(databaseURL, direction string) error {
 	m, err := migrate.New("file://migrations", db.MigrateURL(databaseURL))
 	if err != nil {
-		log.Fatalf("failed to create migrator: %v", err)
+		return fmt.Errorf("failed to create migrator: %w", err)
 	}
-	defer func() { srcErr, dbErr := m.Close(); _ = srcErr; _ = dbErr }()
+	defer m.Close() //nolint:errcheck // best-effort cleanup
 
 	switch direction {
 	case "up":
 		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-			log.Fatalf("migration up failed: %v", err)
+			return fmt.Errorf("migration up failed: %w", err)
 		}
 	case "down":
 		if err := m.Down(); err != nil && err != migrate.ErrNoChange {
-			log.Fatalf("migration down failed: %v", err)
+			return fmt.Errorf("migration down failed: %w", err)
 		}
 	default:
-		log.Fatalf("unknown direction %q: use 'up' or 'down'", direction)
+		return fmt.Errorf("unknown direction %q: use 'up' or 'down'", direction)
 	}
 
-	log.Printf("migrations %s: done", direction)
+	return nil
 }

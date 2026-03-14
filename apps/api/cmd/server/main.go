@@ -69,7 +69,7 @@ func main() {
 		slog.Error("migration failed", "error", err)
 		os.Exit(1) //nolint:gocritic // startup failure, defers not critical
 	}
-	m.Close()
+	m.Close() //nolint:errcheck // best-effort cleanup after successful migration
 	slog.Info("migrations applied")
 
 	// Repositories, services, handlers
