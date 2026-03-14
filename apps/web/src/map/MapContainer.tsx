@@ -13,7 +13,7 @@ import {
 import { useMapStore } from '../stores/mapStore'
 import MapControls from './MapControls'
 import { useTopoAutoSelect } from './useTopoAutoSelect'
-import { useRasterOverlays, applyAllRasterOverlays } from './useRasterOverlays'
+import { useRasterOverlays } from './useRasterOverlays'
 
 /**
  * Re-add terrain source, terrain exaggeration, sky layer,
@@ -30,7 +30,7 @@ function applyPostStyleLoad(map: mapboxgl.Map) {
     }
   }
 
-  applyAllRasterOverlays(map)
+  // Raster overlays are handled by useRasterOverlays' own style.load listener.
 }
 
 export default function MapContainer() {

@@ -102,6 +102,25 @@ describe('createApiClient', () => {
     // Actually the retry IS a 401 but isRetry=true, so it falls through to the !res.ok branch
   })
 
+  it('does not call onRefresh for 401 on auth endpoints', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: () =>
+        Promise.resolve({ error: { code: 'AUTH_FAILED', message: 'authentication failed' } }),
+    })
+    vi.stubGlobal('fetch', mockFetch)
+
+    const { client, onRefresh, onAuthFailure } = makeClient()
+
+    await expect(client.post('/api/v1/auth/google', { id_token: 'bad' })).rejects.toThrow(
+      'authentication failed',
+    )
+    expect(onRefresh).not.toHaveBeenCalled()
+    expect(onAuthFailure).not.toHaveBeenCalled()
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+
   it('throws on non-401 error without calling refresh', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: false,
