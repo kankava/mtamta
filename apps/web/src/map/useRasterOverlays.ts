@@ -171,7 +171,6 @@ export function useRasterOverlays(map: mapboxgl.Map | null): void {
   }, [
     map,
     topoSource,
-    topoOpacity,
     baseLayer,
     season,
     overlayPistes,

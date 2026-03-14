@@ -40,7 +40,7 @@ export function createApiClient(opts: ApiClientOptions): ApiClient {
       body: body !== undefined ? JSON.stringify(body) : null,
     })
 
-    if (res.status === 401 && !isRetry) {
+    if (res.status === 401 && !isRetry && !path.startsWith('/api/v1/auth/')) {
       const newToken = await opts.onRefresh()
       if (newToken === null) {
         opts.onAuthFailure()
