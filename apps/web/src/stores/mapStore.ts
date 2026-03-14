@@ -130,7 +130,6 @@ interface MapState {
   setTerrainExaggeration: (exaggeration: number) => void
   setMapReady: (ready: boolean) => void
   setTopoSource: (source: TopoSourceId | null, manual?: boolean) => void
-  resetTopoSourceAuto: () => void
   setOverlayPistes: (enabled: boolean) => void
   setOverlaySkiTouring: (enabled: boolean) => void
   setOverlaySnowshoe: (enabled: boolean) => void
@@ -171,7 +170,6 @@ export const useMapStore = create<MapState>((set) => ({
   setMapReady: (isMapReady) => set({ isMapReady }),
   setTopoSource: (topoSource, manual) =>
     set(manual !== undefined ? { topoSource, topoSourceManual: manual } : { topoSource }),
-  resetTopoSourceAuto: () => set({ topoSourceManual: false }),
   setOverlayPistes: (overlayPistes) => set({ overlayPistes }),
   setOverlaySkiTouring: (overlaySkiTouring) => set({ overlaySkiTouring }),
   setOverlaySnowshoe: (overlaySnowshoe) => set({ overlaySnowshoe }),

@@ -5,7 +5,10 @@ import { useMapStore } from '../stores/mapStore'
 
 /**
  * Auto-selects the topo source based on the map viewport center.
- * Disabled when the user has manually selected a source.
+ * Disabled when the user has manually selected a source (topoSourceManual).
+ * Runs on moveend and once on initial load — not on state transitions,
+ * so that selectBasemap() can clear the topo without auto-detect
+ * immediately re-applying it.
  */
 export function useTopoAutoSelect(map: mapboxgl.Map | null): void {
   useEffect(() => {
@@ -25,20 +28,9 @@ export function useTopoAutoSelect(map: mapboxgl.Map | null): void {
       handler()
     }
 
-    // Re-run detection when topoSourceManual flips to false (reset to auto)
-    let prevManual = useMapStore.getState().topoSourceManual
-    const unsubscribe = useMapStore.subscribe((state) => {
-      const manual = state.topoSourceManual
-      if (prevManual && !manual) {
-        handler()
-      }
-      prevManual = manual
-    })
-
     map.on('moveend', handler)
     return () => {
       map.off('moveend', handler)
-      unsubscribe()
     }
   }, [map])
 }
