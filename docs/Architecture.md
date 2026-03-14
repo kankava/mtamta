@@ -544,11 +544,12 @@ CREATE TABLE auth_providers (
 
 ### Stack
 
-- **React 18+** with TypeScript
-- **Vite** for development and builds
-- **Mapbox GL JS** for map rendering
-- **Zustand** for state management
-- **React Router** for routing
+- **React 19** with TypeScript 5.9
+- **Vite 8** (Rolldown) for development and builds
+- **Mapbox GL JS 3.x** for map rendering
+- **Zustand 5** for state management
+- **React Router 7** for routing
+- **Vitest 4** for testing
 
 ### Map Integration
 

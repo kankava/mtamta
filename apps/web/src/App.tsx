@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router'
 import { GoogleLogin } from '@react-oauth/google'
 import { useAuthStore } from './stores/authStore'
 

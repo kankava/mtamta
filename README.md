@@ -4,17 +4,20 @@ An outdoor adventure platform for logging, finding, and sharing extreme outdoor 
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Backend | Go (modular monolith), chi router, pgx/v5 |
-| Frontend | React + TypeScript + Vite |
-| Mobile | React Native (planned) |
-| Maps | Mapbox GL JS |
-| Database | PostgreSQL + PostGIS + TimescaleDB |
-| Cache | Redis |
-| Search | Meilisearch (planned) |
-| Auth | Google + Apple OAuth, JWT |
-| Hosting | Railway (API) + Cloudflare Pages (web) |
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| Backend | Go (modular monolith), chi router, pgx/v5 | Go 1.24 |
+| Frontend | React + TypeScript + Vite | React 19, Vite 8 (Rolldown) |
+| State | Zustand | 5 |
+| Maps | Mapbox GL JS | 3.20 |
+| Routing | React Router | 7 |
+| Testing | Vitest | 4 |
+| Mobile | React Native (planned) | — |
+| Database | PostgreSQL + PostGIS + TimescaleDB | PG 17 |
+| Cache | Redis | 7 |
+| Search | Meilisearch (planned) | — |
+| Auth | Google + Apple OAuth, JWT | — |
+| Hosting | Railway (API) + Cloudflare Pages (web) | — |
 
 ## Monorepo Structure
 
@@ -24,7 +27,8 @@ mtamta/
 │   ├── api/          # Go backend
 │   └── web/          # React + Vite frontend
 ├── packages/
-│   └── shared/       # TypeScript types, API client, token storage
+│   ├── shared/       # TypeScript types, API client, token storage
+│   └── map-core/     # Map config, layers, styles, terrain, topo sources
 ├── data/
 │   └── seed/         # Seed SQL files
 ├── docs/             # Architecture & planning docs
@@ -112,6 +116,7 @@ This starts Docker services, the Go API with [air](https://github.com/air-verse/
 | `GOOGLE_CLIENT_ID` | Yes | — | Google OAuth client ID |
 | `APPLE_CLIENT_ID` | No | `""` | Apple OAuth client ID |
 | `WEB_ORIGIN` | No | `http://localhost:5173` | Allowed CORS origin |
+| `ALLOWED_EMAILS` | No | `""` | Comma-separated emails allowed to sign up (empty = allow all) |
 | `SENTRY_DSN` | No | `""` | Sentry error tracking DSN |
 | `IGN_API_KEY` | No | `""` | IGN Géoplateforme API key for France topo tiles |
 | `SENTINEL_HUB_INSTANCE_ID` | No | `""` | Sentinel Hub WMS instance ID for satellite tiles |
@@ -124,6 +129,7 @@ This starts Docker services, the Go API with [air](https://github.com/air-verse/
 |----------|-------------|
 | `VITE_API_URL` | API base URL (e.g. `http://localhost:8080`) |
 | `VITE_GOOGLE_CLIENT_ID` | Google OAuth client ID (same as API) |
+| `VITE_MAPBOX_ACCESS_TOKEN` | Mapbox public token (`pk.*`) |
 
 ## Google OAuth Setup
 
@@ -140,7 +146,9 @@ This starts Docker services, the Go API with [air](https://github.com/air-verse/
 |---------|-------------|
 | `make dev` | Start all services (Docker + API + web) |
 | `make test` | Run all tests (Go + TypeScript) |
-| `make lint` | Run linters (go vet + tsc) |
+| `make lint` | Run linters (golangci-lint + ESLint + Prettier) |
+| `make build` | Build all packages |
+| `make check` | Run all CI checks locally (test + lint + build) |
 | `make db-migrate` | Run pending database migrations |
 | `make db-reset` | Wipe DB, re-run migrations and seed data |
 | `make seed` | Load seed data |
@@ -172,6 +180,8 @@ pnpm lint
 | `POST` | `/api/v1/auth/apple` | Sign in with Apple ID token |
 | `POST` | `/api/v1/auth/refresh` | Refresh access token (cookie) |
 | `POST` | `/api/v1/auth/logout` | Logout and clear refresh token |
+| `GET` | `/api/v1/tiles/{provider}/{z}/{x}/{y}` | Tile proxy (opentopomap, ign) |
+| `GET` | `/api/v1/tiles/sentinel/{z}/{x}/{y}` | Sentinel Hub seasonal satellite tiles |
 
 ### Authenticated (Bearer token required)
 
@@ -184,32 +194,31 @@ pnpm lint
 
 ### API (Railway)
 
-The API deploys to Railway via the `Dockerfile` at `apps/api/Dockerfile`. Configuration is in `railway.toml`.
+The API deploys to Railway via the `Dockerfile` at `apps/api/Dockerfile`. Configuration is in `apps/api/railway.toml`.
 
-Railway runs migrations automatically on startup. Required secrets:
-- `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `APPLE_CLIENT_ID`
-- `WEB_ORIGIN` (your Cloudflare Pages URL)
-- `SENTRY_DSN` (optional)
-- `ENV=production`
+Railway auto-deploys from GitHub with **Wait for CI** enabled — deploys only happen after all CI checks pass. Migrations run automatically on startup.
 
 ### Web (Cloudflare Pages)
 
-The web app builds with `pnpm build --filter=@mtamta/web` and deploys the `apps/web/dist` directory to Cloudflare Pages.
+The web app is built and deployed by the `deploy-web` CI job using `wrangler pages deploy`. Cloudflare Pages auto-build is disabled.
 
-Environment variables are set in Cloudflare Pages dashboard:
-- `VITE_API_URL` — your Railway API URL
-- `VITE_GOOGLE_CLIENT_ID` — your Google client ID
+`VITE_` environment variables are set as GitHub Actions **variables** (not secrets) and baked into the bundle at build time.
 
 ### CI/CD
 
 Pushes to `main` trigger the full pipeline (`.github/workflows/ci.yml`):
-1. **test-api** — Go tests with Postgres + Redis service containers
-2. **test-web** — TypeScript tests (shared + web)
+1. **test-api** — Go unit + integration tests with Postgres + Redis service containers
+2. **test-web** — TypeScript tests (shared, map-core, web)
 3. **build-web** — Verify web app builds
-4. **lint** — `go vet` + `tsc --noEmit`
-5. **deploy** — Railway (API) + Cloudflare Pages (web)
+4. **lint** — golangci-lint, ESLint, Prettier
+5. **deploy-web** — Deploy to Cloudflare Pages (after all checks pass)
 
-Required GitHub secrets: `RAILWAY_TOKEN`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+Railway auto-deploys the API separately after CI passes (Wait for CI).
+
+Required GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
+Required GitHub variables: `VITE_API_URL`, `VITE_GOOGLE_CLIENT_ID`, `VITE_MAPBOX_ACCESS_TOKEN`
+
+See [docs/Deployment.md](docs/Deployment.md) for full deployment reference.
 
 ### Database Backups
 
@@ -221,7 +230,11 @@ Required GitHub secrets: `DATABASE_URL`, `R2_ACCESS_KEY`, `R2_SECRET_KEY`, `R2_B
 
 - [Architecture](docs/Architecture.md) — tech stack, system design, database schema, API conventions
 - [Implementation Plan](docs/Plan.md) — 12-phase roadmap from foundation to launch
-- [Phase 1 Spec](docs/Phase1.md) — detailed implementation spec for the foundation phase
+- [Deployment](docs/Deployment.md) — production deployment setup and reference
+- [Upgrades](docs/Upgrades.md) — dependency upgrade plan and migration notes
+- [Phase 1 Spec](docs/Phase1.md) — foundation phase implementation spec
+- [Phase 2 Spec](docs/Phase2.md) — maps core implementation spec
+- [Phase 3 Spec](docs/Phase3.md) — map sources & overlays implementation spec
 
 ## License
 
