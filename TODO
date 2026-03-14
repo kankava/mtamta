@@ -13,3 +13,5 @@
 - [ ] Add tile-proxy observability (cache hit ratio, upstream error rate, per-provider request volume)
 - [ ] Sentry for error tracking (free tier)
 - [ ] Mapbox token URL restrictions (lock pk.* token to production domain)
+- [ ] Logger middleware drops optional http.ResponseWriter interfaces (Flush, Hijack, Push) — fix before adding SSE/WebSocket/streaming features
+- [ ] Add integration test for duplicate-email 409 path (requires real Postgres)

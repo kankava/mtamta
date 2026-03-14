@@ -674,16 +674,21 @@ packages/shared/src/types/
 
 3. **User profile enhancements**
    - `PATCH /api/v1/users/me` — update avatar, bio, display name
+   - Fix nullable field clearing: PATCH currently uses COALESCE so clients can't set bio/avatar_url to null. Use a three-state patch type (unset / null / value) or explicit clear flags
    - Avatar upload via S3 pre-signed URL
    - Trip count, follower/following counts on profile
 
-4. **Notifications**
+4. **Auth improvements**
+   - Multi-provider account linking: sign-in with a second provider for the same email should attach the provider to the existing user, not fail with 409. Implement "find by normalized email and attach provider" in one transaction
+   - Refresh token rotation: implement one-time-use refresh tokens. Once rotation is in place, also fix the StrictMode double-restore in App.tsx (dev-only mount effect fires twice, issuing duplicate /auth/refresh requests)
+
+5. **Notifications**
    - `notifications` table migration
    - `GET /api/v1/notifications` — polling endpoint for current user's notifications
    - `PATCH /api/v1/notifications/:id/read` — mark notification as read
    - Trigger notifications on follow, like, and comment actions
 
-5. **Web UI**
+6. **Web UI**
    - `pages/UserProfilePage.tsx` — user profile with trip grid
    - `components/FollowButton.tsx` — follow/unfollow toggle
    - `components/LikeButton.tsx` — like/unlike with count
