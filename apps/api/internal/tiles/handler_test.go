@@ -223,7 +223,6 @@ func TestServeTile_FormatOrderZYX(t *testing.T) {
 }
 
 func TestParseTileCoords_NegativeZ(t *testing.T) {
-	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rctx := chi.NewRouteContext()
 	rctx.URLParams.Add("z", "-1")
@@ -235,5 +234,49 @@ func TestParseTileCoords_NegativeZ(t *testing.T) {
 	if err == nil {
 		t.Error("expected error for negative z")
 	}
-	_ = rr
+}
+
+func TestParseTileCoords_OutOfRangeXY(t *testing.T) {
+	tests := []struct {
+		name    string
+		z, x, y string
+	}{
+		{"x out of range", "2", "4", "0"}, // z=2 → max=4, x must be < 4
+		{"y out of range", "2", "0", "4"}, // z=2 → max=4, y must be < 4
+		{"x way out", "0", "1", "0"},      // z=0 → max=1, x must be < 1
+		{"y way out", "0", "0", "1"},      // z=0 → max=1, y must be < 1
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("z", tt.z)
+			rctx.URLParams.Add("x", tt.x)
+			rctx.URLParams.Add("y", tt.y)
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+			_, _, _, err := parseTileCoords(req)
+			if err == nil {
+				t.Errorf("expected error for %s (z=%s x=%s y=%s)", tt.name, tt.z, tt.x, tt.y)
+			}
+		})
+	}
+}
+
+func TestParseTileCoords_ValidBoundary(t *testing.T) {
+	// z=2 → max coord is 3 (2^2 - 1)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("z", "2")
+	rctx.URLParams.Add("x", "3")
+	rctx.URLParams.Add("y", "3")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+	z, x, y, err := parseTileCoords(req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if z != 2 || x != 3 || y != 3 {
+		t.Errorf("got z=%d x=%d y=%d, want 2 3 3", z, x, y)
+	}
 }

@@ -6,12 +6,18 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5/pgconn"
+
 	"github.com/kankava/mtamta/internal/user"
 )
 
 // ErrSignUpDisabled is returned when a new user tries to sign up but their
 // email is not in the allowlist.
 var ErrSignUpDisabled = errors.New("sign-up is restricted")
+
+// ErrEmailAlreadyExists is returned when a new provider sign-in attempts to
+// create a user but the email is already taken by another account.
+var ErrEmailAlreadyExists = errors.New("email already associated with another account")
 
 type Service struct {
 	repo           *Repository
@@ -72,6 +78,9 @@ func (s *Service) signInOrCreate(ctx context.Context, provider, providerUID, ema
 		}
 		u, err = s.repo.CreateUserWithProvider(ctx, displayName, email, provider, providerUID)
 		if err != nil {
+			if isDuplicateEmail(err) {
+				return nil, ErrEmailAlreadyExists
+			}
 			return nil, fmt.Errorf("creating user: %w", err)
 		}
 	}
@@ -107,6 +116,13 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string) (*AuthResult
 
 func (s *Service) Logout(ctx context.Context, refreshToken string) error {
 	return s.repo.DeleteRefreshToken(ctx, refreshToken)
+}
+
+// isDuplicateEmail checks if a Postgres error is a unique_violation on the
+// users.email constraint (users_email_key).
+func isDuplicateEmail(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "users_email_key"
 }
 
 // isEmailAllowed returns true if sign-up is unrestricted (empty allowlist)

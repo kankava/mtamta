@@ -66,6 +66,10 @@ func (h *Handler) Google(w http.ResponseWriter, r *http.Request) {
 			respond.Error(w, http.StatusForbidden, "SIGNUP_DISABLED", "sign-up is restricted")
 			return
 		}
+		if errors.Is(err, ErrEmailAlreadyExists) {
+			respond.Error(w, http.StatusConflict, "EMAIL_EXISTS", "email already associated with another account")
+			return
+		}
 		respond.Error(w, http.StatusUnauthorized, "AUTH_FAILED", "authentication failed")
 		return
 	}
@@ -88,6 +92,10 @@ func (h *Handler) Apple(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, ErrSignUpDisabled) {
 			respond.Error(w, http.StatusForbidden, "SIGNUP_DISABLED", "sign-up is restricted")
+			return
+		}
+		if errors.Is(err, ErrEmailAlreadyExists) {
+			respond.Error(w, http.StatusConflict, "EMAIL_EXISTS", "email already associated with another account")
 			return
 		}
 		respond.Error(w, http.StatusUnauthorized, "AUTH_FAILED", "authentication failed")
