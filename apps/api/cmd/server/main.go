@@ -57,7 +57,7 @@ func main() {
 
 	// Redis
 	redisClient := cache.New(cfg.RedisURL)
-	defer redisClient.Close()
+	defer func() { _ = redisClient.Close() }()
 
 	// Migrations
 	m, err := migrate.New("file://migrations", db.MigrateURL(cfg.DatabaseURL))

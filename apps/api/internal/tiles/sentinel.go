@@ -105,7 +105,7 @@ func (s *SentinelProvider) ServeTile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "upstream fetch failed", http.StatusBadGateway)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		slog.Error("sentinel non-200", "status", resp.StatusCode)
@@ -169,7 +169,7 @@ func (s *SentinelProvider) getToken(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("token request failed with status %d", resp.StatusCode)
