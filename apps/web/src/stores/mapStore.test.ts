@@ -10,10 +10,11 @@ describe('mapStore', () => {
       zoom: DEFAULT_ZOOM,
       pitch: 0,
       bearing: 0,
-      baseLayer: 'outdoors',
+      baseLayer: 'satellite',
       season: 'summer',
       terrainEnabled: false,
       terrainExaggeration: DEFAULT_TERRAIN_EXAGGERATION,
+      projection: 'mercator',
       topoSource: null,
       sidebarOpen: true,
       sidebarTab: 'basemaps',
@@ -25,9 +26,10 @@ describe('mapStore', () => {
     const state = useMapStore.getState()
     expect(state.center).toEqual(DEFAULT_CENTER)
     expect(state.zoom).toBe(DEFAULT_ZOOM)
-    expect(state.baseLayer).toBe('outdoors')
+    expect(state.baseLayer).toBe('satellite')
     expect(state.season).toBe('summer')
     expect(state.terrainEnabled).toBe(false)
+    expect(state.projection).toBe('mercator')
     expect(state.isMapReady).toBe(false)
     expect(state.sidebarOpen).toBe(true)
     expect(state.sidebarTab).toBe('basemaps')
@@ -102,5 +104,13 @@ describe('mapStore', () => {
     expect(useMapStore.getState().sidebarTab).toBe('overlays')
     useMapStore.getState().setSidebarTab('settings')
     expect(useMapStore.getState().sidebarTab).toBe('settings')
+  })
+
+  it('setProjection switches between mercator and globe', () => {
+    expect(useMapStore.getState().projection).toBe('mercator')
+    useMapStore.getState().setProjection('globe')
+    expect(useMapStore.getState().projection).toBe('globe')
+    useMapStore.getState().setProjection('mercator')
+    expect(useMapStore.getState().projection).toBe('mercator')
   })
 })

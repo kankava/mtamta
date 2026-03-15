@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
+import { TerrainControl } from './TerrainControl'
 
 interface MapControlsProps {
   map: mapboxgl.Map | null
@@ -7,8 +8,9 @@ interface MapControlsProps {
 
 /**
  * Attaches Mapbox GL built-in controls to the map instance.
- * - NavigationControl: zoom + compass (top-right)
- * - GeolocateControl: locate user (top-right, below nav)
+ * - NavigationControl: zoom + compass (bottom-right)
+ * - TerrainControl: 2D/3D toggle (bottom-right)
+ * - GeolocateControl: locate user (bottom-right)
  * - ScaleControl: metric scale bar (bottom-left)
  */
 export default function MapControls({ map }: MapControlsProps) {
@@ -19,18 +21,21 @@ export default function MapControls({ map }: MapControlsProps) {
     controlsAdded.current = true
 
     const nav = new mapboxgl.NavigationControl({ visualizePitch: true })
+    const terrain = new TerrainControl()
     const geolocate = new mapboxgl.GeolocateControl({
       positionOptions: { enableHighAccuracy: true },
       trackUserLocation: true,
     })
     const scale = new mapboxgl.ScaleControl({ unit: 'metric' })
 
-    map.addControl(nav, 'top-right')
-    map.addControl(geolocate, 'top-right')
+    map.addControl(nav, 'bottom-right')
+    map.addControl(terrain, 'bottom-right')
+    map.addControl(geolocate, 'bottom-right')
     map.addControl(scale, 'bottom-left')
 
     return () => {
       map.removeControl(nav)
+      map.removeControl(terrain)
       map.removeControl(geolocate)
       map.removeControl(scale)
       controlsAdded.current = false

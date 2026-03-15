@@ -43,6 +43,7 @@ const BASEMAP_PRESETS: Record<BasemapPreset, BasemapConfig> = {
 
 export { BASEMAP_PRESETS }
 
+export type Projection = 'mercator' | 'globe'
 export type SidebarTab = 'basemaps' | 'overlays' | 'settings'
 
 interface MapState {
@@ -57,6 +58,8 @@ interface MapState {
   season: Season
   terrainEnabled: boolean
   terrainExaggeration: number
+  customExaggeration: boolean
+  projection: Projection
 
   // Topo overlay (Phase 3)
   topoSource: TopoSourceId | null
@@ -86,6 +89,8 @@ interface MapState {
   selectBasemap: (preset: BasemapPreset) => void
   setTerrainEnabled: (enabled: boolean) => void
   setTerrainExaggeration: (exaggeration: number) => void
+  setCustomExaggeration: (enabled: boolean) => void
+  setProjection: (projection: Projection) => void
   setMapReady: (ready: boolean) => void
   setTopoSource: (source: TopoSourceId | null) => void
   setOverlayPistes: (enabled: boolean) => void
@@ -102,10 +107,12 @@ export const useMapStore = create<MapState>((set) => ({
   pitch: DEFAULT_PITCH,
   bearing: DEFAULT_BEARING,
 
-  baseLayer: 'outdoors',
+  baseLayer: 'satellite',
   season: 'summer',
   terrainEnabled: false,
   terrainExaggeration: DEFAULT_TERRAIN_EXAGGERATION,
+  customExaggeration: false,
+  projection: 'mercator',
 
   topoSource: null,
 
@@ -124,6 +131,8 @@ export const useMapStore = create<MapState>((set) => ({
   selectBasemap: (preset) => set(BASEMAP_PRESETS[preset]),
   setTerrainEnabled: (terrainEnabled) => set({ terrainEnabled }),
   setTerrainExaggeration: (terrainExaggeration) => set({ terrainExaggeration }),
+  setCustomExaggeration: (customExaggeration) => set({ customExaggeration }),
+  setProjection: (projection) => set({ projection }),
   setMapReady: (isMapReady) => set({ isMapReady }),
   setTopoSource: (topoSource) => set({ topoSource }),
   setOverlayPistes: (overlayPistes) => set({ overlayPistes }),

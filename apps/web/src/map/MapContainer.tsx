@@ -5,6 +5,7 @@ import {
   resolveStyleUrl,
   TERRAIN_SOURCE_ID,
   TERRAIN_SOURCE,
+  DEFAULT_TERRAIN_EXAGGERATION,
   SKY_LAYER_ID,
   SKY_LAYER,
   MIN_ZOOM,
@@ -23,7 +24,10 @@ function applyPostStyleLoad(map: mapboxgl.Map) {
 
   const state = useMapStore.getState()
   if (state.terrainEnabled) {
-    map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration: state.terrainExaggeration })
+    const exaggeration = state.customExaggeration
+      ? state.terrainExaggeration
+      : DEFAULT_TERRAIN_EXAGGERATION
+    map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration })
     if (!map.getLayer(SKY_LAYER_ID)) {
       map.addLayer(SKY_LAYER as mapboxgl.LayerSpecification)
     }
@@ -48,6 +52,8 @@ export default function MapContainer() {
     season,
     terrainEnabled,
     terrainExaggeration,
+    customExaggeration,
+    projection,
     setViewport,
     setMapReady,
   } = useMapStore()
@@ -60,7 +66,19 @@ export default function MapContainer() {
 
   // --- Map initialization ---
   useEffect(() => {
-    if (mapRef.current) return
+    // React Strict Mode (dev) fires mount → unmount → mount.
+    // Reuse the existing map on remount — Firefox can't recover a
+    // WebGL context after map.remove().
+    if (mapRef.current) {
+      const map = mapRef.current
+      setMapInstance(map)
+      if (map.isStyleLoaded()) {
+        setMapReady(true)
+      } else {
+        map.once('load', () => setMapReady(true))
+      }
+      return
+    }
 
     const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
     if (!token?.startsWith('pk.')) {
@@ -74,6 +92,7 @@ export default function MapContainer() {
       accessToken: token,
       container: containerRef.current!,
       style: resolveStyleUrl(baseLayer, season),
+      projection,
       center,
       zoom,
       pitch,
@@ -101,12 +120,13 @@ export default function MapContainer() {
       })
     })
 
-    // CRITICAL: always clean up — prevents WebGL context leaks.
+    // Reset state on unmount but keep map alive — mapRef.current is
+    // intentionally NOT cleared so the Strict Mode remount path above
+    // can reuse it. On real unmount (route change), the DOM container
+    // is removed and the browser reclaims WebGL resources on navigation.
     return () => {
       setMapReady(false)
       setMapInstance(null)
-      map.remove()
-      mapRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -138,23 +158,23 @@ export default function MapContainer() {
     })
   }, [baseLayer, season])
 
-  // --- Terrain toggle ---
+  // --- Terrain exaggeration sync (toggle handled by TerrainControl) ---
   useEffect(() => {
     const map = mapRef.current
-    if (!map || !map.isStyleLoaded()) return
+    if (!map || !map.isStyleLoaded() || !terrainEnabled) return
 
-    if (terrainEnabled) {
-      map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration: terrainExaggeration })
-      if (!map.getLayer(SKY_LAYER_ID)) {
-        map.addLayer(SKY_LAYER as mapboxgl.LayerSpecification)
-      }
-    } else {
-      map.setTerrain(null)
-      if (map.getLayer(SKY_LAYER_ID)) {
-        map.removeLayer(SKY_LAYER_ID)
-      }
-    }
-  }, [terrainEnabled, terrainExaggeration])
+    const exaggeration = customExaggeration
+      ? terrainExaggeration
+      : DEFAULT_TERRAIN_EXAGGERATION
+    map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration })
+  }, [terrainEnabled, terrainExaggeration, customExaggeration])
+
+  // --- Projection toggle ---
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    map.setProjection(projection)
+  }, [projection])
 
   return (
     <>

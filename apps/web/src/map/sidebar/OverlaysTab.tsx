@@ -1,10 +1,7 @@
 import { useMapStore } from '../../stores/mapStore'
 
-const SENTINEL_MIN_YEAR = 2018
-
 export default function OverlaysTab() {
   const {
-    baseLayer,
     season,
     topoSource,
     overlayPistes,
@@ -13,12 +10,9 @@ export default function OverlaysTab() {
     setOverlaySkiTouring,
     overlaySnowshoe,
     setOverlaySnowshoe,
-    sentinelYear,
-    setSentinelYear,
   } = useMapStore()
 
   const isSwisstopo = topoSource === 'swisstopo'
-  const currentYear = new Date().getFullYear()
 
   return (
     <div className="space-y-5">
@@ -47,27 +41,7 @@ export default function OverlaysTab() {
         )}
       </Section>
 
-      {baseLayer === 'satellite' && (
-        <Section title="Seasonal Satellite">
-          <label className="flex items-center justify-between text-sm text-white/60">
-            <span>Year</span>
-            <select
-              value={sentinelYear}
-              onChange={(e) => setSentinelYear(parseInt(e.target.value))}
-              className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm text-white outline-none focus:border-accent/50"
-            >
-              {Array.from({ length: currentYear - SENTINEL_MIN_YEAR + 1 }, (_, i) => {
-                const year = currentYear - i
-                return (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                )
-              })}
-            </select>
-          </label>
-        </Section>
-      )}
+      {/* Sentinel year selector — hidden until Sentinel Hub is configured (capability-aware cards TODO) */}
     </div>
   )
 }

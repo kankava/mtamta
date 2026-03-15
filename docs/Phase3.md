@@ -266,7 +266,7 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
 - [x] `Sidebar.tsx` — collapsible left panel (320px, slide in/out), tab buttons, header with user info + sign out
 - [x] `BasemapsTab.tsx` — card grid: 4 global cards (Outdoors/Satellite × Summer/Winter) + 7 country topo cards (swisstopo summer/winter, IGN, basemap.at, BKG, Kartverket, USGS). Active card determined by matching current state
 - [x] `OverlaysTab.tsx` — toggle switches for pistes, ski touring (swisstopo only), snowshoe (swisstopo only), sentinel year selector (satellite only)
-- [x] `SettingsTab.tsx` — 3D terrain toggle + exaggeration slider
+- [x] `SettingsTab.tsx` — custom exaggeration toggle + slider, flat/globe projection toggle (3D terrain toggle moved to map control)
 
 ### 4. AppLayout rewire — `apps/web/src/map/AppLayout.tsx`
 

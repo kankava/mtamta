@@ -123,23 +123,15 @@ function applyOverlays(map: mapboxgl.Map) {
   }
 }
 
-/** Apply sentinel seasonal satellite */
+/** Apply sentinel seasonal satellite overlay (disabled until Sentinel Hub is configured) */
 function applySentinel(map: mapboxgl.Map) {
-  const { baseLayer, season, sentinelYear } = useMapStore.getState()
-
+  // Always clean up in case it was previously active
   removeSourceAndLayer(map, SENTINEL_LAYER, SENTINEL_SOURCE)
 
-  // Only show sentinel when satellite base layer is active
-  if (baseLayer !== 'satellite') return
-
-  const tileUrl = `${API_BASE_URL}/api/v1/tiles/sentinel/{z}/{x}/{y}?season=${season}&year=${sentinelYear}`
-
-  addRasterLayer(map, SENTINEL_SOURCE, SENTINEL_LAYER, tileUrl, {
-    tileSize: 256,
-    maxZoom: 14,
-    opacity: 1,
-    attribution: '&copy; Copernicus Sentinel-2',
-  })
+  // Sentinel overlay adds seasonal/historical satellite imagery on top of
+  // the Mapbox satellite base. Disabled until Sentinel Hub backend env vars
+  // are configured and the UI year selector is re-enabled.
+  // TODO: gate on /api/v1/capabilities endpoint (capability-aware cards)
 }
 
 /**

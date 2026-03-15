@@ -11,6 +11,10 @@ const TABS: { id: SidebarTab; label: string }[] = [
   { id: 'settings', label: 'Settings' },
 ]
 
+/** Insets from edges — sidebar floats symmetrically on the right side */
+const INSET_TOP = 'top-3'
+const INSET_BOTTOM = 'bottom-60'
+
 export default function Sidebar() {
   const { sidebarOpen, sidebarTab, setSidebarOpen, setSidebarTab } = useMapStore()
   const { user, signOut } = useAuthStore()
@@ -18,16 +22,16 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Collapsed toggle — dark glass pill on left edge */}
+      {/* Collapsed toggle — dark glass pill on right edge */}
       {!sidebarOpen && (
         <button
           onClick={() => setSidebarOpen(true)}
-          className="absolute top-3 left-3 z-10 flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900/80 backdrop-blur-md text-white/70 hover:text-white hover:bg-slate-900/90 shadow-lg cursor-pointer border-none transition-all duration-150"
+          className={`absolute ${INSET_TOP} right-3 z-10 mt-3 flex h-9 w-9 items-center justify-center rounded-lg bg-slate-900/80 backdrop-blur-md text-white/70 hover:text-white hover:bg-slate-900/90 shadow-lg cursor-pointer border-none transition-all duration-150`}
           title="Open sidebar"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path
-              d="M6 3l5 5-5 5"
+              d="M10 3l-5 5 5 5"
               stroke="currentColor"
               strokeWidth="2"
               strokeLinecap="round"
@@ -37,17 +41,32 @@ export default function Sidebar() {
         </button>
       )}
 
-      {/* Sidebar — dark frosted glass */}
+      {/* Sidebar — dark frosted glass, right side, inset from top/bottom */}
       <div
-        className={`absolute top-0 left-0 z-10 h-full w-80 bg-slate-900/92 backdrop-blur-xl flex flex-col transition-transform duration-200 ease-out ${
+        className={`absolute ${INSET_TOP} ${INSET_BOTTOM} right-0 z-10 w-80 bg-slate-900/92 backdrop-blur-xl flex flex-col transition-transform duration-200 ease-out rounded-l-xl ${
           sidebarOpen
-            ? 'translate-x-0 shadow-[4px_0_24px_rgba(0,0,0,0.3)]'
-            : '-translate-x-full shadow-none'
+            ? 'translate-x-0 shadow-[-4px_0_24px_rgba(0,0,0,0.3)]'
+            : 'translate-x-full shadow-none'
         }`}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-white/[0.08] cursor-pointer border-none bg-transparent text-white/40 hover:text-white/70 transition-colors"
+              title="Close sidebar"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path
+                  d="M6 3l5 5-5 5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
             <div className="h-2 w-2 rounded-full bg-accent" />
             <span className="text-sm font-semibold text-white tracking-tight">mtamta</span>
           </div>
@@ -63,21 +82,6 @@ export default function Sidebar() {
                 </button>
               </>
             )}
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-white/[0.08] cursor-pointer border-none bg-transparent text-white/40 hover:text-white/70 transition-colors"
-              title="Close sidebar"
-            >
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <path
-                  d="M10 3l-5 5 5 5"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
           </div>
         </div>
 

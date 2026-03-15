@@ -308,7 +308,7 @@ apps/web/src/
 2. **Sidebar UI** (`apps/web/src/map/sidebar/`)
    - `BasemapsTab.tsx` — card grid with global cards (Outdoors/Satellite × Summer/Winter) + country topo cards. Clicking a card atomically sets baseLayer + season + topoSource via `selectBasemap()`
    - `OverlaysTab.tsx` — toggle switches for pistes, ski touring, snowshoe; Sentinel year selector (satellite only)
-   - `SettingsTab.tsx` — 3D terrain toggle + exaggeration slider
+   - `SettingsTab.tsx` — custom exaggeration toggle + slider, flat/globe projection toggle (3D terrain toggle is a map control)
    - Dynamic map attribution: update attribution control text when topo source changes
 
 3. **Map state extensions** (`apps/web/src/stores/mapStore.ts`)
