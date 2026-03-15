@@ -90,6 +90,12 @@ All services have free tiers sufficient for development:
 | `GOOGLE_CLIENT_ID` | `<from Google Cloud Console>` | |
 | `WEB_ORIGIN` | `https://mtamta.pages.dev` | Used for CORS |
 | `ALLOWED_EMAILS` | `<your email>` | Restricts sign-ups |
+| `APPLE_CLIENT_ID` | `<from Apple Developer>` | Optional — Apple OAuth |
+| `SENTRY_DSN` | `<from Sentry>` | Optional — error tracking |
+| `IGN_API_KEY` | `<from IGN Géoplateforme>` | Optional — France topo tiles |
+| `SENTINEL_HUB_INSTANCE_ID` | `<from Sentinel Hub>` | Optional — seasonal satellite tiles |
+| `SENTINEL_HUB_CLIENT_ID` | `<from Sentinel Hub>` | Optional — satellite OAuth |
+| `SENTINEL_HUB_CLIENT_SECRET` | `<from Sentinel Hub>` | Optional — satellite OAuth |
 
 ---
 

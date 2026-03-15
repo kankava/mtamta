@@ -1746,12 +1746,10 @@ EXPOSE 8080
 CMD ["/api"]
 ```
 
-**Local development** — `docker-compose.yml` mirrors production topology:
-
-> **Note**: This docker-compose shows the final-state local development setup. Services are added incrementally per Phase (Redis in Phase 1, MinIO in Phase 4, Meilisearch in Phase 10).
+**Local development** — `docker-compose.yml` provides the infrastructure services:
 
 ```yaml
-# docker-compose.yml (root)
+# docker-compose.yml (root) — current state (Phases 1–3)
 services:
   postgres:
     image: timescale/timescaledb-ha:pg17
@@ -1769,33 +1767,11 @@ services:
     ports:
       - "6379:6379"
 
-  meilisearch:
-    image: getmeili/meilisearch:v1.12
-    environment:
-      MEILI_ENV: development
-      MEILI_MASTER_KEY: mtamta-dev-key
-    ports:
-      - "7700:7700"
-    volumes:
-      - meilidata:/meili_data
-
-  minio:
-    image: minio/minio
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - miniodata:/data
-
 volumes:
   pgdata:
-  meilidata:
-  miniodata:
 ```
+
+> **Future services** (added when their phases are implemented): MinIO/S3 (Phase 4 — file storage), Meilisearch (Phase 10 — search).
 
 The Go API and Vite dev server run on the host (not containerized) during development for fast iteration and hot reload. `turbo dev` starts both.
 
