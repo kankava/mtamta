@@ -33,7 +33,7 @@
 
 ## Soon
 
-- [ ] Web bundle size is large (MapPage chunk ~1.7MB) — plan code-splitting before phases add more UI/features
+- [x] Web bundle size — split mapbox-gl into separate chunk (MapPage: 1,685KB → 20KB)
 - [ ] Add tile-proxy observability (cache hit ratio, upstream error rate, per-provider request volume)
 - [ ] Sentry for error tracking (free tier)
 - [ ] Mapbox token URL restrictions (lock pk.* token to production domain)

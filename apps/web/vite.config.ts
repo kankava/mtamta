@@ -11,4 +11,16 @@ export default defineConfig({
       '@mtamta/map-core': path.resolve(__dirname, '../../packages/map-core/src/index.ts'),
     },
   },
+  build: {
+    chunkSizeWarningLimit: 1700,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/mapbox-gl')) {
+            return 'mapbox-gl'
+          }
+        },
+      },
+    },
+  },
 })
