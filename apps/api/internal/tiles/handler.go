@@ -15,8 +15,23 @@ import (
 )
 
 // blankSentinel is cached in Redis for tiles detected as blank,
-// so subsequent requests return 204 without hitting upstream.
+// so subsequent requests return a transparent tile without hitting upstream.
 var blankSentinel = []byte("__blank__")
+
+// transparentPNG is a minimal 1x1 transparent PNG (67 bytes).
+// Returned for blank tiles so Mapbox GL can decode a valid image
+// and the base layer shows through.
+var transparentPNG = []byte{
+	0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, // PNG signature
+	0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, // IHDR chunk
+	0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, // 1x1
+	0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, // RGBA, 8-bit
+	0x00, 0x00, 0x00, 0x0a, 0x49, 0x44, 0x41, 0x54, // IDAT chunk
+	0x78, 0x9c, 0x62, 0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xe5, // compressed data
+	0x27, 0xde, 0xfc,
+	0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, // IEND chunk
+	0xae, 0x42, 0x60, 0x82,
+}
 
 // Handler serves proxied tile requests.
 type Handler struct {
@@ -71,8 +86,10 @@ func (h *Handler) ServeTile(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		// Blank sentinel — upstream had no data for this tile
 		if bytes.Equal(cached, blankSentinel) {
+			w.Header().Set("Content-Type", "image/png")
+			w.Header().Set("Cache-Control", "public, max-age=86400")
 			w.Header().Set("X-Cache", "HIT")
-			w.WriteHeader(http.StatusNoContent)
+			w.Write(transparentPNG) //nolint:errcheck
 			return
 		}
 		w.Header().Set("Content-Type", detectContentType(cached))
@@ -103,14 +120,17 @@ func (h *Handler) ServeTile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Detect blank tiles — small responses from providers that pad empty
-	// areas with uniform-color JPEGs. Return 204 so the client's base
-	// layer shows through. Cache a sentinel so we don't re-fetch.
+	// areas with uniform-color JPEGs. Return a 1x1 transparent PNG so
+	// Mapbox GL can decode a valid image and the base layer shows through.
+	// Cache a sentinel so we don't re-fetch.
 	if provider.BlankThreshold > 0 && len(data) <= provider.BlankThreshold {
 		if err := h.redis.Set(ctx, cacheKey, blankSentinel, provider.CacheTTL).Err(); err != nil {
 			slog.Warn("tile cache set failed", "key", cacheKey, "error", err)
 		}
+		w.Header().Set("Content-Type", "image/png")
+		w.Header().Set("Cache-Control", "public, max-age=86400")
 		w.Header().Set("X-Cache", "MISS")
-		w.WriteHeader(http.StatusNoContent)
+		w.Write(transparentPNG) //nolint:errcheck
 		return
 	}
 

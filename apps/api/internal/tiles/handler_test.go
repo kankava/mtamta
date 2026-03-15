@@ -246,13 +246,16 @@ func TestServeTile_BlankTileDetection(t *testing.T) {
 	}
 	h := NewHandler(providers, rc)
 
-	// Should detect blank and return 204
+	// Should detect blank and return transparent PNG
 	rr := makeRequest(h, "blank", 10, 100, 200)
-	if rr.Code != http.StatusNoContent {
-		t.Fatalf("expected 204, got %d", rr.Code)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr.Code)
 	}
-	if rr.Body.Len() != 0 {
-		t.Errorf("expected empty body for blank tile, got %d bytes", rr.Body.Len())
+	if rr.Header().Get("Content-Type") != "image/png" {
+		t.Errorf("expected image/png, got %s", rr.Header().Get("Content-Type"))
+	}
+	if rr.Body.Len() != len(transparentPNG) {
+		t.Errorf("expected %d bytes (transparent PNG), got %d", len(transparentPNG), rr.Body.Len())
 	}
 }
 
@@ -283,19 +286,22 @@ func TestServeTile_BlankTileCached(t *testing.T) {
 	}
 	h := NewHandler(providers, rc)
 
-	// First — cache miss, detect blank
+	// First — cache miss, detect blank → transparent PNG
 	rr1 := makeRequest(h, "blank", 10, 100, 200)
-	if rr1.Code != http.StatusNoContent {
-		t.Fatalf("expected 204, got %d", rr1.Code)
+	if rr1.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rr1.Code)
 	}
 
-	// Second — blank sentinel from cache
+	// Second — blank sentinel from cache → transparent PNG
 	rr2 := makeRequest(h, "blank", 10, 100, 200)
-	if rr2.Code != http.StatusNoContent {
-		t.Fatalf("expected 204 from cache, got %d", rr2.Code)
+	if rr2.Code != http.StatusOK {
+		t.Fatalf("expected 200 from cache, got %d", rr2.Code)
 	}
 	if rr2.Header().Get("X-Cache") != "HIT" {
 		t.Errorf("expected X-Cache: HIT, got %s", rr2.Header().Get("X-Cache"))
+	}
+	if rr2.Header().Get("Content-Type") != "image/png" {
+		t.Errorf("expected image/png, got %s", rr2.Header().Get("Content-Type"))
 	}
 }
 
