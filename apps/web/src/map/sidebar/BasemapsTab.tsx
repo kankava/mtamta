@@ -23,7 +23,13 @@ const SATELLITE_CARDS: BasemapCard[] = [
 
 const TOPO_GLOBAL_CARDS: BasemapCard[] = [
   { preset: 'outdoors-summer', label: 'Global Summer', flag: '\u{1F30D}' },
-  { preset: 'outdoors-winter', label: 'Global Winter', flag: '\u{1F30D}' },
+  {
+    preset: 'outdoors-winter',
+    label: 'Global Winter',
+    flag: '\u{1F30D}',
+    disabled: true,
+    hint: 'Coming soon',
+  },
 ]
 
 const TOPO_COUNTRY_CARDS: BasemapCard[] = [

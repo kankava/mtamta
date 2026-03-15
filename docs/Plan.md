@@ -404,6 +404,7 @@ apps/web/src/map/
 - Trip segments model for climbing: approach/climb/descent phases with per-pitch metadata
 - Pitch-by-pitch data: grade (multi-system JSONB), elevation gain, duration, belay type
 - Vertical elevation profile visualization for climb segments (pitch stacked bars, color = grade)
+- Map search bar — geocode cities, peaks, POIs via Mapbox Search Box API (free tier: 100k req/month)
 
 ### Technical Tasks
 
@@ -421,11 +422,14 @@ apps/web/src/map/
    - `repository.go` — PostGIS-backed trip storage
    - Trips table migration
 
-3. **Photo upload**
+3. **Photo upload and geotagging**
    - `internal/storage/s3.go` — S3 client, pre-signed URL generation
    - `POST /api/v1/upload/url` — returns pre-signed upload URL
    - `POST /api/v1/trips/:id/photos` — associate uploaded photo with trip
-   - Trip photos table migration
+   - Trip photos table migration (includes `lat`/`lng` columns for photo location)
+   - EXIF extraction on upload: read GPS coordinates and timestamp from photo metadata
+   - Time-based interpolation fallback: match photo timestamp against trip GPX track to resolve position
+   - Resolution order: EXIF GPS → timestamp interpolation → null (no location)
 
 4. **Map trip display** (`apps/web/src/map/`)
    - `TripLayer.tsx` — renders trip routes as GeoJSON on the map
@@ -440,7 +444,12 @@ apps/web/src/map/
    - `stores/tripStore.ts` — trip list, active trip, filters
    - `components/GpxUploader.tsx` — drag-and-drop GPX upload
 
-6. **Climbing trip segments** (`apps/api/internal/climbing/`)
+6. **Map search bar** (`apps/web/src/map/`)
+   - `@mapbox/search-js-react` SearchBox component
+   - Geocode cities, mountains, POIs — fly to result on map
+   - Uses existing Mapbox access token (no backend changes)
+
+7. **Climbing trip segments** (`apps/api/internal/climbing/`)
    - `trip_segments` table migration (`004_trip_segments.up.sql`)
    - `POST /api/v1/trips/:id/segments`, `GET /api/v1/trips/:id/segments`
    - `@openbeta/sandbag` frontend grade display/conversion
@@ -467,7 +476,8 @@ apps/api/
 
 apps/web/src/
 ├── map/
-│   └── TripLayer.tsx
+│   ├── TripLayer.tsx
+│   └── MapSearch.tsx
 ├── pages/
 │   ├── TripDetailPage.tsx
 │   └── TripCreatePage.tsx
@@ -492,6 +502,7 @@ packages/shared/src/types/
 - [ ] Photos can be uploaded and displayed on the trip detail page
 - [ ] Only the trip owner can edit or delete their trip
 - [ ] Trips are queryable by bounding box (`GET /api/v1/map/trips?bbox=...`)
+- [ ] Map search bar geocodes locations and flies to result on map
 - [ ] User can add approach/climb/descent segments to a climbing trip
 - [ ] Each climb segment supports per-pitch metadata (grade, elevation, duration, belay type)
 - [ ] Grades display correctly in user's preferred system via @openbeta/sandbag
