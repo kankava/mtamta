@@ -405,6 +405,7 @@ apps/web/src/map/
 - Pitch-by-pitch data: grade (multi-system JSONB), elevation gain, duration, belay type
 - Vertical elevation profile visualization for climb segments (pitch stacked bars, color = grade)
 - Map search bar — geocode cities, peaks, POIs via Mapbox Search Box API (free tier: 100k req/month)
+- Radix UI primitives for accessible interactive components (dialogs, dropdowns, toasts) — install per-component as needed (`@radix-ui/react-dialog`, etc.), styled with Tailwind
 
 ### Technical Tasks
 
@@ -416,96 +417,28 @@ apps/web/src/map/
    - Calculate elevation gain and loss
    - Calculate duration from first/last trackpoint timestamps
 
-2. **Trip API** (`apps/api/internal/trip/`)
-   - `handler.go` — CRUD endpoints
-   - `service.go` — business logic, GPX processing orchestration
-   - `repository.go` — PostGIS-backed trip storage
-   - Trips table migration
+2. **Trip CRUD API** — GPX parsing (`encoding/xml`), PostGIS route storage, trip CRUD endpoints, bbox GeoJSON query with zoom-dependent simplification
+3. **Photo upload + geotagging** — S3 pre-signed uploads (server-generated keys), EXIF GPS extraction, timestamp interpolation fallback
+4. **Map trip display** — trip routes as GeoJSON on map, color by activity type, click to open detail panel
+5. **Trip UI** — creation page (GPX upload + metadata), detail page, card component, Radix UI primitives (Dialog, DropdownMenu, Toast)
+6. **Map search bar** — Mapbox SearchBox geocoder (fly-to-place only; full app search is Phase 10)
+7. **Climbing trip segments** — approach/climb/descent segments, per-pitch JSONB metadata, `@openbeta/sandbag` grade display, vertical profile
 
-3. **Photo upload and geotagging**
-   - `internal/storage/s3.go` — S3 client, pre-signed URL generation
-   - `POST /api/v1/upload/url` — returns pre-signed upload URL
-   - `POST /api/v1/trips/:id/photos` — associate uploaded photo with trip
-   - Trip photos table migration (includes `lat`/`lng` columns for photo location)
-   - EXIF extraction on upload: read GPS coordinates and timestamp from photo metadata
-   - Time-based interpolation fallback: match photo timestamp against trip GPX track to resolve position
-   - Resolution order: EXIF GPS → timestamp interpolation → null (no location)
-
-4. **Map trip display** (`apps/web/src/map/`)
-   - `TripLayer.tsx` — renders trip routes as GeoJSON on the map
-   - Fetch trips within current viewport bounding box
-   - Color routes by activity type
-   - Click a route to open trip detail panel
-
-5. **Trip UI** (`apps/web/src/`)
-   - `pages/TripDetailPage.tsx` — full trip view (route on mini-map, stats, photos, description)
-   - `pages/TripCreatePage.tsx` — upload GPX, fill metadata, add photos
-   - `components/TripCard.tsx` — compact trip preview for list views
-   - `stores/tripStore.ts` — trip list, active trip, filters
-   - `components/GpxUploader.tsx` — drag-and-drop GPX upload
-
-6. **Map search bar** (`apps/web/src/map/`)
-   - `@mapbox/search-js-react` SearchBox component
-   - Geocode cities, mountains, POIs — fly to result on map
-   - Uses existing Mapbox access token (no backend changes)
-
-7. **Climbing trip segments** (`apps/api/internal/climbing/`)
-   - `trip_segments` table migration (`004_trip_segments.up.sql`)
-   - `POST /api/v1/trips/:id/segments`, `GET /api/v1/trips/:id/segments`
-   - `@openbeta/sandbag` frontend grade display/conversion
-   - `ClimbingProfile.tsx` — vertical pitch-by-pitch stacked bars
-   - Climbing-aware trip detail: segments timeline, per-pitch stats
-
-### Key Files
-
-```
-apps/api/
-├── internal/trip/
-│   ├── handler.go
-│   ├── service.go
-│   ├── gpx.go
-│   └── repository.go
-├── internal/climbing/
-│   └── (see Phase 11 for full package; trip_segments repo here)
-├── internal/storage/
-│   └── s3.go
-├── migrations/
-│   ├── 002_trips.up.sql
-│   ├── 003_trip_photos.up.sql
-│   └── 004_trip_segments.up.sql
-
-apps/web/src/
-├── map/
-│   ├── TripLayer.tsx
-│   └── MapSearch.tsx
-├── pages/
-│   ├── TripDetailPage.tsx
-│   └── TripCreatePage.tsx
-├── components/
-│   ├── TripCard.tsx
-│   ├── GpxUploader.tsx
-│   └── ClimbingProfile.tsx
-└── stores/
-    └── tripStore.ts
-
-packages/shared/src/types/
-└── trip.ts
-```
+> **Detailed implementation plan**: See [`docs/Phase4.md`](Phase4.md) for sub-milestones (4a–4d), file manifests, SQL schemas, endpoint contracts, and verification checklists.
 
 ### Acceptance Criteria
 
 - [ ] User can upload a GPX file and create a trip with title, description, activity type
 - [ ] Backend parses GPX and stores route geometry in PostGIS
 - [ ] Trip detail page shows route on map with distance, elevation, duration stats
-- [ ] Trip routes appear on the main map when browsing
+- [ ] Trip routes appear on the main map when browsing (public + published only)
 - [ ] Clicking a route on the map opens the trip detail panel
 - [ ] Photos can be uploaded and displayed on the trip detail page
 - [ ] Only the trip owner can edit or delete their trip
-- [ ] Trips are queryable by bounding box (`GET /api/v1/map/trips?bbox=...`)
+- [ ] Trips are queryable by bounding box with zoom-dependent simplification and feature cap
 - [ ] Map search bar geocodes locations and flies to result on map
 - [ ] User can add approach/climb/descent segments to a climbing trip
 - [ ] Each climb segment supports per-pitch metadata (grade, elevation, duration, belay type)
-- [ ] Grades display correctly in user's preferred system via @openbeta/sandbag
 - [ ] Climbing trip detail shows vertical elevation profile with pitch-by-pitch stacked bars
 
 ---

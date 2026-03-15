@@ -75,6 +75,7 @@ The platform combines rich interactive maps (topographic, satellite, 3D terrain)
 | `mapbox-gl` | Web map rendering |
 | `@rnmapbox/maps` | React Native map rendering |
 | `zustand` | State management |
+| `@radix-ui/react-*` | Headless accessible UI primitives (dialogs, dropdowns, toasts) — installed per-component, styled with Tailwind |
 | `deck.gl` | Advanced data visualization (optional) |
 | `@turf/turf` | Geodesic distance, geometry operations |
 | `@openbeta/sandbag` | Climbing grade conversion/comparison across systems (YDS, French, UIAA, etc.) |
@@ -547,7 +548,7 @@ CREATE TABLE auth_providers (
 The web app is centered around an interactive map. The map component is the primary UI element, with overlaid panels for trip details, search, and filters.
 
 **Implementation requirements for `MapContainer.tsx`:**
-- Use `useRef` + `useEffect` pattern — store map instance in a ref, initialize in `useEffect(fn, [])`, **always return a cleanup function that calls `map.remove()`** to prevent WebGL context leaks on route changes
+- Use `useRef` + `useEffect` pattern — store map instance in a ref, initialize in `useEffect(fn, [])`. The map persists for the lifetime of `AppLayout` (not remounted on sidebar or panel changes). Return a cleanup function that calls `map.remove()` only when `AppLayout` itself unmounts to prevent WebGL context leaks
 - Import `'mapbox-gl/dist/mapbox-gl.css'` — the map canvas is invisible without it
 - Use Mapbox GL JS **v3.x**: pass `accessToken` in the Map constructor rather than setting `mapboxgl.accessToken` globally
 - `VITE_MAPBOX_ACCESS_TOKEN` must be a public `pk.*` token with URL restrictions configured per environment in the Mapbox dashboard; the Directions API proxy uses a server-side `sk.*` token that never reaches the browser
@@ -1157,7 +1158,7 @@ All spatial columns use `GEOGRAPHY` (not `GEOMETRY`) so distance/length function
 CREATE TABLE trip_photos (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     trip_id    UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
-    url        TEXT NOT NULL,
+    key        TEXT NOT NULL,  -- S3 object key (e.g. 'photos/{trip_id}/{uuid}.jpg')
     caption    TEXT,
     location   GEOGRAPHY(Point, 4326),
     taken_at   TIMESTAMPTZ,
@@ -1511,11 +1512,16 @@ All user-uploaded files are stored in S3-compatible storage (AWS S3, MinIO, Clou
 | `topos/` | Crag topo photos (originals) | Public CDN |
 | `models/` | 3D crag models (glTF) and point clouds | Public CDN |
 
-**Upload Flow**:
-1. Client requests a pre-signed upload URL from the API
+**Upload Flows**:
+
+*GPX files* — single multipart `POST /api/v1/trips` with GPX file + metadata fields. The API parses the GPX server-side, stores the route in PostGIS, and optionally stores the original file in S3 (`gpx/{trip_id}.gpx`). No pre-signed URL needed — GPX files are small (<50 MB) and must be parsed before the trip is created.
+
+*Photos and other large files* — pre-signed URL flow:
+1. Client requests a pre-signed upload URL from the API (`POST /api/v1/upload/url` with `{trip_id, file_ext, content_type}`). **The server generates the key** (`photos/{trip_id}/{uuid}.{ext}`) — clients never choose keys
 2. Client uploads directly to S3 (no proxying through the API)
-3. Client sends the S3 key back to the API to associate with the trip/user
-4. API generates thumbnails asynchronously (for photos)
+3. Client sends the **S3 object key** (not an arbitrary URL) back to the API to associate with the trip (`POST /api/v1/trips/{id}/photos` with `{key, caption, sort_order}`)
+4. API validates the key matches the expected prefix (`photos/{trip_id}/`), fetches the object from S3 to extract EXIF metadata, and stores the photo record
+5. Thumbnails: deferred — originals served initially in Phase 4c. Async thumbnail generation added in a later phase when traffic justifies it
 
 ---
 
@@ -1554,13 +1560,16 @@ All user-uploaded files are stored in S3-compatible storage (AWS S3, MinIO, Clou
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/api/v1/trips` | Create a trip |
+| `POST` | `/api/v1/trips` | Create a trip (multipart: GPX file + metadata, or JSON-only for manual entry) |
 | `GET` | `/api/v1/trips/:id` | Get trip details |
 | `PATCH` | `/api/v1/trips/:id` | Update a trip |
 | `DELETE` | `/api/v1/trips/:id` | Delete a trip |
 | `GET` | `/api/v1/trips` | List/search trips (filters: activity_type, bbox, status). Defaults to status=published |
-| `POST` | `/api/v1/trips/:id/gpx` | Upload GPX file for trip |
-| `POST` | `/api/v1/trips/:id/photos` | Upload photos for trip |
+| `GET` | `/api/v1/map/trips` | Trip routes as GeoJSON FeatureCollection (`?bbox=w,s,e,n&zoom=z&limit=200`) — public, no auth. Zoom controls `ST_Simplify` tolerance; limit defaults 200, max 500 |
+| `POST` | `/api/v1/trips/:id/photos` | Associate uploaded photo with trip (body: `{key, caption, sort_order}`) |
+| `GET` | `/api/v1/trips/:id/photos` | List trip photos |
+| `DELETE` | `/api/v1/photos/:id` | Delete a photo |
+| `POST` | `/api/v1/upload/url` | Request pre-signed S3 upload URL (body: `{trip_id, file_ext, content_type}`, server generates key). **Authenticated, verifies caller owns trip_id** |
 | `GET` | `/api/v1/trips/trending` | Get trending trips |
 | `GET` | `/api/v1/trips/featured` | Get featured trips |
 
@@ -1623,9 +1632,10 @@ All user-uploaded files are stored in S3-compatible storage (AWS S3, MinIO, Clou
 
 ### Geo / Map
 
+> Canonical trip/photo/upload endpoints are in the [Trips](#trips) table above. This table covers non-trip map endpoints only.
+
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/v1/map/trips` | Get trips within bounding box |
 | `GET` | `/api/v1/map/pois` | Get POIs within bounding box |
 | `GET` | `/api/v1/tiles/{layer}/{z}/{x}/{y}` | Get custom overlay tile |
 | `GET` | `/api/v1/tiles/sentinel/{z}/{x}/{y}?season=winter&year=2024` | Get seasonal satellite tile (proxied Sentinel Hub) |
@@ -1654,9 +1664,7 @@ All user-uploaded files are stored in S3-compatible storage (AWS S3, MinIO, Clou
 
 ### Storage
 
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/api/v1/upload/url` | Get pre-signed upload URL |
+> Canonical upload endpoint is in the [Trips](#trips) table above (`POST /api/v1/upload/url`).
 
 ---
 
