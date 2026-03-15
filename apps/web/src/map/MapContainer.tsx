@@ -163,9 +163,7 @@ export default function MapContainer() {
     const map = mapRef.current
     if (!map || !map.isStyleLoaded() || !terrainEnabled) return
 
-    const exaggeration = customExaggeration
-      ? terrainExaggeration
-      : DEFAULT_TERRAIN_EXAGGERATION
+    const exaggeration = customExaggeration ? terrainExaggeration : DEFAULT_TERRAIN_EXAGGERATION
     map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration })
   }, [terrainEnabled, terrainExaggeration, customExaggeration])
 

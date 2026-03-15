@@ -12,7 +12,13 @@ interface BasemapCard {
 
 const SATELLITE_CARDS: BasemapCard[] = [
   { preset: 'satellite-summer', label: 'Summer', flag: '\u{1F6F0}\u{FE0F}' },
-  { preset: 'satellite-winter', label: 'Winter', flag: '\u{1F6F0}\u{FE0F}', disabled: true, hint: 'Coming soon' },
+  {
+    preset: 'satellite-winter',
+    label: 'Winter',
+    flag: '\u{1F6F0}\u{FE0F}',
+    disabled: true,
+    hint: 'Coming soon',
+  },
 ]
 
 const TOPO_GLOBAL_CARDS: BasemapCard[] = [
@@ -63,14 +69,12 @@ export default function BasemapsTab() {
       </Section>
 
       <Section title="Topos">
-        <div className="grid grid-cols-2 gap-2">
-          {renderCards(TOPO_GLOBAL_CARDS)}
-        </div>
+        <div className="grid grid-cols-2 gap-2">{renderCards(TOPO_GLOBAL_CARDS)}</div>
         <div className="mt-3 pt-3 border-t border-white/[0.06]">
-          <span className="text-[9px] uppercase tracking-wider text-white/20 mb-2 block">Country</span>
-          <div className="grid grid-cols-2 gap-2">
-            {renderCards(TOPO_COUNTRY_CARDS)}
-          </div>
+          <span className="text-[9px] uppercase tracking-wider text-white/20 mb-2 block">
+            Country
+          </span>
+          <div className="grid grid-cols-2 gap-2">{renderCards(TOPO_COUNTRY_CARDS)}</div>
         </div>
       </Section>
     </div>
@@ -108,9 +112,7 @@ function Card({
       >
         {card.label}
       </span>
-      {card.hint && (
-        <span className="text-[9px] text-white/25 leading-tight">{card.hint}</span>
-      )}
+      {card.hint && <span className="text-[9px] text-white/25 leading-tight">{card.hint}</span>}
     </button>
   )
 }

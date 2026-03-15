@@ -58,7 +58,9 @@ export default function SettingsTab() {
                   : 'bg-white/5 border-white/10 text-white/50 hover:text-white/70'
               }`}
             >
-              <span className="text-sm leading-none">{p === 'mercator' ? '\u{1F5FA}\u{FE0F}' : '\u{1F30D}'}</span>
+              <span className="text-sm leading-none">
+                {p === 'mercator' ? '\u{1F5FA}\u{FE0F}' : '\u{1F30D}'}
+              </span>
               {p === 'mercator' ? 'Flat' : 'Globe'}
             </button>
           ))}

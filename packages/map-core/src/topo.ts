@@ -88,8 +88,7 @@ export const TOPO_SOURCES: TopoSourceDef[] = [
     name: 'Kartverket',
     country: 'NO',
     bbox: [4.65, 57.96, 31.17, 71.19],
-    tileUrl:
-      'https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png',
+    tileUrl: 'https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png',
     attribution: '&copy; <a href="https://www.kartverket.no">Kartverket</a>',
     maxZoom: 18,
     tileSize: 256,
