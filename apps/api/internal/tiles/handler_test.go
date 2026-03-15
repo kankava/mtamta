@@ -146,7 +146,7 @@ func TestServeTile_RateLimit(t *testing.T) {
 	defer cleanup()
 
 	// Exhaust rate limit
-	h.limiter = NewRateLimiter(1)
+	h.limiters["test"] = NewRateLimiter(1)
 	_ = makeRequest(h, "test", 10, 1, 1) // uses the 1 allowed request
 
 	rr := makeRequest(h, "test", 10, 2, 2) // should be rate limited
@@ -219,6 +219,120 @@ func TestServeTile_FormatOrderZYX(t *testing.T) {
 	expected := "/?TILEMATRIX=10&TILEROW=200&TILECOL=100"
 	if requestedURL != expected {
 		t.Errorf("expected %s, got %s", expected, requestedURL)
+	}
+}
+
+func TestServeTile_BlankTileDetection(t *testing.T) {
+	// Upstream returns a small response (simulating a blank swisstopo JPEG)
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/jpeg")
+		w.Write([]byte("tiny-blank")) // 10 bytes, below threshold
+	}))
+	defer upstream.Close()
+
+	rc := newTestRedis()
+	defer rc.Close()
+
+	providers := map[string]*Provider{
+		"blank": {
+			ID:             "blank",
+			UpstreamURL:    upstream.URL + "/%d/%d/%d.jpeg",
+			FormatOrder:    "zxy",
+			CacheTTL:       1 * time.Minute,
+			CachePrefix:    "tile:blank",
+			Headers:        map[string]string{},
+			BlankThreshold: 1000,
+		},
+	}
+	h := NewHandler(providers, rc)
+
+	// Should detect blank and return 204
+	rr := makeRequest(h, "blank", 10, 100, 200)
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d", rr.Code)
+	}
+	if rr.Body.Len() != 0 {
+		t.Errorf("expected empty body for blank tile, got %d bytes", rr.Body.Len())
+	}
+}
+
+func TestServeTile_BlankTileCached(t *testing.T) {
+	rc := redis.NewClient(&redis.Options{Addr: "localhost:6379", DB: 15})
+	if err := rc.Ping(context.Background()).Err(); err != nil {
+		t.Skip("Redis not available, skipping cache test")
+	}
+	rc.FlushDB(context.Background())
+	defer rc.Close()
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/jpeg")
+		w.Write([]byte("tiny")) // below threshold
+	}))
+	defer upstream.Close()
+
+	providers := map[string]*Provider{
+		"blank": {
+			ID:             "blank",
+			UpstreamURL:    upstream.URL + "/%d/%d/%d.jpeg",
+			FormatOrder:    "zxy",
+			CacheTTL:       1 * time.Minute,
+			CachePrefix:    "tile:blank",
+			Headers:        map[string]string{},
+			BlankThreshold: 1000,
+		},
+	}
+	h := NewHandler(providers, rc)
+
+	// First — cache miss, detect blank
+	rr1 := makeRequest(h, "blank", 10, 100, 200)
+	if rr1.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d", rr1.Code)
+	}
+
+	// Second — blank sentinel from cache
+	rr2 := makeRequest(h, "blank", 10, 100, 200)
+	if rr2.Code != http.StatusNoContent {
+		t.Fatalf("expected 204 from cache, got %d", rr2.Code)
+	}
+	if rr2.Header().Get("X-Cache") != "HIT" {
+		t.Errorf("expected X-Cache: HIT, got %s", rr2.Header().Get("X-Cache"))
+	}
+}
+
+func TestServeTile_BlankThresholdNotTriggered(t *testing.T) {
+	// Upstream returns a large response (real tile data)
+	largeData := make([]byte, 5000)
+	for i := range largeData {
+		largeData[i] = byte(i % 256)
+	}
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/jpeg")
+		w.Write(largeData)
+	}))
+	defer upstream.Close()
+
+	rc := newTestRedis()
+	defer rc.Close()
+
+	providers := map[string]*Provider{
+		"real": {
+			ID:             "real",
+			UpstreamURL:    upstream.URL + "/%d/%d/%d.jpeg",
+			FormatOrder:    "zxy",
+			CacheTTL:       1 * time.Minute,
+			CachePrefix:    "tile:real",
+			Headers:        map[string]string{},
+			BlankThreshold: 1000,
+		},
+	}
+	h := NewHandler(providers, rc)
+
+	rr := makeRequest(h, "real", 10, 100, 200)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 for real tile, got %d", rr.Code)
+	}
+	if rr.Body.Len() != 5000 {
+		t.Errorf("expected 5000 bytes, got %d", rr.Body.Len())
 	}
 }
 

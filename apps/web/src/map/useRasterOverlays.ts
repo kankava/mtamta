@@ -40,7 +40,13 @@ function addRasterLayer(
   sourceId: string,
   layerId: string,
   tileUrl: string,
-  opts: { tileSize: number; maxZoom: number; opacity: number; attribution: string },
+  opts: {
+    tileSize: number
+    maxZoom: number
+    opacity: number
+    attribution: string
+    bounds?: [number, number, number, number]
+  },
 ) {
   const beforeLayer = findFirstSymbolLayer(map)
 
@@ -51,6 +57,7 @@ function addRasterLayer(
       tileSize: opts.tileSize,
       maxzoom: opts.maxZoom,
       attribution: opts.attribution,
+      ...(opts.bounds && { bounds: opts.bounds }),
     })
   }
 
@@ -86,6 +93,7 @@ function applyTopoOverlay(map: mapboxgl.Map) {
     maxZoom: sourceDef.maxZoom,
     opacity: 1,
     attribution: sourceDef.attribution,
+    bounds: sourceDef.tileBounds ?? sourceDef.bbox,
   })
 }
 

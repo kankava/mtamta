@@ -4,14 +4,14 @@
 
 - [ ] Manual: verify sidebar UI — open/close, all three tabs render, map fills width when collapsed
 - [ ] Manual: click each basemap card — map style, topo overlay, and season all change atomically
-- [ ] Manual: select country topo card (e.g. swisstopo) — topo overlay loads; switch back to Outdoors Summer — topo overlay removed
+- [ ] Manual: select country topo card (e.g. swisstopo) — topo overlay loads; switch back to Outdoors Summer — topo overlay removed (requires `make dev` — swisstopo is proxied for blank tile filtering)
 - [ ] Manual: select "swisstopo Winter" → winter topo tiles load, ski touring/snowshoe toggles appear in Overlays tab
 - [ ] Manual: select "Satellite Summer" → satellite base layer loads (Satellite Winter card is disabled/coming soon)
 - [ ] Manual: toggle overlays on/off — layers appear/disappear on map
 - [ ] Manual: click 2D/3D map control — terrain enables with pitch tilt, disables back to flat
 - [ ] Manual: toggle custom exaggeration in Settings → slider appears, adjusts terrain exaggeration in real-time
 - [ ] Manual: toggle flat/globe projection in Settings (note: Firefox private browsing disables terrain due to Canvas2D fingerprinting protection)
-- [ ] Manual: proxy tiles load through `/api/v1/tiles/opentopomap/...` with Redis caching (cache HIT/MISS headers)
+- [ ] Manual: proxy tiles load through `/api/v1/tiles/{swisstopo,opentopomap}/...` with Redis caching (cache HIT/MISS headers, blank tiles return 204)
 - [ ] Run full `go test ./internal/tiles/...` locally with Redis/network enabled
 - [ ] Add one lightweight e2e smoke test for map behavior (basemap card switching + sentinel request)
 - [ ] Decide if in-memory tile rate limiter is enough (single instance = fine; multi-instance = move to shared limiting)
@@ -25,3 +25,4 @@
 - [ ] Logger middleware drops optional http.ResponseWriter interfaces (Flush, Hijack, Push) — fix before adding SSE/WebSocket/streaming features
 - [ ] Add integration test for duplicate-email 409 path (requires real Postgres)
 - [ ] Capability-aware basemap cards (hide IGN/Sentinel options when backend env vars not configured)
+- [ ] BKG TopPlusOpen serves global tiles (tested: Madrid, Rome, London, Moscow, New York all return data) — consider expanding bbox or offering it as a global topo alternative

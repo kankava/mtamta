@@ -17,7 +17,8 @@ export interface TopoSourceDef {
   id: TopoSourceId
   name: string
   country: string // ISO 3166-1 alpha-2
-  bbox: [number, number, number, number] // [west, south, east, north]
+  bbox: [number, number, number, number] // [west, south, east, north] — used for auto-selection (findTopoSourceForPoint)
+  tileBounds?: [number, number, number, number] // if set, used as Mapbox raster source `bounds` instead of bbox
   tileUrl: string // XYZ template with {z}/{x}/{y}
   winterTileUrl?: string
   attribution: string
@@ -25,6 +26,7 @@ export interface TopoSourceDef {
   tileSize: 256 | 512
   needsProxy: boolean
   proxyProvider?: string // key for /api/v1/tiles/{provider}/
+  winterProxyProvider?: string // separate proxy key for winter tiles (if different upstream)
 }
 
 export const TOPO_SOURCES: TopoSourceDef[] = [
@@ -32,7 +34,8 @@ export const TOPO_SOURCES: TopoSourceDef[] = [
     id: 'swisstopo',
     name: 'swisstopo',
     country: 'CH',
-    bbox: [5.96, 45.82, 10.49, 47.81],
+    bbox: [5.96, 45.82, 10.49, 47.81], // political bbox for auto-selection
+    tileBounds: [5.3, 45.3, 11.4, 48.3], // actual tile coverage (larger than political borders)
     tileUrl:
       'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg',
     winterTileUrl:
@@ -40,7 +43,9 @@ export const TOPO_SOURCES: TopoSourceDef[] = [
     attribution: '&copy; <a href="https://www.swisstopo.admin.ch">swisstopo</a>',
     maxZoom: 18,
     tileSize: 256,
-    needsProxy: false,
+    needsProxy: true,
+    proxyProvider: 'swisstopo',
+    winterProxyProvider: 'swisstopo-winter',
   },
   {
     id: 'ign',
@@ -84,7 +89,7 @@ export const TOPO_SOURCES: TopoSourceDef[] = [
     country: 'NO',
     bbox: [4.65, 57.96, 31.17, 71.19],
     tileUrl:
-      'https://opencache.statkart.no/gatekeeper/gk/gk.open_gmaps?layers=topo4&zoom={z}&x={x}&y={y}',
+      'https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png',
     attribution: '&copy; <a href="https://www.kartverket.no">Kartverket</a>',
     maxZoom: 18,
     tileSize: 256,
@@ -94,7 +99,8 @@ export const TOPO_SOURCES: TopoSourceDef[] = [
     id: 'usgs',
     name: 'USGS Topo',
     country: 'US',
-    bbox: [-125.0, 24.4, -66.9, 49.4],
+    bbox: [-125.0, 24.4, -66.9, 49.4], // CONUS political bbox for auto-selection
+    tileBounds: [-180, 17, -65, 72], // all of North America (CONUS + Alaska + Hawaii + PR)
     tileUrl:
       'https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}',
     attribution: '&copy; <a href="https://www.usgs.gov">USGS</a>',
@@ -208,7 +214,11 @@ export function resolveTopoTileUrl(
   apiBaseUrl: string,
 ): string {
   if (source.needsProxy && source.proxyProvider) {
-    return `${apiBaseUrl}/api/v1/tiles/${source.proxyProvider}/{z}/{x}/{y}`
+    const provider =
+      season === 'winter' && source.winterProxyProvider
+        ? source.winterProxyProvider
+        : source.proxyProvider
+    return `${apiBaseUrl}/api/v1/tiles/${provider}/{z}/{x}/{y}`
   }
   if (season === 'winter' && source.winterTileUrl) {
     return source.winterTileUrl

@@ -1,6 +1,7 @@
 package tiles
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -13,23 +14,37 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// blankSentinel is cached in Redis for tiles detected as blank,
+// so subsequent requests return 204 without hitting upstream.
+var blankSentinel = []byte("__blank__")
+
 // Handler serves proxied tile requests.
 type Handler struct {
 	providers  map[string]*Provider
 	redis      *redis.Client
 	httpClient *http.Client
-	limiter    *RateLimiter
+	limiters   map[string]*RateLimiter
 }
+
+const defaultRateLimit = 500
 
 // NewHandler creates a tile proxy handler.
 func NewHandler(providers map[string]*Provider, redisClient *redis.Client) *Handler {
+	limiters := make(map[string]*RateLimiter, len(providers))
+	for id, p := range providers {
+		limit := defaultRateLimit
+		if p.RateLimit > 0 {
+			limit = p.RateLimit
+		}
+		limiters[id] = NewRateLimiter(limit)
+	}
 	return &Handler{
 		providers: providers,
 		redis:     redisClient,
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
-		limiter: NewRateLimiter(500),
+		limiters: limiters,
 	}
 }
 
@@ -54,15 +69,21 @@ func (h *Handler) ServeTile(w http.ResponseWriter, r *http.Request) {
 	// Check Redis cache
 	cached, err := h.redis.Get(ctx, cacheKey).Bytes()
 	if err == nil {
-		w.Header().Set("Content-Type", "image/png")
+		// Blank sentinel — upstream had no data for this tile
+		if bytes.Equal(cached, blankSentinel) {
+			w.Header().Set("X-Cache", "HIT")
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		w.Header().Set("Content-Type", detectContentType(cached))
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		w.Header().Set("X-Cache", "HIT")
 		w.Write(cached) //nolint:errcheck
 		return
 	}
 
-	// Rate limit upstream fetches
-	if !h.limiter.Allow() {
+	// Rate limit upstream fetches (per-provider)
+	if limiter, ok := h.limiters[providerID]; ok && !limiter.Allow() {
 		http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
 		return
 	}
@@ -78,6 +99,18 @@ func (h *Handler) ServeTile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.Error("tile fetch failed", "provider", providerID, "error", err)
 		http.Error(w, "upstream fetch failed", http.StatusBadGateway)
+		return
+	}
+
+	// Detect blank tiles — small responses from providers that pad empty
+	// areas with uniform-color JPEGs. Return 204 so the client's base
+	// layer shows through. Cache a sentinel so we don't re-fetch.
+	if provider.BlankThreshold > 0 && len(data) <= provider.BlankThreshold {
+		if err := h.redis.Set(ctx, cacheKey, blankSentinel, provider.CacheTTL).Err(); err != nil {
+			slog.Warn("tile cache set failed", "key", cacheKey, "error", err)
+		}
+		w.Header().Set("X-Cache", "MISS")
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 
@@ -122,6 +155,18 @@ func (h *Handler) fetchUpstream(ctx context.Context, url string, headers map[str
 	}
 
 	return data, contentType, nil
+}
+
+// detectContentType sniffs the image format from the first bytes.
+// Used for cache hits where the original Content-Type wasn't stored.
+func detectContentType(data []byte) string {
+	if len(data) >= 2 && data[0] == 0xFF && data[1] == 0xD8 {
+		return "image/jpeg"
+	}
+	if len(data) >= 4 && data[0] == 0x89 && data[1] == 'P' && data[2] == 'N' && data[3] == 'G' {
+		return "image/png"
+	}
+	return "image/png" // default fallback
 }
 
 func parseTileCoords(r *http.Request) (z, x, y int, err error) {

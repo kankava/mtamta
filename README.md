@@ -154,6 +154,19 @@ This starts Docker services, the Go API with [air](https://github.com/air-verse/
 | `make db-reset` | Wipe DB, re-run migrations and seed data |
 | `make seed` | Load seed data |
 
+### Docker services
+
+```bash
+docker compose up -d          # Start Postgres + Redis (background)
+docker compose down            # Stop and remove containers (data preserved in volume)
+docker compose down -v         # Stop, remove containers AND delete data volumes
+docker compose restart         # Restart all containers
+docker compose restart redis   # Restart only Redis (clears rate limiter windows)
+docker compose ps              # Show running containers and ports
+docker compose logs -f         # Tail logs from all services
+docker compose logs -f postgres # Tail logs from Postgres only
+```
+
 ### Running tests directly
 
 ```bash
@@ -181,7 +194,7 @@ pnpm lint
 | `POST` | `/api/v1/auth/apple` | Sign in with Apple ID token |
 | `POST` | `/api/v1/auth/refresh` | Refresh access token (cookie) |
 | `POST` | `/api/v1/auth/logout` | Logout and clear refresh token |
-| `GET` | `/api/v1/tiles/{provider}/{z}/{x}/{y}` | Tile proxy (opentopomap, ign) |
+| `GET` | `/api/v1/tiles/{provider}/{z}/{x}/{y}` | Tile proxy (swisstopo, opentopomap, ign) |
 | `GET` | `/api/v1/tiles/sentinel/{z}/{x}/{y}` | Sentinel Hub seasonal satellite tiles |
 
 ### Authenticated (Bearer token required)

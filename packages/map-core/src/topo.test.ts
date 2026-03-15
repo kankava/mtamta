@@ -30,6 +30,17 @@ describe('TOPO_SOURCES', () => {
       }
     }
   })
+
+  it('tileBounds is wider than bbox where set', () => {
+    for (const s of TOPO_SOURCES) {
+      if (s.tileBounds) {
+        expect(s.tileBounds[0]).toBeLessThanOrEqual(s.bbox[0])
+        expect(s.tileBounds[1]).toBeLessThanOrEqual(s.bbox[1])
+        expect(s.tileBounds[2]).toBeGreaterThanOrEqual(s.bbox[2])
+        expect(s.tileBounds[3]).toBeGreaterThanOrEqual(s.bbox[3])
+      }
+    }
+  })
 })
 
 describe('OVERLAY_SOURCES', () => {
@@ -90,6 +101,13 @@ describe('findTopoSourceForPoint', () => {
     // Point in Africa — no country source, should return null
     expect(findTopoSourceForPoint(36.82, -1.29)).toBeNull()
   })
+
+  it('does not auto-select usgs outside CONUS bbox', () => {
+    // Edmonton, Canada (well north of CONUS bbox)
+    expect(findTopoSourceForPoint(-113.5, 53.5)).toBeNull()
+    // Mexico City (south of CONUS bbox)
+    expect(findTopoSourceForPoint(-99.13, 19.43)).toBeNull()
+  })
 })
 
 describe('getTopoSource', () => {
@@ -107,16 +125,22 @@ describe('getTopoSource', () => {
 describe('resolveTopoTileUrl', () => {
   const apiBase = 'https://api.mtamta.com'
 
-  it('returns direct tile URL for non-proxy source in summer', () => {
+  it('returns proxy URL for swisstopo in summer', () => {
     const s = getTopoSource('swisstopo')!
     const url = resolveTopoTileUrl(s, 'summer', apiBase)
-    expect(url).toBe(s.tileUrl)
+    expect(url).toBe(`${apiBase}/api/v1/tiles/swisstopo/{z}/{x}/{y}`)
   })
 
-  it('returns winter tile URL for swisstopo in winter', () => {
+  it('returns winter proxy URL for swisstopo in winter', () => {
     const s = getTopoSource('swisstopo')!
     const url = resolveTopoTileUrl(s, 'winter', apiBase)
-    expect(url).toBe(s.winterTileUrl)
+    expect(url).toBe(`${apiBase}/api/v1/tiles/swisstopo-winter/{z}/{x}/{y}`)
+  })
+
+  it('returns direct tile URL for non-proxy source in summer', () => {
+    const s = getTopoSource('basemap-at')!
+    const url = resolveTopoTileUrl(s, 'summer', apiBase)
+    expect(url).toBe(s.tileUrl)
   })
 
   it('returns proxy URL for IGN', () => {
