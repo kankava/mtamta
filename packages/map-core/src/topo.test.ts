@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  TOPO_SOURCES,
-  OVERLAY_SOURCES,
-  findTopoSourceForPoint,
-  getTopoSource,
-  resolveTopoTileUrl,
-} from './topo'
+import { TOPO_SOURCES, OVERLAY_SOURCES, getTopoSource, resolveTopoTileUrl } from './topo'
 
 describe('TOPO_SOURCES', () => {
   it('contains 7 providers', () => {
@@ -59,54 +53,6 @@ describe('OVERLAY_SOURCES', () => {
     const snowshoe = OVERLAY_SOURCES.find((o) => o.id === 'snowshoe')
     expect(skiTouring?.topoSourceFilter).toBe('swisstopo')
     expect(snowshoe?.topoSourceFilter).toBe('swisstopo')
-  })
-})
-
-describe('findTopoSourceForPoint', () => {
-  it('returns swisstopo for a point in Switzerland', () => {
-    expect(findTopoSourceForPoint(8.23, 46.82)).toBe('swisstopo')
-  })
-
-  it('returns ign for a point in France', () => {
-    expect(findTopoSourceForPoint(2.35, 48.86)).toBe('ign')
-  })
-
-  it('returns basemap-at for a point in Austria', () => {
-    expect(findTopoSourceForPoint(13.4, 47.26)).toBe('basemap-at')
-  })
-
-  it('returns bkg for a point in Germany', () => {
-    expect(findTopoSourceForPoint(10.45, 51.16)).toBe('bkg')
-  })
-
-  it('returns kartverket for a point in Norway', () => {
-    expect(findTopoSourceForPoint(10.75, 59.91)).toBe('kartverket')
-  })
-
-  it('returns usgs for a point in the US', () => {
-    expect(findTopoSourceForPoint(-105.27, 40.01)).toBe('usgs')
-  })
-
-  it('returns null for a point in the ocean', () => {
-    expect(findTopoSourceForPoint(-30, 30)).toBeNull()
-  })
-
-  it('prefers smaller bbox when bboxes overlap', () => {
-    // A point on the French-Swiss border that falls in both bboxes
-    // swisstopo bbox is smaller than IGN, so swisstopo should win
-    expect(findTopoSourceForPoint(6.15, 46.2)).toBe('swisstopo')
-  })
-
-  it('does not auto-select opentopomap (global fallback)', () => {
-    // Point in Africa — no country source, should return null
-    expect(findTopoSourceForPoint(36.82, -1.29)).toBeNull()
-  })
-
-  it('does not auto-select usgs outside CONUS bbox', () => {
-    // Edmonton, Canada (well north of CONUS bbox)
-    expect(findTopoSourceForPoint(-113.5, 53.5)).toBeNull()
-    // Mexico City (south of CONUS bbox)
-    expect(findTopoSourceForPoint(-99.13, 19.43)).toBeNull()
   })
 })
 

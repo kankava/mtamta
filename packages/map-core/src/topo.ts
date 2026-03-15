@@ -173,31 +173,6 @@ export const OVERLAY_SOURCES: OverlaySourceDef[] = [
   },
 ]
 
-/** Check if a point falls within a bounding box */
-function pointInBbox(lng: number, lat: number, bbox: [number, number, number, number]): boolean {
-  const [west, south, east, north] = bbox
-  return lng >= west && lng <= east && lat >= south && lat <= north
-}
-
-/**
- * Find the best topo source for a geographic point.
- * Country-specific sources are checked first (smallest bbox = most specific wins).
- * Falls back to null if no country-specific match.
- * OpenTopoMap (global fallback) is excluded from auto-selection.
- */
-export function findTopoSourceForPoint(lng: number, lat: number): TopoSourceId | null {
-  const candidates = TOPO_SOURCES.filter((s) => s.country !== '' && pointInBbox(lng, lat, s.bbox))
-  if (candidates.length === 0) return null
-
-  // Prefer the source with the smallest bounding box (most specific).
-  candidates.sort((a, b) => {
-    const areaA = (a.bbox[2] - a.bbox[0]) * (a.bbox[3] - a.bbox[1])
-    const areaB = (b.bbox[2] - b.bbox[0]) * (b.bbox[3] - b.bbox[1])
-    return areaA - areaB
-  })
-  return candidates[0]!.id
-}
-
 /** Look up a topo source definition by ID */
 export function getTopoSource(id: TopoSourceId): TopoSourceDef | undefined {
   return TOPO_SOURCES.find((s) => s.id === id)
