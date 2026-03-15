@@ -24,62 +24,21 @@ export type BasemapPreset =
 interface BasemapConfig {
   baseLayer: BaseLayer
   season: Season
-  topoSourceManual: boolean
   topoSource: TopoSourceId | null
 }
 
 const BASEMAP_PRESETS: Record<BasemapPreset, BasemapConfig> = {
-  'outdoors-summer': {
-    baseLayer: 'outdoors',
-    season: 'summer',
-    topoSourceManual: false,
-    topoSource: null,
-  },
-  'outdoors-winter': {
-    baseLayer: 'outdoors',
-    season: 'winter',
-    topoSourceManual: false,
-    topoSource: null,
-  },
-  'satellite-summer': {
-    baseLayer: 'satellite',
-    season: 'summer',
-    topoSourceManual: false,
-    topoSource: null,
-  },
-  'satellite-winter': {
-    baseLayer: 'satellite',
-    season: 'winter',
-    topoSourceManual: false,
-    topoSource: null,
-  },
-  swisstopo: {
-    baseLayer: 'outdoors',
-    season: 'summer',
-    topoSourceManual: true,
-    topoSource: 'swisstopo',
-  },
-  'swisstopo-winter': {
-    baseLayer: 'outdoors',
-    season: 'winter',
-    topoSourceManual: true,
-    topoSource: 'swisstopo',
-  },
-  ign: { baseLayer: 'outdoors', season: 'summer', topoSourceManual: true, topoSource: 'ign' },
-  'basemap-at': {
-    baseLayer: 'outdoors',
-    season: 'summer',
-    topoSourceManual: true,
-    topoSource: 'basemap-at',
-  },
-  bkg: { baseLayer: 'outdoors', season: 'summer', topoSourceManual: true, topoSource: 'bkg' },
-  kartverket: {
-    baseLayer: 'outdoors',
-    season: 'summer',
-    topoSourceManual: true,
-    topoSource: 'kartverket',
-  },
-  usgs: { baseLayer: 'outdoors', season: 'summer', topoSourceManual: true, topoSource: 'usgs' },
+  'outdoors-summer': { baseLayer: 'outdoors', season: 'summer', topoSource: null },
+  'outdoors-winter': { baseLayer: 'outdoors', season: 'winter', topoSource: null },
+  'satellite-summer': { baseLayer: 'satellite', season: 'summer', topoSource: null },
+  'satellite-winter': { baseLayer: 'satellite', season: 'winter', topoSource: null },
+  swisstopo: { baseLayer: 'outdoors', season: 'summer', topoSource: 'swisstopo' },
+  'swisstopo-winter': { baseLayer: 'outdoors', season: 'winter', topoSource: 'swisstopo' },
+  ign: { baseLayer: 'outdoors', season: 'summer', topoSource: 'ign' },
+  'basemap-at': { baseLayer: 'outdoors', season: 'summer', topoSource: 'basemap-at' },
+  bkg: { baseLayer: 'outdoors', season: 'summer', topoSource: 'bkg' },
+  kartverket: { baseLayer: 'outdoors', season: 'summer', topoSource: 'kartverket' },
+  usgs: { baseLayer: 'outdoors', season: 'summer', topoSource: 'usgs' },
 }
 
 export { BASEMAP_PRESETS }
@@ -101,7 +60,6 @@ interface MapState {
 
   // Topo overlay (Phase 3)
   topoSource: TopoSourceId | null
-  topoSourceManual: boolean
 
   // Overlays (Phase 3)
   overlayPistes: boolean
@@ -129,7 +87,7 @@ interface MapState {
   setTerrainEnabled: (enabled: boolean) => void
   setTerrainExaggeration: (exaggeration: number) => void
   setMapReady: (ready: boolean) => void
-  setTopoSource: (source: TopoSourceId | null, manual?: boolean) => void
+  setTopoSource: (source: TopoSourceId | null) => void
   setOverlayPistes: (enabled: boolean) => void
   setOverlaySkiTouring: (enabled: boolean) => void
   setOverlaySnowshoe: (enabled: boolean) => void
@@ -150,7 +108,6 @@ export const useMapStore = create<MapState>((set) => ({
   terrainExaggeration: DEFAULT_TERRAIN_EXAGGERATION,
 
   topoSource: null,
-  topoSourceManual: false,
 
   overlayPistes: false,
   overlaySkiTouring: false,
@@ -168,8 +125,7 @@ export const useMapStore = create<MapState>((set) => ({
   setTerrainEnabled: (terrainEnabled) => set({ terrainEnabled }),
   setTerrainExaggeration: (terrainExaggeration) => set({ terrainExaggeration }),
   setMapReady: (isMapReady) => set({ isMapReady }),
-  setTopoSource: (topoSource, manual) =>
-    set(manual !== undefined ? { topoSource, topoSourceManual: manual } : { topoSource }),
+  setTopoSource: (topoSource) => set({ topoSource }),
   setOverlayPistes: (overlayPistes) => set({ overlayPistes }),
   setOverlaySkiTouring: (overlaySkiTouring) => set({ overlaySkiTouring }),
   setOverlaySnowshoe: (overlaySnowshoe) => set({ overlaySnowshoe }),

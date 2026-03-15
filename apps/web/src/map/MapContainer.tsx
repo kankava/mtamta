@@ -12,7 +12,6 @@ import {
 } from '@mtamta/map-core'
 import { useMapStore } from '../stores/mapStore'
 import MapControls from './MapControls'
-import { useTopoAutoSelect } from './useTopoAutoSelect'
 import { useRasterOverlays } from './useRasterOverlays'
 
 /**
@@ -57,7 +56,6 @@ export default function MapContainer() {
   const initialStyleRef = useRef(true)
 
   // Phase 3 hooks
-  useTopoAutoSelect(mapInstance)
   useRasterOverlays(mapInstance)
 
   // --- Map initialization ---

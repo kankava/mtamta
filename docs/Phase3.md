@@ -14,7 +14,7 @@
 |---|----------|-----------|
 | 1 | **TopoSource is separate from BaseLayer** | `BaseLayer` stays `'outdoors' \| 'satellite'`. A new `TopoSourceId` type controls which raster topo tiles overlay the Mapbox vector style when `baseLayer === 'outdoors'`. Hidden when satellite is active. |
 | 2 | **Raster tiles overlay via `map.addSource()` + `map.addLayer()`** | Inserted `before` first symbol layer so Mapbox labels float above topo tiles. Default opacity ~0.85, user-adjustable. |
-| 3 | **Auto-selection with manual override** | On `moveend`, check viewport center against country bounding boxes. `topoSourceManual` flag disables auto-switching. "Reset to auto" clears it. |
+| 3 | **Explicit topo selection only** | No auto-detect — topo overlays only load when user explicitly selects a country topo card. Global outdoors cards set `topoSource: null`, showing only the Mapbox Outdoors base style. |
 | 4 | **Single generic tile proxy handler** | One Go handler at `/api/v1/tiles/{provider}/{z}/{x}/{y}` with a provider allowlist. Sentinel-2 gets a separate handler due to OAuth2 + WMS complexity. |
 | 5 | **`style.load` re-application** | Extract `applyPostStyleLoad(map)` that re-adds both terrain and raster overlays after any style swap. |
 
@@ -80,15 +80,13 @@ Providers:
 
 ```typescript
 topoSource: TopoSourceId | null    // active topo source (null = none)
-topoSourceManual: boolean          // user manually selected
-topoOpacity: number                // 0-1, default 0.85
 overlayPistes: boolean             // OpenSnowMap pistes
 overlaySkiTouring: boolean         // swisstopo ski touring (winter + CH only)
 overlaySnowshoe: boolean           // swisstopo snowshoe (winter + CH only)
 sentinelYear: number               // default: current year
 ```
 
-- [x] Add actions: `setTopoSource`, `setTopoOpacity`, `resetTopoSourceAuto`, `setOverlayPistes`, `setOverlaySkiTouring`, `setOverlaySnowshoe`, `setSentinelYear`
+- [x] Add actions: `setTopoSource`, `setOverlayPistes`, `setOverlaySkiTouring`, `setOverlaySnowshoe`, `setSentinelYear`
 
 ### 5. Raster overlay hook — `apps/web/src/map/useRasterOverlays.ts`
 
@@ -105,15 +103,14 @@ Responsibilities:
 
 Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-source/layer`
 
-### 6. Auto-selection hook — `apps/web/src/map/useTopoAutoSelect.ts`
+### 6. ~~Auto-selection hook~~ — REMOVED
 
-- [x] Create `useTopoAutoSelect(map)` hook
-- Subscribes to `moveend`, calls `findTopoSourceForPoint()`, updates store if `topoSourceManual === false`
-- Runs once immediately on mount if style is loaded
+- `useTopoAutoSelect.ts` deleted — auto-detect caused confusion (e.g. swisstopo loading on startup because default center is Switzerland). Topo now only loads when user explicitly selects a country topo card.
+- `findTopoSourceForPoint()` remains in `map-core` for potential future use but is not called from the web app.
 
 ### 7. MapContainer integration — `apps/web/src/map/MapContainer.tsx`
 
-- [x] Import and call `useTopoAutoSelect(mapInstance)` and `useRasterOverlays(mapInstance)`
+- [x] Import and call `useRasterOverlays(mapInstance)`
 - [x] Extract `applyPostStyleLoad(map)` function that re-adds terrain + raster overlays
 - [x] Wire both terrain + raster re-add from `style.load` handler and initial `load`
 
@@ -262,9 +259,9 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
 ### 2. Map store changes — `apps/web/src/stores/mapStore.ts`
 
 - [x] Add `sidebarOpen: boolean` (default: `true`) and `sidebarTab: 'basemaps' | 'overlays' | 'settings'` (default: `'basemaps'`)
-- [x] Add `BasemapPreset` type and `BASEMAP_PRESETS` lookup table (11 presets mapping to `baseLayer + season + topoSource + topoSourceManual`)
-- [x] Add `selectBasemap(preset)` action — atomically sets all four fields in a single `set()` call
-- [x] Remove `setBaseLayer`, `setSeason`, `setTopoOpacity`, `topoOpacity` — replaced by `selectBasemap`
+- [x] Add `BasemapPreset` type and `BASEMAP_PRESETS` lookup table (11 presets mapping to `baseLayer + season + topoSource`)
+- [x] Add `selectBasemap(preset)` action — atomically sets all three fields in a single `set()` call
+- [x] Remove `setBaseLayer`, `setSeason`, `setTopoOpacity`, `topoOpacity`, `topoSourceManual` — replaced by `selectBasemap`
 - [x] Add `setSidebarOpen`, `setSidebarTab` actions
 
 ### 3. Sidebar components — `apps/web/src/map/sidebar/`
@@ -309,9 +306,11 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
 - [x] `cd apps/api && go build ./...` — compiles
 - [x] `cd apps/api && go test ./internal/tiles/...` — unit tests pass
 - [x] `cd apps/web && pnpm build` — web app builds
-- [ ] Manual: open map over Switzerland → swisstopo auto-selected, tiles render
+- [ ] Manual: open map → no topo overlay on startup (Mapbox Outdoors only)
+- [ ] Manual: select "swisstopo" card → swisstopo tiles render
 - [ ] Manual: switch to satellite → topo overlay hidden
 - [ ] Manual: select "swisstopo Winter" card → swisstopo switches to winter variant, pistes overlay appears
+- [ ] Manual: switch back to "Outdoors Summer" → topo overlay removed, Mapbox Outdoors base style only
 - [ ] Manual: proxy tiles load through `/api/v1/tiles/opentopomap/...` with Redis caching
 - [x] `cd apps/web && pnpm lint` — no TypeScript or ESLint errors (3d)
 - [x] `cd apps/web && pnpm test` — 14/14 tests pass (3d)
@@ -322,11 +321,10 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
 
 ## Files Summary
 
-**New files (14):**
+**New files (13):**
 - `packages/map-core/src/topo.ts`
 - `packages/map-core/src/topo.test.ts`
 - `apps/web/src/map/useRasterOverlays.ts`
-- `apps/web/src/map/useTopoAutoSelect.ts`
 - `apps/web/src/map/sidebar/Sidebar.tsx` (3d)
 - `apps/web/src/map/sidebar/BasemapsTab.tsx` (3d)
 - `apps/web/src/map/sidebar/OverlaysTab.tsx` (3d)
@@ -350,6 +348,7 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
 - `apps/api/internal/config/config.go`
 - `apps/api/cmd/server/main.go`
 
-**Deleted files (2, in 3d):**
+**Deleted files (3, in 3d):**
 - `apps/web/src/map/LayerPanel.tsx`
 - `apps/web/src/map/StyleSwitcher.tsx`
+- `apps/web/src/map/useTopoAutoSelect.ts` (auto-detect removed)

@@ -15,7 +15,6 @@ describe('mapStore', () => {
       terrainEnabled: false,
       terrainExaggeration: DEFAULT_TERRAIN_EXAGGERATION,
       topoSource: null,
-      topoSourceManual: false,
       sidebarOpen: true,
       sidebarTab: 'basemaps',
       isMapReady: false,
@@ -54,15 +53,15 @@ describe('mapStore', () => {
     expect(state.baseLayer).toBe('outdoors')
     expect(state.season).toBe('winter')
     expect(state.topoSource).toBe('swisstopo')
-    expect(state.topoSourceManual).toBe(true)
   })
 
-  it('selectBasemap outdoors-summer sets auto-detect mode', () => {
+  it('selectBasemap outdoors-summer clears topo source', () => {
+    useMapStore.getState().selectBasemap('swisstopo')
     useMapStore.getState().selectBasemap('outdoors-summer')
     const state = useMapStore.getState()
     expect(state.baseLayer).toBe('outdoors')
     expect(state.season).toBe('summer')
-    expect(state.topoSourceManual).toBe(false)
+    expect(state.topoSource).toBeNull()
   })
 
   it('selectBasemap satellite clears topo source', () => {
@@ -72,7 +71,6 @@ describe('mapStore', () => {
     expect(state.baseLayer).toBe('satellite')
     expect(state.season).toBe('winter')
     expect(state.topoSource).toBeNull()
-    expect(state.topoSourceManual).toBe(false)
   })
 
   it('setTerrainEnabled toggles terrain on and off', () => {

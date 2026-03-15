@@ -5,11 +5,28 @@ import { useAuthStore } from './stores/authStore'
 
 const MapPage = lazy(() => import('./map/MapPage'))
 
+const DEV_USER: import('@mtamta/shared').User | null =
+  import.meta.env.DEV && import.meta.env.VITE_DEV_AUTH === 'true'
+    ? {
+        id: 'dev-local-user',
+        display_name: 'Dev User',
+        email: 'dev@localhost',
+        avatar_url: null,
+        bio: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }
+    : null
+
 export default function App() {
   const { user, isLoading, restoreSession } = useAuthStore()
 
   useEffect(() => {
-    restoreSession()
+    if (DEV_USER) {
+      useAuthStore.setState({ user: DEV_USER, isLoading: false })
+    } else {
+      restoreSession()
+    }
   }, [restoreSession])
 
   // Loading state — session restoration in progress

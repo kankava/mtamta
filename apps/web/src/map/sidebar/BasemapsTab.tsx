@@ -93,25 +93,19 @@ const COUNTRY_CARDS: BasemapCard[] = [
 
 function isActivePreset(
   preset: BasemapPreset,
-  state: {
-    baseLayer: string
-    season: string
-    topoSource: string | null
-    topoSourceManual: boolean
-  },
+  state: { baseLayer: string; season: string; topoSource: string | null },
 ): boolean {
   const config = BASEMAP_PRESETS[preset]
   return (
     state.baseLayer === config.baseLayer &&
     state.season === config.season &&
-    state.topoSourceManual === config.topoSourceManual &&
-    (config.topoSourceManual ? state.topoSource === config.topoSource : true)
+    state.topoSource === config.topoSource
   )
 }
 
 export default function BasemapsTab() {
-  const { baseLayer, season, topoSource, topoSourceManual, selectBasemap } = useMapStore()
-  const state = { baseLayer, season, topoSource, topoSourceManual }
+  const { baseLayer, season, topoSource, selectBasemap } = useMapStore()
+  const state = { baseLayer, season, topoSource }
 
   return (
     <div className="space-y-5">
