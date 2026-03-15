@@ -25,6 +25,12 @@
 
 - [x] `go test ./internal/tiles/...` with Redis — runs in CI (test-api job)
 
+## Before Production Auth
+
+- [ ] Set up custom domain (`mtamta.com` + `api.mtamta.com`) — refresh cookie is `SameSite=Lax`, which requires same root domain between web and API. Won't work on `.pages.dev` / `.railway.app` split.
+- [ ] Run migration `002_email_normalize` on production Postgres
+- [ ] PATCH /users/me cannot clear nullable fields (`bio`, `avatar_url`) — COALESCE treats null same as omitted. Fix when building profile UI (Phase 6).
+
 ## Soon
 
 - [ ] Web bundle size is large (MapPage chunk ~1.7MB) — plan code-splitting before phases add more UI/features

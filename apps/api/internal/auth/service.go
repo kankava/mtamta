@@ -68,6 +68,8 @@ func (s *Service) SignInWithApple(ctx context.Context, idToken string) (*AuthRes
 }
 
 func (s *Service) signInOrCreate(ctx context.Context, provider, providerUID, email, displayName string) (*AuthResult, error) {
+	email = strings.ToLower(strings.TrimSpace(email))
+
 	u, err := s.repo.FindUserByProviderUID(ctx, provider, providerUID)
 	if err != nil && !errors.Is(err, ErrProviderNotFound) {
 		return nil, fmt.Errorf("looking up provider: %w", err)
@@ -119,10 +121,10 @@ func (s *Service) Logout(ctx context.Context, refreshToken string) error {
 }
 
 // isDuplicateEmail checks if a Postgres error is a unique_violation on the
-// users.email constraint (users_email_key).
+// users.email constraint (users_email_lower_idx).
 func isDuplicateEmail(err error) bool {
 	var pgErr *pgconn.PgError
-	return errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "users_email_key"
+	return errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "users_email_lower_idx"
 }
 
 // isEmailAllowed returns true if sign-up is unrestricted (empty allowlist)

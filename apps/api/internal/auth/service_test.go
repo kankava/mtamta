@@ -14,8 +14,8 @@ func TestIsDuplicateEmail(t *testing.T) {
 		want bool
 	}{
 		{
-			name: "users_email_key violation",
-			err:  &pgconn.PgError{Code: "23505", ConstraintName: "users_email_key"},
+			name: "users_email_lower_idx violation",
+			err:  &pgconn.PgError{Code: "23505", ConstraintName: "users_email_lower_idx"},
 			want: true,
 		},
 		{
@@ -25,7 +25,7 @@ func TestIsDuplicateEmail(t *testing.T) {
 		},
 		{
 			name: "non-23505 error",
-			err:  &pgconn.PgError{Code: "42P01", ConstraintName: "users_email_key"},
+			err:  &pgconn.PgError{Code: "42P01", ConstraintName: "users_email_lower_idx"},
 			want: false,
 		},
 		{
