@@ -4,14 +4,14 @@
 
 - [ ] Manual: verify sidebar UI — open/close, all three tabs render, map fills width when collapsed
 - [ ] Manual: click each basemap card — map style, topo overlay, and season all change atomically
-- [ ] Manual: navigate to Switzerland → swisstopo auto-detected with "Outdoors Summer/Winter" cards
+- [ ] Manual: select country topo card (e.g. swisstopo) — topo overlay loads; switch back to Outdoors Summer — topo overlay removed
 - [ ] Manual: select "swisstopo Winter" → winter topo tiles load, ski touring/snowshoe toggles appear in Overlays tab
 - [ ] Manual: select "Satellite Winter" → Sentinel-2 winter tiles load
 - [ ] Manual: toggle overlays on/off — layers appear/disappear on map
 - [ ] Manual: toggle 3D terrain + adjust exaggeration slider
 - [ ] Manual: proxy tiles load through `/api/v1/tiles/opentopomap/...` with Redis caching (cache HIT/MISS headers)
 - [ ] Run full `go test ./internal/tiles/...` locally with Redis/network enabled
-- [ ] Add one lightweight e2e smoke test for map behavior (topo auto-select + basemap card + sentinel request)
+- [ ] Add one lightweight e2e smoke test for map behavior (basemap card switching + sentinel request)
 - [ ] Decide if in-memory tile rate limiter is enough (single instance = fine; multi-instance = move to shared limiting)
 
 ## Soon
@@ -22,3 +22,4 @@
 - [ ] Mapbox token URL restrictions (lock pk.* token to production domain)
 - [ ] Logger middleware drops optional http.ResponseWriter interfaces (Flush, Hijack, Push) — fix before adding SSE/WebSocket/streaming features
 - [ ] Add integration test for duplicate-email 409 path (requires real Postgres)
+- [ ] Capability-aware basemap cards (hide IGN/Sentinel options when backend env vars not configured)

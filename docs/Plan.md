@@ -280,24 +280,24 @@ apps/web/src/
 
 ### Features
 
-- Country-specific topographic base layers (swisstopo, IGN, basemap.at, BKG, Kartverket, USGS) with viewport-based auto-selection and Mapbox Outdoors as global default
+- Country-specific topographic base layers (swisstopo, IGN, basemap.at, BKG, Kartverket, USGS) with explicit country topo selection via sidebar cards and Mapbox Outdoors as global default
 - Seasonal satellite imagery (summer/winter) via Copernicus Sentinel-2, proxied through backend
-- Coupled season modes (winter/summer toggle auto-switches satellite variant, swisstopo variant, and seasonal overlays)
+- Atomic basemap presets that set baseLayer + season + topoSource in one action (no separate winter/summer toggle)
 - swisstopo winter base map variant with ski touring and snowshoe route overlays
 - OpenSnowMap pistes overlay (global ski piste + lift layer)
 
 ### Sub-milestones
 
-- **3a — Country topo providers**: Source catalog, bounding boxes, auto-selection, attribution (tasks 1, 2, 3)
+- **3a — Country topo providers**: Source catalog, bounding boxes, attribution (tasks 1, 2, 3)
 - **3b — Backend proxy & caching**: Tile proxy for IGN/OpenTopoMap/Sentinel-2, Redis caching (tasks 4, 5, 6)
-- **3c — Seasonal & overlays**: Sentinel-2 satellite imagery, coupled season modes, swisstopo winter variant, OpenSnowMap pistes
+- **3c — Seasonal & overlays**: Sentinel-2 satellite imagery, swisstopo winter variant, OpenSnowMap pistes
 - **3d — UI Redesign**: Collapsible left sidebar replacing LayerPanel + StyleSwitcher, Tailwind CSS v4 migration, basemap cards that atomically set baseLayer + season + topoSource (no separate winter/summer toggle), NavBar moved into sidebar header, topoOpacity slider removed (full opacity always)
 
 ### Technical Tasks
 
 1. **Country topographic source catalog** (`packages/map-core/`)
    - Country-specific topographic source catalog: tile URLs, WMTS endpoints, max zoom, API key requirements, license/attribution per source
-   - Country bounding box definitions for viewport-based auto-selection (Switzerland, France, Austria, Germany, Norway, USA)
+   - Country bounding box definitions (Switzerland, France, Austria, Germany, Norway, USA)
    - OpenTopoMap configuration as a manually-selectable global topo source
    - Dynamic attribution strings per topo source
    - Sentinel-2 seasonal satellite configuration: WMS URL template, season date ranges, MAXCC values
@@ -305,25 +305,22 @@ apps/web/src/
    - swisstopo winter sport overlay configs: ski touring routes, snowshoe routes
    - OpenSnowMap pistes tile source configuration
 
-2. **Map source components** (`apps/web/src/map/`)
-   - `TopoSourceSwitcher.tsx` — country topo source selector (auto-suggestion banner + manual override dropdown)
-   - Viewport-based auto-detection: on viewport change, check if center falls within a country bounding box and suggest/switch topo source
+2. **Sidebar UI** (`apps/web/src/map/sidebar/`)
+   - `BasemapsTab.tsx` — card grid with global cards (Outdoors/Satellite × Summer/Winter) + country topo cards. Clicking a card atomically sets baseLayer + season + topoSource via `selectBasemap()`
+   - `OverlaysTab.tsx` — toggle switches for pistes, ski touring, snowshoe; Sentinel year selector (satellite only)
+   - `SettingsTab.tsx` — 3D terrain toggle + exaggeration slider
    - Dynamic map attribution: update attribution control text when topo source changes
-   - Satellite sub-selector: Default (Mapbox) / Summer (Sentinel-2) / Winter (Sentinel-2) options within satellite base layer
-   - Coupled season mode: winter/summer toggle auto-switches satellite variant, swisstopo variant (CH), and seasonal overlays together. User can override individual layers
 
 3. **Map state extensions** (`apps/web/src/stores/mapStore.ts`)
-   - Active topo source (mapbox-outdoors | country-specific ID | opentopomap)
-   - Auto-topo-selection preference (auto | manual)
-   - Detected country for viewport (derived from bounding box check)
-   - Active satellite variant (mapbox-default | sentinel-summer | sentinel-winter)
-   - Season mode (winter | summer | auto) — extends existing winter/summer mode toggle
+   - Active topo source (`TopoSourceId | null` — null = Mapbox Outdoors only)
+   - `BasemapPreset` type and `BASEMAP_PRESETS` lookup table (11 presets)
+   - `selectBasemap(preset)` action — atomically sets baseLayer + season + topoSource
+   - Sidebar state: `sidebarOpen`, `sidebarTab`
+   - Sentinel year for seasonal satellite
 
 4. **Backend proxy & caching**
    - Configure raster tile sources for each national mapping agency (WMTS/XYZ endpoints)
    - IGN Géoplateforme: register free API key, configure WMTS tile URL template
-   - Viewport-to-country bounding box intersection check (point-in-rectangle, no geocoding needed)
-   - Auto-selection logic: viewport center moves → detect country → suggest/switch topo source
    - Overlap handling for border regions: smallest bbox wins (most specific/detailed source)
    - Attribution manager: swap attribution text when active topo source changes
    - Proxy endpoint for IGN tiles: `GET /api/v1/tiles/ign/{z}/{x}/{y}` (API key must not be exposed to client)
@@ -349,37 +346,34 @@ apps/web/src/
 
 ```
 packages/map-core/src/
-├── country-topo/       # Country-specific topo source configs
-│   ├── index.ts        # Source catalog + auto-selection logic
-│   ├── swisstopo.ts
-│   ├── ign.ts
-│   ├── basemap-at.ts
-│   ├── bkg.ts
-│   ├── kartverket.ts
-│   ├── usgs.ts
-│   ├── opentopomap.ts
-│   └── bounds.ts       # Country bounding boxes
-├── seasonal/            # Seasonal satellite + topo configs
-│   ├── sentinel.ts      # Sentinel Hub WMS config, season date ranges
-│   └── swisstopo-winter.ts  # swisstopo winter variant + sport overlays
+├── topo.ts              # Source catalog, overlay defs, bbox lookup, URL resolution
+├── topo.test.ts
+├── styles.ts            # Base style URLs, resolveStyleUrl
+├── layers.ts            # Layer registry
+└── terrain.ts           # Terrain config
 
 apps/web/src/map/
-└── TopoSourceSwitcher.tsx
+├── sidebar/
+│   ├── Sidebar.tsx           # Collapsible left panel with tabs
+│   ├── BasemapsTab.tsx       # Basemap card grid (global + country topo)
+│   ├── OverlaysTab.tsx       # Overlay toggles + sentinel year selector
+│   └── SettingsTab.tsx       # 3D terrain toggle + exaggeration
+└── useRasterOverlays.ts      # Imperatively manages raster overlay layers
 ```
 
 ### Acceptance Criteria
 
-- [ ] When viewport is over Switzerland, swisstopo topo map is auto-suggested or auto-applied
+- [ ] Clicking a country topo card (e.g. swisstopo) loads the topo overlay; switching back to a global Outdoors card removes it
 - [ ] Country-specific topo sources render correctly as raster tile layers for all 6 supported countries
-- [ ] Mapbox Outdoors is used as default when viewport is outside supported countries
-- [ ] User can manually override the auto-selected topo source via the sidebar basemap cards
+- [ ] Mapbox Outdoors is used as default (global Outdoors cards set topoSource: null)
+- [ ] Basemap cards atomically set baseLayer + season + topoSource in one action
 - [ ] Map attribution updates dynamically to reflect the active topo source
 - [ ] IGN tiles are proxied through the backend (API key not exposed to client)
 - [ ] User can select Summer or Winter satellite view; seasonal Sentinel-2 imagery loads as raster tiles
 - [ ] Sentinel-2 tiles are proxied through backend (Instance ID not exposed)
-- [ ] Winter/summer mode toggle is coupled: auto-switches satellite variant, swisstopo variant (CH), and seasonal overlays together
-- [ ] In winter mode over Switzerland, swisstopo switches to winter base map variant
-- [ ] swisstopo ski touring and snowshoe route overlays are available in winter mode
+- [ ] Selecting a winter basemap card switches satellite variant, swisstopo variant (CH), and seasonal overlays atomically
+- [ ] swisstopo winter card loads winter base map variant (`pixelkarte-grau`)
+- [ ] swisstopo ski touring and snowshoe route overlays are available when swisstopo winter card is active
 - [ ] OpenSnowMap pistes layer renders as a toggleable overlay
 - [ ] User can manually override any individually coupled layer
 - [ ] Sentinel-2 tiles are cached in Redis with 7-day TTL

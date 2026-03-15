@@ -10,7 +10,7 @@
 |---|---|---|
 | Map rendering | Mapbox GL JS v3 | `mapbox-gl@^3.0.0` |
 | Map wrapper | Raw (no react-map-gl) | Direct `mapboxgl.Map` via `useRef` |
-| Routing | React Router v6 | `react-router-dom` (already installed) |
+| Routing | React Router v7 | `react-router` (already installed) |
 | State management | Zustand | `zustand` (already installed) |
 | Geospatial utils | Deferred to Phase 4 | `@turf/turf` — not installed yet |
 
@@ -18,7 +18,7 @@
 - **Raw mapbox-gl, not react-map-gl** — full control over terrain, style switching, custom layers, and lifecycle. react-map-gl adds an abstraction layer that gets in the way for advanced use cases.
 - **`useRef` for map instance** — not `useState`. Storing the map in state would trigger React re-renders on every map interaction.
 - **Styles as Mapbox-hosted URLs** — no bundled style JSON. Style switching uses `map.setStyle(url)`.
-- **Winter/summer as placeholders** — both use Mapbox Outdoors v12 in Phase 2. The toggle mechanism and store plumbing is what matters; custom Mapbox Studio styles are created later.
+- **Winter/summer as placeholders** — both use Mapbox Outdoors v12 in Phase 2. Winter/summer variants are now handled via atomic basemap presets in the sidebar (Phase 3d), not a separate toggle.
 - **`/` is the map page** — auth gate wraps the router, not individual routes.
 
 ---

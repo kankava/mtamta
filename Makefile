@@ -19,7 +19,7 @@ lint: ## Run linters
 	pnpm lint
 	pnpm format:check
 
-build: ## Build all packages
+build: ## Build web app
 	pnpm turbo build --filter=@mtamta/web
 
 check: ## Run all CI checks locally (test + lint + build)

@@ -148,7 +148,7 @@ This starts Docker services, the Go API with [air](https://github.com/air-verse/
 | `make dev` | Start all services (Docker + API + web) |
 | `make test` | Run all tests (Go + TypeScript) |
 | `make lint` | Run linters (golangci-lint + ESLint + Prettier) |
-| `make build` | Build all packages |
+| `make build` | Build web app |
 | `make check` | Run all CI checks locally (test + lint + build) |
 | `make db-migrate` | Run pending database migrations |
 | `make db-reset` | Wipe DB, re-run migrations and seed data |

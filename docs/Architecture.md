@@ -164,22 +164,13 @@ mtamta/
 │   │   ├── tsconfig.json
 │   │   └── package.json
 │   │
-│   ├── mobile/               # React Native application
-│   │   ├── src/
-│   │   │   ├── screens/      # Screen components
-│   │   │   ├── components/   # Mobile-specific components
-│   │   │   ├── navigation/   # React Navigation setup
-│   │   │   └── hooks/        # Mobile-specific hooks
-│   │   ├── ios/
-│   │   ├── android/
-│   │   └── package.json
+│   # apps/mobile/ — Phase 9 (React Native)
 │   │
 │   └── api/                  # Go backend
 │       ├── cmd/
 │       │   ├── server/
 │       │   │   └── main.go   # Entry point
-│       │   └── tilegen/
-│       │       └── main.go   # Batch tile generation CLI
+│       │   # cmd/tilegen/ — Phase 7 (terrain analysis CLI)
 │       ├── internal/
 │       │   ├── auth/         # Authentication (OAuth, JWT)
 │       │   ├── user/         # User management
@@ -226,7 +217,7 @@ mtamta/
 │
 ├── turbo.json                # Turborepo configuration
 ├── package.json              # Root package.json (workspaces)
-├── docker-compose.yml        # Local development services (TimescaleDB+PostGIS, Redis, Meilisearch, MinIO)
+├── docker-compose.yml        # Local development services (TimescaleDB+PostGIS, Redis)
 ├── railway.toml              # Railway deployment configuration
 ├── Architecture.md           # This file
 └── Plan.md                   # Implementation plan
@@ -599,7 +590,7 @@ Layers are toggled via the UI and managed through the shared `map-core` package.
 |---|---|---|---|
 | **Base** | Topographic | Vector | Mapbox Outdoors v12 (`mapbox://styles/mapbox/outdoors-v12`) |
 | **Base** | Satellite | Raster | Mapbox Satellite Streets v12 (`mapbox://styles/mapbox/satellite-streets-v12`) |
-| **Base** | Country Topographic | Raster (WMTS/XYZ) | National mapping agency tiles, auto-selected by viewport (swisstopo, IGN, basemap.at, BKG, Kartverket, USGS); OpenTopoMap manually-selectable global topo source; Mapbox Outdoors global default |
+| **Base** | Country Topographic | Raster (WMTS/XYZ) | National mapping agency tiles, explicitly selected via sidebar cards (swisstopo, IGN, basemap.at, BKG, Kartverket, USGS); OpenTopoMap as global fallback in catalog; Mapbox Outdoors global default |
 | **Base** | Satellite — Summer | Raster (WMS) | Sentinel-2 via Copernicus Sentinel Hub (Jun–Aug composite, 10m, MAXCC=20); proxied through backend |
 | **Base** | Satellite — Winter | Raster (WMS) | Sentinel-2 via Copernicus Sentinel Hub (Dec–Feb composite, 10m, MAXCC=30); proxied through backend |
 | **Base** | 3D Terrain | DEM | Mapbox Terrain-DEM v1 (`mapbox.mapbox-terrain-dem-v1`) |
@@ -745,12 +736,12 @@ National mapping agencies provide high-detail topographic maps that significantl
 | USGS National Map | USA | WMTS via `basemap.nationalmap.gov` (USGSTopo layer) | WMTS | z16 | No | Public domain |
 | OpenTopoMap | Global | `https://tile.opentopomap.org/{z}/{x}/{y}.png` | XYZ (PNG) | z19 | No | CC-BY-SA 3.0 |
 
-**Auto-selection logic**: When the map viewport center falls within a country's bounding box, the system auto-suggests (or auto-switches, based on user preference) the corresponding country topo source:
+**Selection model**: Topo overlays load only when the user explicitly selects a country topo card in the sidebar. Global Outdoors cards set `topoSource: null`, showing the Mapbox Outdoors base style without any raster overlay.
 
-1. **Country-specific source** — if viewport center is within a supported country's bounds
-2. **Mapbox Outdoors v12** — global default when no country-specific source matches
+1. **Country-specific source** — user selects a country topo card (e.g. swisstopo, IGN)
+2. **Mapbox Outdoors v12** — global default when no country topo card is selected
 
-OpenTopoMap is available as a manual selection but is not part of the auto-selection fallback chain.
+OpenTopoMap is kept in the source catalog as a proxy-only global fallback but has no dedicated UI card.
 
 > **Why raster?** Country topo sources are pre-rendered cartographic products from national mapping agencies. Using their raster tiles gives expert-quality cartography (contour styling, hillshading, trail symbols, local labels) with zero styling effort. Vector tile alternatives exist for some providers but would require building and maintaining per-country Mapbox GL style specs — significant effort for marginal benefit when the goal is to overlay national topo quality on the Mapbox vector basemap.
 

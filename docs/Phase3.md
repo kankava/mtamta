@@ -48,7 +48,7 @@ export interface TopoSourceDef {
 Exports:
 - `TOPO_SOURCES: TopoSourceDef[]` — 7 providers with real tile URLs
 - `OVERLAY_SOURCES: OverlaySourceDef[]` — pistes, ski touring, snowshoe
-- `findTopoSourceForPoint(lng, lat)` — returns most specific country match (smallest bbox wins), excludes OpenTopoMap from auto-select
+- `findTopoSourceForPoint(lng, lat)` — returns most specific country match (smallest bbox wins), excludes OpenTopoMap. Not currently called from the web app (auto-detect removed in 3d); kept for potential future use
 - `getTopoSource(id)` — lookup by ID
 - `resolveTopoTileUrl(source, season, apiBaseUrl)` — resolves proxy or winter variant URLs
 
@@ -86,6 +86,8 @@ overlaySnowshoe: boolean           // swisstopo snowshoe (winter + CH only)
 sentinelYear: number               // default: current year
 ```
 
+> **Note (post-3d):** `topoSourceManual` and `topoOpacity` were removed in 3d. Topo source is now set atomically via `selectBasemap()`. Opacity is always 1.
+
 - [x] Add actions: `setTopoSource`, `setOverlayPistes`, `setOverlaySkiTouring`, `setOverlaySnowshoe`, `setSentinelYear`
 
 ### 5. Raster overlay hook — `apps/web/src/map/useRasterOverlays.ts`
@@ -114,18 +116,13 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
 - [x] Extract `applyPostStyleLoad(map)` function that re-adds terrain + raster overlays
 - [x] Wire both terrain + raster re-add from `style.load` handler and initial `load`
 
-### 8. LayerPanel UI — `apps/web/src/map/LayerPanel.tsx`
+### 8. ~~LayerPanel UI~~ — replaced by sidebar in 3d
 
-- [x] Add "Topo Map" section (visible when `baseLayer === 'outdoors'`):
-  - Dropdown: Auto-detect (shows current source), None, each country source
-  - Opacity slider (0–100%)
-  - Attribution text
-- [x] Add "Overlays" section (visible in winter mode):
-  - Pistes checkbox (always)
-  - Ski touring checkbox (when swisstopo active)
-  - Snowshoe checkbox (when swisstopo active)
-- [x] Add "Seasonal Satellite" section (visible when `baseLayer === 'satellite'`):
-  - Year selector (2018–current)
+> **Note (post-3d):** `LayerPanel.tsx` was deleted. Its functionality was split across sidebar tabs: basemap cards in `BasemapsTab.tsx`, overlay toggles in `OverlaysTab.tsx`, and terrain settings in `SettingsTab.tsx`. The auto-detect dropdown and opacity slider were removed entirely.
+
+- [x] ~~Add "Topo Map" section~~ → replaced by basemap cards in sidebar
+- [x] ~~Add "Overlays" section~~ → replaced by OverlaysTab toggle switches
+- [x] ~~Add "Seasonal Satellite" section~~ → year selector moved to OverlaysTab
 
 ### 9. Tests — `packages/map-core/src/topo.test.ts`
 
