@@ -7,39 +7,46 @@ interface BasemapCard {
   gradient: string
   topo: boolean
   tag?: string | undefined
+  disabled?: boolean | undefined
+  hint?: string | undefined
 }
 
 const TOPO_PATTERN =
   'repeating-linear-gradient(0deg, transparent, transparent 6px, rgba(255,255,255,0.07) 6px, rgba(255,255,255,0.07) 7px)'
 
-const GLOBAL_CARDS: BasemapCard[] = [
-  {
-    preset: 'outdoors-summer',
-    label: 'Outdoors Summer',
-    gradient: 'linear-gradient(135deg, #34d399, #059669)',
-    topo: true,
-  },
-  {
-    preset: 'outdoors-winter',
-    label: 'Outdoors Winter',
-    gradient: 'linear-gradient(135deg, #7dd3fc, #38bdf8)',
-    topo: true,
-  },
+const SATELLITE_CARDS: BasemapCard[] = [
   {
     preset: 'satellite-summer',
-    label: 'Satellite Summer',
+    label: 'Summer',
     gradient: 'linear-gradient(135deg, #065f46, #064e3b)',
     topo: false,
   },
   {
     preset: 'satellite-winter',
-    label: 'Satellite Winter',
+    label: 'Winter',
     gradient: 'linear-gradient(135deg, #1e3a5f, #0f172a)',
     topo: false,
+    disabled: true,
+    hint: 'Coming soon',
   },
 ]
 
-const COUNTRY_CARDS: BasemapCard[] = [
+const TOPO_GLOBAL_CARDS: BasemapCard[] = [
+  {
+    preset: 'outdoors-summer',
+    label: 'Global Summer',
+    gradient: 'linear-gradient(135deg, #34d399, #059669)',
+    topo: true,
+  },
+  {
+    preset: 'outdoors-winter',
+    label: 'Global Winter',
+    gradient: 'linear-gradient(135deg, #7dd3fc, #38bdf8)',
+    topo: true,
+  },
+]
+
+const TOPO_COUNTRY_CARDS: BasemapCard[] = [
   {
     preset: 'swisstopo',
     label: 'swisstopo',
@@ -107,31 +114,26 @@ export default function BasemapsTab() {
   const { baseLayer, season, topoSource, selectBasemap } = useMapStore()
   const state = { baseLayer, season, topoSource }
 
+  const renderCards = (cards: BasemapCard[]) =>
+    cards.map((card) => (
+      <Card
+        key={card.preset}
+        card={card}
+        active={!card.disabled && isActivePreset(card.preset, state)}
+        onClick={card.disabled ? undefined : () => selectBasemap(card.preset)}
+      />
+    ))
+
   return (
     <div className="space-y-5">
-      <Section title="Global">
-        <div className="grid grid-cols-2 gap-2">
-          {GLOBAL_CARDS.map((card) => (
-            <Card
-              key={card.preset}
-              card={card}
-              active={isActivePreset(card.preset, state)}
-              onClick={() => selectBasemap(card.preset)}
-            />
-          ))}
-        </div>
+      <Section title="Satellite">
+        <div className="grid grid-cols-2 gap-2">{renderCards(SATELLITE_CARDS)}</div>
       </Section>
 
-      <Section title="Country Topos">
+      <Section title="Topos">
         <div className="grid grid-cols-2 gap-2">
-          {COUNTRY_CARDS.map((card) => (
-            <Card
-              key={card.preset}
-              card={card}
-              active={isActivePreset(card.preset, state)}
-              onClick={() => selectBasemap(card.preset)}
-            />
-          ))}
+          {renderCards(TOPO_GLOBAL_CARDS)}
+          {renderCards(TOPO_COUNTRY_CARDS)}
         </div>
       </Section>
     </div>
@@ -156,20 +158,25 @@ function Card({
 }: {
   card: BasemapCard
   active: boolean
-  onClick: () => void
+  onClick: (() => void) | undefined
 }) {
+  const disabled = card.disabled ?? false
+
   return (
     <button
-      onClick={onClick}
-      className={`group relative flex flex-col rounded-xl overflow-hidden cursor-pointer border-2 transition-all duration-150 w-full bg-transparent ${
-        active
-          ? 'border-accent shadow-[0_0_0_2px_rgba(245,158,11,0.2)]'
-          : 'border-white/[0.08] hover:border-white/20'
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      className={`group relative flex flex-col rounded-xl overflow-hidden border-2 transition-all duration-150 w-full bg-transparent ${
+        disabled
+          ? 'border-white/[0.04] opacity-50 cursor-not-allowed'
+          : active
+            ? 'border-accent shadow-[0_0_0_2px_rgba(245,158,11,0.2)] cursor-pointer'
+            : 'border-white/[0.08] hover:border-white/20 cursor-pointer'
       }`}
     >
       {/* Gradient thumbnail with topo contour texture */}
       <div
-        className="relative w-full h-14 transition-[filter] duration-150 group-hover:brightness-110"
+        className={`relative w-full h-14 transition-[filter] duration-150 ${disabled ? 'grayscale' : 'group-hover:brightness-110'}`}
         style={{
           background: card.topo ? `${TOPO_PATTERN}, ${card.gradient}` : card.gradient,
         }}
@@ -190,6 +197,9 @@ function Card({
         >
           {card.label}
         </span>
+        {card.hint && (
+          <span className="block text-[9px] text-white/25 leading-tight">{card.hint}</span>
+        )}
       </div>
     </button>
   )

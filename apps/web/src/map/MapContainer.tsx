@@ -112,10 +112,12 @@ export default function MapContainer() {
   }, [])
 
   // --- Style switching (base layer or season change) ---
+  const prevStyleRef = useRef<string | null>(null)
   useEffect(() => {
     // Skip on initial render — the map constructor already set the style.
     if (initialStyleRef.current) {
       initialStyleRef.current = false
+      prevStyleRef.current = resolveStyleUrl(baseLayer, season)
       return
     }
 
@@ -123,6 +125,11 @@ export default function MapContainer() {
     if (!map) return
 
     const newStyle = resolveStyleUrl(baseLayer, season)
+
+    // Skip if resolved URL hasn't changed (e.g. season toggle within same base layer)
+    if (newStyle === prevStyleRef.current) return
+    prevStyleRef.current = newStyle
+
     map.setStyle(newStyle, { diff: false } as Parameters<typeof map.setStyle>[1])
 
     // After style replacement, all sources/layers are gone.
