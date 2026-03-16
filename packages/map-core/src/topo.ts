@@ -41,7 +41,7 @@ export const TOPO_SOURCES: TopoSourceDef[] = [
     winterTileUrl:
       'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-grau/default/current/3857/{z}/{x}/{y}.jpeg',
     attribution: '&copy; <a href="https://www.swisstopo.admin.ch">swisstopo</a>',
-    maxZoom: 18,
+    maxZoom: 22,
     tileSize: 256,
     needsProxy: true,
     proxyProvider: 'swisstopo',
@@ -68,7 +68,7 @@ export const TOPO_SOURCES: TopoSourceDef[] = [
     tileUrl: 'https://maps.wien.gv.at/basemap/bmaphidpi/normal/google3857/{z}/{y}/{x}.jpeg',
     attribution: '&copy; <a href="https://basemap.at">basemap.at</a>',
     maxZoom: 19,
-    tileSize: 256,
+    tileSize: 512, // bmaphidpi serves 512px HiDPI tiles
     needsProxy: false,
   },
   {

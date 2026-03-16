@@ -674,7 +674,7 @@ Layers are toggled via the UI and managed through the shared `map-core` package.
 | Satellite Streets v12 | `mapbox://styles/mapbox/satellite-streets-v12` | Satellite with road/label overlays |
 | Custom Winter | `mapbox://styles/{username}/winter` | Snow-tinted terrain, blue water, white roads (built in Mapbox Studio from Outdoors base) |
 | Custom Summer | `mapbox://styles/{username}/summer` | Green vegetation emphasis (built in Mapbox Studio from Outdoors base) |
-| OpenTopoMap | `https://tile.opentopomap.org/{z}/{x}/{y}.png` | Outdoor-focused manually-selectable topo source (raster XYZ, max z19, CC-BY-SA) |
+| OpenTopoMap | `https://tile.opentopomap.org/{z}/{x}/{y}.png` | Outdoor-focused manually-selectable topo source (raster XYZ, max z17, CC-BY-SA) |
 | Sentinel-2 Summer | Copernicus Sentinel Hub WMS (proxied) | Seasonal satellite composite: Jun–Aug, 10m, MAXCC ≤20% |
 | Sentinel-2 Winter | Copernicus Sentinel Hub WMS (proxied) | Seasonal satellite composite: Dec–Feb, 10m, MAXCC ≤30% |
 
@@ -735,7 +735,7 @@ National mapping agencies provide high-detail topographic maps that significantl
 | BKG TopPlusOpen | Germany | `https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web/default/WEBMERCATOR/{z}/{y}/{x}.png` | WMTS (PNG) | z26 | No | DL-DE-BY 2.0 |
 | Kartverket | Norway | WMTS via `opencache.statkart.no` (topo4 layer) | WMTS | z20 | No | CC-BY 4.0 |
 | USGS National Map | USA | WMTS via `basemap.nationalmap.gov` (USGSTopo layer) | WMTS | z16 | No | Public domain |
-| OpenTopoMap | Global | `https://tile.opentopomap.org/{z}/{x}/{y}.png` | XYZ (PNG) | z19 | No | CC-BY-SA 3.0 |
+| OpenTopoMap | Global | `https://tile.opentopomap.org/{z}/{x}/{y}.png` | XYZ (PNG) | z17 | No | CC-BY-SA 3.0 |
 
 **Selection model**: Topo overlays load only when the user explicitly selects a country topo card in the sidebar. Global Outdoors cards set `topoSource: null`, showing the Mapbox Outdoors base style without any raster overlay.
 
@@ -745,6 +745,8 @@ National mapping agencies provide high-detail topographic maps that significantl
 OpenTopoMap is kept in the source catalog as a proxy-only global fallback but has no dedicated UI card.
 
 > **Why raster?** Country topo sources are pre-rendered cartographic products from national mapping agencies. Using their raster tiles gives expert-quality cartography (contour styling, hillshading, trail symbols, local labels) with zero styling effort. Vector tile alternatives exist for some providers but would require building and maintaining per-country Mapbox GL style specs — significant effort for marginal benefit when the goal is to overlay national topo quality on the Mapbox vector basemap.
+
+> **Future: vector tile migration.** 5 of 7 providers now offer vector tiles (PBF): swisstopo (Light Base Map via `vectortiles10.geo.admin.ch`), IGN (Plan IGN TMS via `data.geopf.fr`), basemap.at (via `maps.wien.gv.at/basemapv`), BKG (basemap.de via `sgx.geodatenzentrum.de`), Kartverket (landtopo pilot). OpenTopoMap has vector tiles coming soon (per their site). USGS has no vector tiles. Switching to vector would give retina-crisp rendering, smaller payloads, and the ability to style/theme topo layers — but requires per-provider Mapbox GL style specs. Consider migrating high-priority providers (swisstopo, IGN) first when raster quality on retina screens becomes a user complaint.
 
 Country bounding boxes (approximate, stored in `packages/map-core`):
 
