@@ -48,7 +48,7 @@ The platform combines rich interactive maps (topographic, satellite, 3D terrain)
 | **Web frontend** | React + TypeScript + Vite | Fast build tooling, mature ecosystem, shares language with mobile |
 | **Mobile** | React Native + `@rnmapbox/maps` | Single codebase for iOS + Android; shares types/logic with web |
 | **Backend** | Go | Excellent concurrency, fast compilation, ideal for geospatial processing and data pipelines |
-| **Maps** | Mapbox GL JS (web), `@rnmapbox/maps` (mobile) | Best-in-class vector tile rendering, 3D terrain, custom styling |
+| **Maps** | Mapbox GL JS / MapTiler SDK (web), `@rnmapbox/maps` (mobile) | Dual-provider web map rendering with runtime selection; 3D terrain, custom styling |
 | **State management** | Zustand | Lightweight, minimal boilerplate, good fit for map-heavy UIs |
 | **Data visualization** | Deck.gl (optional) | Advanced visualization layers on top of Mapbox when needed |
 | **Monorepo** | Turborepo | Fast task orchestration, dependency-aware builds |
@@ -73,6 +73,7 @@ The platform combines rich interactive maps (topographic, satellite, 3D terrain)
 | Library | Purpose |
 |---|---|
 | `mapbox-gl` | Web map rendering |
+| `@maptiler/sdk` | Web map rendering (alternative provider, MapLibre-based) |
 | `@rnmapbox/maps` | React Native map rendering |
 | `zustand` | State management |
 | `@radix-ui/react-*` | Headless accessible UI primitives (dialogs, dropdowns, toasts) — installed per-component, styled with Tailwind |
@@ -86,6 +87,7 @@ The platform combines rich interactive maps (topographic, satellite, 3D terrain)
 | Service | Free Tier | Paid Tier | Notes |
 |---|---|---|---|
 | **Mapbox** | 50K web map loads/month, 25K mobile MAU/month, 750K raster tile requests/month | Pay-as-you-go beyond free tier | A "map load" = one `new Map()` initialization, NOT per-interaction |
+| **MapTiler** | Free (no hard limit, fair use) | From EUR 25/month | MapTiler SDK includes terrain, geocoding, weather; alternative to Mapbox for base maps |
 | **Mapbox Directions API** | 100K requests/month (included in Mapbox free tier) | Pay-as-you-go beyond | Walking profile for trail snapping; proxied through backend |
 | **Open-Meteo** | <10K calls/day (no API key) | From $29/month for 1M calls | Free for non-commercial use |
 | **OpenSkiData** | Free | — | ODbL license, self-hostable |
@@ -200,11 +202,13 @@ mtamta/
 │   │   ├── tsconfig.json
 │   │   └── package.json
 │   │
-│   ├── map-core/             # Map config, styles, layer definitions
+│   ├── map-core/             # Map config, styles, layer definitions, provider types
 │   │   ├── src/
-│   │   │   ├── styles/       # Mapbox style definitions
+│   │   │   ├── styles/       # Provider-neutral style definitions
 │   │   │   ├── layers/       # Layer configuration
-│   │   │   └── config.ts     # Mapbox tokens, defaults
+│   │   │   ├── providers.ts  # MapProvider type, FeatureId, CapabilityState
+│   │   │   ├── capabilities.ts # Per-provider capability matrix
+│   │   │   └── config.ts     # Map defaults, viewport config
 │   │   └── package.json
 │   │
 │   # packages/ui/ — created when shared component logic emerges between web and mobile (Phase 9+)
@@ -538,20 +542,29 @@ CREATE TABLE auth_providers (
 
 - **React 19** with TypeScript 5.9
 - **Vite 8** (Rolldown) for development and builds
-- **Mapbox GL JS 3.x** for map rendering
+- **Mapbox GL JS 3.x / MapTiler SDK** for map rendering (runtime-selected)
 - **Zustand 5** for state management
 - **React Router 7** for routing
 - **Vitest 4** for testing
 
 ### Map Integration
 
-The web app is centered around an interactive map. The map component is the primary UI element, with overlaid panels for trip details, search, and filters.
+The web app is centered around an interactive map. **Target state (Phase 3.5)**: a dual-provider architecture where users select Mapbox or MapTiler after login, and the app lazy-loads only the chosen provider runtime. Until Phase 3.5 ships, the web app uses Mapbox GL JS directly. The selection is persisted in `localStorage` so the gate only appears on first use (or after clearing). A "Change map provider" option is available in Settings.
 
-**Implementation requirements for `MapContainer.tsx`:**
+**Provider-neutral runtime dispatch:**
+- Post-login provider selection (stored in `localStorage`, surfaced via `mapStore`)
+- Lazy-loaded provider runtimes: `runtime/mapbox/` or `runtime/maptiler/`
+- Shared app-owned layers (trip routes, raster overlays) target an `AppMapAdapter` type interface — not the raw vendor SDK — covering source/layer lifecycle, style inspection for layer ordering, viewport reads, and interaction events
+- Provider-specific features (search, weather, directions) live inside each runtime module
+- Capability matrix (`providerCapabilities.ts`) gates UI controls: `available`, `coming_soon`, or `unsupported`
+
+See [`MapProviders.md`](MapProviders.md) for the detailed implementation spec (adapter interface, runtime file structure, capability matrix, testing strategy).
+
+**Implementation requirements (apply to each provider runtime's `MapContainer.tsx`):**
 - Use `useRef` + `useEffect` pattern — store map instance in a ref, initialize in `useEffect(fn, [])`. The map persists for the lifetime of `AppLayout` (not remounted on sidebar or panel changes). Return a cleanup function that calls `map.remove()` only when `AppLayout` itself unmounts to prevent WebGL context leaks
-- Import `'mapbox-gl/dist/mapbox-gl.css'` — the map canvas is invisible without it
-- Use Mapbox GL JS **v3.x**: pass `accessToken` in the Map constructor rather than setting `mapboxgl.accessToken` globally
-- `VITE_MAPBOX_ACCESS_TOKEN` must be a public `pk.*` token with URL restrictions configured per environment in the Mapbox dashboard; the Directions API proxy uses a server-side `sk.*` token that never reaches the browser
+- Mapbox runtime: import `'mapbox-gl/dist/mapbox-gl.css'`; pass `accessToken` in the Map constructor (v3.x)
+- MapTiler runtime: import `'@maptiler/sdk/dist/maptiler-sdk.css'`; pass API key in the Map constructor
+- `VITE_MAPBOX_ACCESS_TOKEN` must be a public `pk.*` token with URL restrictions; `VITE_MAPTILER_API_KEY` is the MapTiler API key
 
 **Layer ordering — user content must render on top:**
 All app-generated layers (trip routes, waypoints, user position) must be added after the base style loads and appended without a `beforeId` so they sit above POI symbols. A route line covering a café icon is acceptable; a POI icon covering a route line is not.
@@ -563,7 +576,7 @@ All app-generated layers (trip routes, waypoints, user position) must be added a
 │ │Bar  │                    │Panel  │ │
 │ ├─────┤                    └───────┘ │
 │ │     │                              │
-│ │Side │     MAP (Mapbox GL JS)       │
+│ │Side │   MAP (Mapbox / MapTiler)    │
 │ │Panel│                              │
 │ │     │                    ┌───────┐ │
 │ │     │                    │Layer  │ │
@@ -578,7 +591,7 @@ All app-generated layers (trip routes, waypoints, user position) must be added a
 ### State Management (Zustand)
 
 Key stores:
-- **`mapStore`** — viewport (center, zoom, bearing, pitch), active layers, selected features
+- **`mapStore`** — viewport (center, zoom, bearing, pitch), active layers, selected features, selected map provider
 - **`authStore`** — current user, tokens, login/logout actions
 - **`tripStore`** — active trip, trip list, filters
 - **`uiStore`** — panel states, modals, loading indicators
@@ -589,12 +602,12 @@ Layers are toggled via the UI and managed through the shared `map-core` package.
 
 | Category | Layer | Type | Source |
 |---|---|---|---|
-| **Base** | Topographic | Vector | Mapbox Outdoors v12 (`mapbox://styles/mapbox/outdoors-v12`) |
-| **Base** | Satellite | Raster | Mapbox Satellite Streets v12 (`mapbox://styles/mapbox/satellite-streets-v12`) |
+| **Base** | Topographic | Vector | Topographic base style (Mapbox Outdoors v12 / MapTiler Outdoor v2) |
+| **Base** | Satellite | Raster | Satellite base style (Mapbox Satellite Streets v12 / MapTiler Satellite) |
 | **Base** | Country Topographic | Raster (WMTS/XYZ) | National mapping agency tiles, explicitly selected via sidebar cards (swisstopo, IGN, basemap.at, BKG, Kartverket, USGS); OpenTopoMap as global fallback in catalog; Mapbox Outdoors global default |
 | **Base** | Satellite — Summer | Raster (WMS) | Sentinel-2 via Copernicus Sentinel Hub (Jun–Aug composite, 10m, MAXCC=20); proxied through backend |
 | **Base** | Satellite — Winter | Raster (WMS) | Sentinel-2 via Copernicus Sentinel Hub (Dec–Feb composite, 10m, MAXCC=30); proxied through backend |
-| **Base** | 3D Terrain | DEM | Mapbox Terrain-DEM v1 (`mapbox.mapbox-terrain-dem-v1`) |
+| **Base** | 3D Terrain | DEM | Provider DEM (Mapbox Terrain-DEM v1 / MapTiler Terrain RGB v2) |
 | **Mode** | Winter style | Style switch | Custom Mapbox Studio style (from Outdoors base) |
 | **Mode** | Summer style | Style switch | Custom Mapbox Studio style (from Outdoors base) |
 | **Overlay** | Slope angle | Raster tiles | Copernicus GLO-30 DEM (pre-generated) + Mapbox Terrain RGB (client-side fallback) |
@@ -616,7 +629,7 @@ Layers are toggled via the UI and managed through the shared `map-core` package.
 | **Tool** | Elevation point query | Popup | Client-side Mapbox Terrain RGB decode |
 | **Tool** | Distance measurement | Interactive overlay | turf.js geodesic distance |
 | **Tool** | Custom terrain filter | Dynamic overlay | Client-side Mapbox Terrain RGB decode (WebGL) |
-| **Tool** | Route planner | Interactive overlay | Draw waypoints → Mapbox Directions API (walking profile, proxied) → snapped route + elevation profile |
+| **Tool** | Route planner | Interactive overlay | Draw waypoints → Mapbox Directions API (walking profile, proxied; Mapbox provider); MapTiler equivalent planned |
 
 ---
 
@@ -625,7 +638,7 @@ Layers are toggled via the UI and managed through the shared `map-core` package.
 ### Stack
 
 - **React Native** (bare or Expo)
-- **`@rnmapbox/maps`** for Mapbox integration
+- **`@rnmapbox/maps`** for Mapbox integration (future: MapLibre React Native as alternative — provider types in `map-core` are already mobile-compatible)
 - **React Navigation** for screen routing
 - Shared `packages/shared` for types, API client, and utilities
 - Shared `packages/map-core` for map configuration and layer definitions
@@ -635,7 +648,7 @@ Layers are toggled via the UI and managed through the shared `map-core` package.
 | Package | Contents | Used By |
 |---|---|---|
 | `packages/shared` | TypeScript types, API client, validation | Web + Mobile |
-| `packages/map-core` | Map styles, layer configs, Mapbox token | Web + Mobile |
+| `packages/map-core` | Map styles, layer configs, provider types, capability matrix | Web + Mobile |
 | `packages/ui` | Platform-agnostic component logic (Phase 9+) | Web + Mobile |
 
 ### Offline Capabilities (Phase 11)
@@ -657,7 +670,15 @@ Layers are toggled via the UI and managed through the shared `map-core` package.
 
 **Geographic priority**: Alps + North America + Scandinavia first, eventually worldwide. Country-specific topographic maps from national mapping agencies provide higher detail than Mapbox Outdoors for priority regions.
 
-### Mapbox Tilesets Used
+### Map Provider Architecture (Phase 3.5)
+
+> **Note**: This section describes the target architecture. Until Phase 3.5 ships, the web app uses Mapbox GL JS directly. See current implementation in `apps/web/src/map/MapContainer.tsx`.
+
+The web app will support dual map providers (Mapbox and MapTiler) with runtime selection. Users choose a provider after login; the choice is persisted in `localStorage`. Each provider has its own lazy-loaded runtime module with provider-specific SDK usage. Shared app-owned layers (trip routes, raster overlays) target a narrow `AppMapAdapter` interface so they work with both providers without duplication.
+
+See [`MapProviders.md`](MapProviders.md) for the full implementation reference: adapter interface, runtime file structure, capability matrix, phased rollout plan, and testing strategy.
+
+### Mapbox Tilesets Used (+ MapTiler Equivalents)
 
 | Tileset | ID | Type | Purpose |
 |---|---|---|---|
@@ -670,28 +691,33 @@ Layers are toggled via the UI and managed through the shared `map-core` package.
 
 | Style | URL | Usage |
 |---|---|---|
-| Outdoors v12 | `mapbox://styles/mapbox/outdoors-v12` | Default — trails, contours, hillshade, peaks |
-| Satellite Streets v12 | `mapbox://styles/mapbox/satellite-streets-v12` | Satellite with road/label overlays |
+| Outdoors v12 (Mapbox) | `mapbox://styles/mapbox/outdoors-v12` | Default — trails, contours, hillshade, peaks |
+| Outdoor v2 (MapTiler) | `https://api.maptiler.com/maps/outdoor-v2/style.json` | MapTiler equivalent — contours, hillshade, trails |
+| Satellite Streets v12 (Mapbox) | `mapbox://styles/mapbox/satellite-streets-v12` | Satellite with road/label overlays |
+| Satellite (MapTiler) | `https://api.maptiler.com/maps/satellite/style.json` | MapTiler satellite with labels |
 | Custom Winter | `mapbox://styles/{username}/winter` | Snow-tinted terrain, blue water, white roads (built in Mapbox Studio from Outdoors base) |
 | Custom Summer | `mapbox://styles/{username}/summer` | Green vegetation emphasis (built in Mapbox Studio from Outdoors base) |
 | OpenTopoMap | `https://tile.opentopomap.org/{z}/{x}/{y}.png` | Outdoor-focused manually-selectable topo source (raster XYZ, max z17, CC-BY-SA) |
 | Sentinel-2 Summer | Copernicus Sentinel Hub WMS (proxied) | Seasonal satellite composite: Jun–Aug, 10m, MAXCC ≤20% |
 | Sentinel-2 Winter | Copernicus Sentinel Hub WMS (proxied) | Seasonal satellite composite: Dec–Feb, 10m, MAXCC ≤30% |
 
-**Country-specific topo sources**: National mapping agency topo maps are available as additional base layer options for priority regions (Switzerland, France, Austria, Germany, Norway, USA). Auto-selected by viewport location. See [Country-Specific Topographic Maps](#country-specific-topographic-maps) in the Layer Catalog.
+**Country-specific topo sources**: National mapping agency topo maps are available as additional base layer options for priority regions (Switzerland, France, Austria, Germany, Norway, USA). Explicitly selected via sidebar cards (not auto-selected). See [Country-Specific Topographic Maps](#country-specific-topographic-maps) in the Layer Catalog.
 
 **Access token**: Stored in environment variables, loaded via `packages/map-core`.
 
 ### 3D Terrain Configuration
 
-- **Source**: `mapbox.mapbox-terrain-dem-v1` (Terrain-DEM v1)
-- **Tile size**: 512px
-- **Max zoom**: 14 (SDK interpolates beyond)
+Both providers support 3D terrain with different DEM sources:
+
+| Provider | DEM Source | Tile Size | Max Zoom | Decoding |
+|---|---|---|---|---|
+| Mapbox | `mapbox.mapbox-terrain-dem-v1` (Terrain-DEM v1) | 512px | 14 | `height = -10000 + ((R × 256 × 256 + G × 256 + B) × 0.1)` |
+| MapTiler | MapTiler Terrain RGB v2 | 512px | 12 | Terrarium encoding: `height = (R × 256 + G + B / 256) − 32768` |
+
 - **Default exaggeration**: 1.5 (adjustable via UI slider)
 - **Sky layer**: Enabled in 3D mode for atmospheric rendering
-- **DEM decoding formula**: `height = -10000 + ((R × 256 × 256 + G × 256 + B) × 0.1)`
 
-Both Mapbox GL JS and `@rnmapbox/maps` support 3D terrain natively. Combined with custom pitch/bearing controls for immersive flyover views.
+Mapbox GL JS, MapTiler SDK, and `@rnmapbox/maps` all support 3D terrain natively. Combined with custom pitch/bearing controls for immersive flyover views.
 
 ### Layer Architecture
 
@@ -707,7 +733,7 @@ Both Mapbox GL JS and `@rnmapbox/maps` support 3D terrain natively. Combined wit
 ├─────────────────────────────┤
 │      Mode                   │  ← Winter / Summer style applied on top of base
 ├─────────────────────────────┤
-│      Base Layer             │  ← Topographic (Mapbox / country-specific / OpenTopoMap) OR Satellite
+│      Base Layer             │  ← Topographic (Mapbox / MapTiler / country-specific / OpenTopoMap) OR Satellite
 ├─────────────────────────────┤
 │      Terrain (3D)           │  ← DEM-based terrain exaggeration
 └─────────────────────────────┘
@@ -1817,6 +1843,9 @@ S3_BUCKET=mtamta
 
 # Mapbox
 MAPBOX_ACCESS_TOKEN=...
+
+# MapTiler
+MAPTILER_API_KEY=...
 
 # Device integrations
 INTEGRATION_TOKEN_KEY=...    # AES-256 key for OAuth token encryption

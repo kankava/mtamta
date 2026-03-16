@@ -9,15 +9,16 @@
 1. [Phase 1: Foundation](#phase-1-foundation)
 2. [Phase 2: Maps Core](#phase-2-maps-core)
 3. [Phase 3: Map Sources & Overlays](#phase-3-map-sources--overlays)
-4. [Phase 4: Trip System](#phase-4-trip-system)
-5. [Phase 5: Device Integrations](#phase-5-device-integrations)
-6. [Phase 6: User & Social](#phase-6-user--social)
-7. [Phase 7: Terrain Analysis Layers](#phase-7-terrain-analysis-layers)
-8. [Phase 8: Live Data Integrations](#phase-8-live-data-integrations)
-9. [Phase 9: Mobile App](#phase-9-mobile-app)
-10. [Phase 10: Search & Discovery](#phase-10-search--discovery)
-11. [Phase 11: Advanced Features](#phase-11-advanced-features)
-12. [Phase 12: Polish & Launch](#phase-12-polish--launch)
+4. [Phase 3.5: Multi-Provider Support](#phase-35-multi-provider-support)
+5. [Phase 4: Trip System](#phase-4-trip-system)
+6. [Phase 5: Device Integrations](#phase-5-device-integrations)
+7. [Phase 6: User & Social](#phase-6-user--social)
+8. [Phase 7: Terrain Analysis Layers](#phase-7-terrain-analysis-layers)
+9. [Phase 8: Live Data Integrations](#phase-8-live-data-integrations)
+10. [Phase 9: Mobile App](#phase-9-mobile-app)
+11. [Phase 10: Search & Discovery](#phase-10-search--discovery)
+12. [Phase 11: Advanced Features](#phase-11-advanced-features)
+13. [Phase 12: Polish & Launch](#phase-12-polish--launch)
 
 ---
 
@@ -382,6 +383,91 @@ apps/web/src/map/
 
 ---
 
+## Phase 3.5: Multi-Provider Support
+
+**Goal**: Dual-provider map rendering (Mapbox + MapTiler) with a shared overlay system and runtime-selected provider loading.
+
+### Dependencies
+
+- Phase 2 (map rendering, map-core package)
+- Phase 3 (overlay system, raster tiles)
+
+### Features
+
+- Post-login provider selection gate (localStorage-persisted)
+- Lazy-loaded provider runtimes (Mapbox or MapTiler)
+- Shared `AppMapAdapter` type interface for app-owned layers
+- Provider capability matrix gating UI controls (`available`, `coming_soon`, `unsupported`)
+- Both providers render topographic, satellite, and 3D terrain base maps
+- Shared raster overlays (country topo, seasonal satellite) work in both providers
+- "Change map provider" option in Settings
+
+### Sub-Milestones
+
+**M1 — Infrastructure + Mapbox Extraction**
+- Add `MapProvider` types and capability model to `@mtamta/map-core`
+- Add `mapProvider` state to `mapStore` with localStorage persistence
+- Create post-login `MapProviderGate` (only shown when no stored preference exists)
+- Extract current Mapbox code into `runtime/mapbox/` modules
+- Define `AppMapAdapter` type interface (source/layer lifecycle, style reload, viewport reads)
+- Move shared overlays (`useRasterOverlays`, trip layers) to `runtime/shared/` targeting `AppMapAdapter`
+- Verify zero behavior regression in existing Mapbox stack
+
+**M2 — MapTiler Runtime Boot + Shared Layer Parity**
+- Implement `runtime/maptiler/MapContainer.tsx` using `@maptiler/sdk`
+- Implement `runtime/maptiler/MapControls.tsx`
+- Wire MapTiler style resolution (Outdoor v2, Satellite, Terrain RGB v2)
+- Verify shared overlays (raster topo, seasonal satellite) work in MapTiler runtime
+- Add capability gating for incomplete MapTiler features (show `Coming soon`)
+- Both providers boot cleanly from the provider gate
+
+**M3 — Provider-Specific Features (deferred to after Phase 4)**
+- Geocoder for each provider
+- Weather integration per provider
+- Directions / route planning per provider
+- Update capability matrix as each feature lands
+
+### Key Files
+
+```
+apps/web/src/map/
+  runtime/
+    mapbox/
+      MapContainer.tsx
+      MapControls.tsx
+      terrain.ts
+    maptiler/
+      MapContainer.tsx
+      MapControls.tsx
+      terrain.ts
+    shared/
+      mapAdapter.ts
+      tripLayers.ts
+      rasterOverlays.ts
+      providerCapabilities.ts
+  MapRuntime.tsx
+  MapProviderGate.tsx
+
+packages/map-core/src/
+  providers.ts          # MapProvider type, FeatureId, CapabilityState
+  capabilities.ts       # Per-provider capability matrix
+```
+
+### Acceptance Criteria
+
+- [ ] Provider gate appears after login when no stored preference exists
+- [ ] Selecting Mapbox loads the Mapbox runtime with no behavior regression
+- [ ] Selecting MapTiler loads the MapTiler runtime with base maps and 3D terrain
+- [ ] Shared overlays (country topo, seasonal satellite) render in both providers
+- [ ] Trip route layers (from Phase 4) use `AppMapAdapter` and work in both providers
+- [ ] Provider choice persists in localStorage; gate is skipped on subsequent visits
+- [ ] Unsupported or not-yet-implemented features show `Coming soon` in the UI
+- [ ] Capability matrix accurately reflects implementation status
+
+> **Detailed implementation spec**: See [`docs/MapProviders.md`](MapProviders.md) for adapter interface, runtime file structure, capability matrix, and testing strategy.
+
+---
+
 ## Phase 4: Trip System
 
 **Goal**: Users can create trips by uploading GPX files, view trip routes on the map, and browse trip detail pages.
@@ -390,6 +476,7 @@ apps/web/src/map/
 
 - Phase 1 (auth, user system, API)
 - Phase 2 (map rendering)
+- Phase 3.5 (multi-provider adapter — trip routes written against `AppMapAdapter`)
 
 ### Features
 
@@ -419,9 +506,9 @@ apps/web/src/map/
 
 2. **Trip CRUD API** — GPX parsing (`encoding/xml`), PostGIS route storage, trip CRUD endpoints, bbox GeoJSON query with zoom-dependent simplification
 3. **Photo upload + geotagging** — S3 pre-signed uploads (server-generated keys), EXIF GPS extraction, timestamp interpolation fallback
-4. **Map trip display** — trip routes as GeoJSON on map, color by activity type, click to open detail panel
+4. **Map trip display** — trip routes as GeoJSON on map, color by activity type, click to open detail panel; `useTripRoutes` uses `AppMapAdapter`, placed in `runtime/shared/`
 5. **Trip UI** — creation page (GPX upload + metadata), detail page, card component, Radix UI primitives (Dialog, DropdownMenu, Toast)
-6. **Map search bar** — Mapbox SearchBox geocoder (fly-to-place only; full app search is Phase 10)
+6. **Map search bar** — Mapbox SearchBox geocoder (fly-to-place only; full app search is Phase 10); Mapbox SearchBox is Mapbox-specific, wrap in capability check, mark `coming_soon` for MapTiler
 7. **Climbing trip segments** — approach/climb/descent segments, per-pitch JSONB metadata, `@openbeta/sandbag` grade display, vertical profile
 
 > **Detailed implementation plan**: See [`docs/Phase4.md`](Phase4.md) for sub-milestones (4a–4d), file manifests, SQL schemas, endpoint contracts, and verification checklists.
@@ -915,6 +1002,7 @@ apps/web/src/map/
    - Set up React Navigation with tab and stack navigators
    - Integrate `packages/shared` for types and API client
    - Integrate `packages/map-core` for map configuration
+   - Import provider types from `packages/map-core` — provider selection model extends to mobile
 
 2. **Authentication**
    - Google Sign-In: `@react-native-google-signin/google-signin`
@@ -970,6 +1058,7 @@ apps/mobile/
 - [ ] Trip detail screen shows route, stats, photos
 - [ ] User can view and edit their profile
 - [ ] Shared packages (`shared`, `map-core`) work correctly in React Native
+- [ ] Shared `map-core` provider types and capability model are compatible with mobile
 - [ ] Navigation between screens is smooth and intuitive
 
 ---
@@ -1371,7 +1460,8 @@ apps/api/
 | 1 | Foundation | Authenticated API + web shell + CI |
 | 2 | Maps Core | Interactive map with layers, 3D terrain |
 | 3 | Map Sources & Overlays | Country-specific topo maps, seasonal satellite, ski overlays |
-| 4 | Trip System | GPX upload, trip CRUD, routes on map, climbing segments + pitch metadata |
+| 3.5 | Multi-Provider Support | Dual Mapbox/MapTiler rendering, shared adapter, capability matrix |
+| 4 | Trip System | GPX upload, trip CRUD, routes via provider-neutral adapter, climbing segments + pitch metadata |
 | 5 | **Device Integrations** | **Garmin sync, FIT parsing, course push, multi-pitch climb parsing** |
 | 6 | User & Social | Profiles, follows, likes, comments, feed, notifications |
 | 7 | Terrain Analysis | Slope angle, aspect, avalanche slope filter, sun exposure, custom tiles |
@@ -1381,4 +1471,4 @@ apps/api/
 | 11 | Advanced | Offline maps, GPS recording, heatmaps, custom terrain filter, map tools, photo topos, 3D walls |
 | 12 | Polish & Launch | Performance, PWA, SEO, monitoring |
 
-Each phase produces a working increment. Phases 1–4 form the minimum viable product (including climbing trip segments with pitch metadata). Phase 5 adds device connectivity with multi-pitch FIT parsing. Phases 6–8 add social and data richness. Phase 10 seeds crags and climbing routes from OpenBeta. Phase 11 adds photo topos and experimental 3D wall visualization. Phase 12 polishes for launch.
+Each phase produces a working increment. Phases 1–3 build the core map experience. Phase 3.5 adds multi-provider support (Mapbox + MapTiler) with a shared adapter before trip features land. Phases 1–4 form the minimum viable product (including climbing trip segments with pitch metadata). Phase 5 adds device connectivity with multi-pitch FIT parsing. Phases 6–8 add social and data richness. Phase 10 seeds crags and climbing routes from OpenBeta. Phase 11 adds photo topos and experimental 3D wall visualization. Phase 12 polishes for launch.

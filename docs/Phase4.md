@@ -4,6 +4,8 @@
 >
 > GPX upload & parsing, trip CRUD, trip routes on map with bbox query, photo upload with geotagging, map search bar, Radix UI, and climbing trip segments. Split into 4 sub-milestones (4a → 4b → 4c → 4d). Complete tasks top-to-bottom within each sub-milestone.
 
+> **Multi-provider context**: Phase 4 depends on Phase 3.5 (multi-provider support). Trip route code (`useTripRoutes`) targets `AppMapAdapter` and lives in `apps/web/src/map/runtime/shared/`. Map search (`MapSearch.tsx`) is Mapbox-specific and lives in `apps/web/src/map/runtime/mapbox/`; it is gated by the capability matrix (`coming_soon` for MapTiler). File paths below that reference the old `apps/web/src/map/MapContainer.tsx` should be read as the provider-specific runtime equivalents (`runtime/mapbox/MapContainer.tsx`, `runtime/maptiler/MapContainer.tsx`). See [`MapProviders.md`](MapProviders.md) for the runtime file structure.
+
 ---
 
 ## Key Design Decisions
@@ -353,15 +355,15 @@ interface TripState {
 }
 ```
 
-### 2. Trip routes hook — `apps/web/src/map/useTripRoutes.ts`
+### 2. Trip routes hook — `apps/web/src/map/runtime/shared/tripLayers.ts`
 
-- [ ] Create `useTripRoutes(map)` hook (follows `useRasterOverlays` pattern)
+- [ ] Create `useTripRoutes(adapter)` hook targeting `AppMapAdapter` (follows `useRasterOverlays` pattern)
 
 Responsibilities:
-- On `moveend` (debounced 500ms), get viewport bounds via `map.getBounds()` and zoom via `Math.floor(map.getZoom())`, call `tripStore.fetchMapTrips(bbox, zoom)`
-- Add GeoJSON source + `line` layer (color by activity type) + `circle` layer (start points)
-- Click handler on line layer: extract trip_id, call `tripStore.fetchTrip(id)`, open detail panel
-- Re-add source/layer on `style.load` event
+- On `moveend` (via `adapter.onMoveEnd`, debounced 500ms), get viewport bounds via `adapter.getBounds()` and zoom via `adapter.getZoom()`, call `tripStore.fetchMapTrips(bbox, zoom)`
+- Add GeoJSON source + `line` layer (color by activity type) + `circle` layer (start points) via `adapter.addSource`/`adapter.addLayer`
+- Click handler on line layer via `adapter.onClick`: extract trip_id, call `tripStore.fetchTrip(id)`, open detail panel
+- Re-add source/layer on style reload via `adapter.onStyleLoad`
 
 Activity type color mapping:
 ```typescript
@@ -379,9 +381,9 @@ const ACTIVITY_COLORS: Record<ActivityType, string> = {
 }
 ```
 
-### 3. MapContainer integration — `apps/web/src/map/MapContainer.tsx`
+### 3. Runtime integration — each provider's `MapContainer.tsx`
 
-- [ ] Wire `useTripRoutes(mapInstance)` alongside existing `useRasterOverlays`
+- [ ] Wire `useTripRoutes(adapter)` in both `runtime/mapbox/MapContainer.tsx` and `runtime/maptiler/MapContainer.tsx` (adapter wraps the provider map instance)
 
 ### 4. Trip detail panel — `apps/web/src/map/TripDetailPanel.tsx`
 
@@ -585,14 +587,16 @@ func interpolatePosition(t time.Time, points []Trackpoint) (lat, lon float64, ok
 - [ ] Test EXIF extraction with sample JPEG bytes
 - [ ] Test timestamp interpolation with known trackpoints
 
-### 7. Map search bar — `apps/web/src/map/MapSearch.tsx`
+### 7. Map search bar — `apps/web/src/map/runtime/mapbox/MapSearch.tsx`
 
-- [ ] `@mapbox/search-js-react` SearchBox component
+- [ ] `@mapbox/search-js-react` SearchBox component (Mapbox-specific — lives inside `runtime/mapbox/`)
   - **Scope**: map geocoder only ("fly to place"). Full app-level search (trips, users, areas) is Phase 10.
   - Positioned top-left of map
   - On result select, calls `map.flyTo({center, zoom})`
   - Uses existing `VITE_MAPBOX_ACCESS_TOKEN`
   - No backend changes — Mapbox Search Box API called directly from client
+  - **Provider gating**: wrapped in capability check; MapTiler provider shows `Coming soon` (MapTiler geocoder ships in M3)
+  - Update capability matrix: set Mapbox geocoder to `available` when this ships
 
 Frontend dependency: `@mapbox/search-js-react`
 
@@ -870,16 +874,17 @@ Frontend dependency: `@openbeta/sandbag`
 
 **New files (Phase 4b — 7):**
 - `apps/web/src/stores/tripStore.ts`
-- `apps/web/src/map/useTripRoutes.ts`
+- `apps/web/src/map/runtime/shared/tripLayers.ts`
 - `apps/web/src/map/TripDetailPanel.tsx`
 - `apps/web/src/pages/TripCreatePage.tsx`
 - `apps/web/src/pages/TripDetailPage.tsx`
 - `apps/web/src/components/GpxUploader.tsx`
 - `apps/web/src/components/TripCard.tsx`
 
-**Modified files (Phase 4b — 3):**
+**Modified files (Phase 4b — 4):**
 - `apps/web/src/App.tsx` — add routes
-- `apps/web/src/map/MapContainer.tsx` — wire useTripRoutes hook
+- `apps/web/src/map/runtime/mapbox/MapContainer.tsx` — wire useTripRoutes hook
+- `apps/web/src/map/runtime/maptiler/MapContainer.tsx` — wire useTripRoutes hook
 - `packages/map-core/src/layers.ts` — add trip-routes layer definition
 
 **New files (Phase 4c — 12):**
@@ -889,7 +894,7 @@ Frontend dependency: `@openbeta/sandbag`
 - `apps/api/internal/trip/exif_test.go`
 - `apps/api/migrations/004_trip_photos.up.sql`
 - `apps/api/migrations/004_trip_photos.down.sql`
-- `apps/web/src/map/MapSearch.tsx`
+- `apps/web/src/map/runtime/mapbox/MapSearch.tsx`
 - `apps/web/src/components/ui/Dialog.tsx`
 - `apps/web/src/components/ui/DropdownMenu.tsx`
 - `apps/web/src/components/ui/Toast.tsx`
@@ -904,7 +909,7 @@ Frontend dependency: `@openbeta/sandbag`
 - `apps/api/cmd/server/main.go` — wire S3 client, register photo routes + upload-url
 - `apps/api/go.mod` — add minio-go, goexif
 - `docker-compose.yml` — add MinIO service
-- `apps/web/src/map/AppLayout.tsx` — add MapSearch
+- `apps/web/src/map/runtime/mapbox/MapContainer.tsx` — add MapSearch (Mapbox provider only)
 - `apps/web/src/App.tsx` — add ToastProvider wrapper
 - `apps/web/src/pages/TripDetailPage.tsx` — add photo gallery
 - `apps/web/package.json` — add search-js, radix dependencies
@@ -932,6 +937,6 @@ Frontend dependency: `@openbeta/sandbag`
 
 - `apps/api/internal/user/repository.go` — reference pattern for all new repository files (SQL const, COALESCE updates, pgx scanning, sentinel errors)
 - `apps/api/cmd/server/main.go` — wiring point for all new handlers/services/repos
-- `apps/web/src/map/MapContainer.tsx` — wire useTripRoutes; reference for style.load re-application
-- `apps/web/src/map/useRasterOverlays.ts` — exact pattern to follow for useTripRoutes (map source/layer management, style.load handling)
+- `apps/web/src/map/runtime/shared/rasterOverlays.ts` — exact pattern to follow for tripLayers (AppMapAdapter usage, style.load handling)
+- `apps/web/src/map/runtime/shared/mapAdapter.ts` — AppMapAdapter interface that tripLayers targets
 - `docs/Architecture.md` lines 1121–1167 — authoritative trips and trip_photos schemas
