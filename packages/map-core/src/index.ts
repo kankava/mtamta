@@ -7,7 +7,7 @@ export {
   MAX_ZOOM,
   DEFAULT_VIEWPORT,
 } from './config'
-export { STYLE_URLS, resolveStyleUrl } from './styles'
+export { STYLE_URLS, resolveStyleUrl, MAPTILER_STYLE_IDS, resolveStyleForProvider } from './styles'
 export type { BaseLayer, Season } from './styles'
 export {
   TERRAIN_SOURCE_ID,
@@ -19,7 +19,11 @@ export {
   SKY_LAYER_ID,
   SKY_LAYER,
 } from './terrain'
+export type { TerrainConfig } from './terrain'
+export { getTerrainConfig } from './terrain'
 export { LAYER_REGISTRY, getAvailableLayers, getLayersByCategory } from './layers'
 export type { LayerCategory, LayerDefinition } from './layers'
 export { TOPO_SOURCES, OVERLAY_SOURCES, getTopoSource, resolveTopoTileUrl } from './topo'
 export type { TopoSourceId, TopoSourceDef, OverlaySourceDef } from './topo'
+export type { MapProvider, FeatureId, CapabilityState, ProviderCapabilities } from './providers'
+export { getProviderCapabilities, getFeatureState, isFeatureAvailable } from './capabilities'

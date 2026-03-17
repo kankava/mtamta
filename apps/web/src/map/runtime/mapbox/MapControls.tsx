@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import mapboxgl from 'mapbox-gl'
-import { TerrainControl } from './TerrainControl'
+import { TerrainControl } from './terrain'
 
 interface MapControlsProps {
   map: mapboxgl.Map | null

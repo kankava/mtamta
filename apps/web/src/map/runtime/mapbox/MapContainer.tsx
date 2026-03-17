@@ -11,9 +11,69 @@ import {
   MIN_ZOOM,
   MAX_ZOOM,
 } from '@mtamta/map-core'
-import { useMapStore } from '../stores/mapStore'
+import { useMapStore } from '../../../stores/mapStore'
 import MapControls from './MapControls'
-import { useRasterOverlays } from './useRasterOverlays'
+import { useRasterOverlays } from '../shared/rasterOverlays'
+import type { AppMapAdapter } from '../shared/mapAdapter'
+
+/**
+ * Creates an AppMapAdapter wrapping a mapboxgl.Map instance.
+ * Shared code (raster overlays, trip routes) uses this instead of raw SDK.
+ */
+export function createMapboxAdapter(map: mapboxgl.Map): AppMapAdapter {
+  // Identity-based tracking: original cb → wrapped handler, keyed per layer.
+  const clickHandlers = new Map<string, WeakMap<Function, (...args: unknown[]) => void>>()
+
+  return {
+    isStyleLoaded: () => map.isStyleLoaded(),
+    getStyleLayers: () => {
+      const layers = map.getStyle()?.layers
+      if (!layers) return []
+      return layers.map((l) => ({ id: l.id, type: l.type }))
+    },
+    getSource: (id) => map.getSource(id),
+    addSource: (id, source) => map.addSource(id, source as mapboxgl.SourceSpecification),
+    removeSource: (id) => map.removeSource(id),
+    getLayer: (id) => map.getLayer(id),
+    addLayer: (layer, beforeId) =>
+      map.addLayer(layer as mapboxgl.LayerSpecification, beforeId),
+    removeLayer: (id) => map.removeLayer(id),
+    getBounds: () => {
+      const b = map.getBounds()!
+      return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]
+    },
+    getZoom: () => map.getZoom(),
+    flyTo: (center, zoom) => map.flyTo({ center, ...(zoom != null && { zoom }) }),
+    onStyleLoad: (cb) => map.on('style.load', cb),
+    offStyleLoad: (cb) => map.off('style.load', cb),
+    onMoveEnd: (cb) => map.on('moveend', cb),
+    offMoveEnd: (cb) => map.off('moveend', cb),
+    onClick: (layerId, cb) => {
+      const wrapper = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.GeoJSONFeature[] }) => {
+        const event: { lngLat: [number, number]; features?: unknown[] } = {
+          lngLat: [e.lngLat.lng, e.lngLat.lat],
+        }
+        if (e.features) event.features = e.features as unknown[]
+        cb(event)
+      }
+      let layerMap = clickHandlers.get(layerId)
+      if (!layerMap) {
+        layerMap = new WeakMap()
+        clickHandlers.set(layerId, layerMap)
+      }
+      layerMap.set(cb, wrapper as (...args: unknown[]) => void)
+      map.on('click', layerId, wrapper)
+    },
+    offClick: (layerId, cb) => {
+      const layerMap = clickHandlers.get(layerId)
+      const wrapper = layerMap?.get(cb)
+      if (wrapper) {
+        map.off('click', layerId, wrapper)
+        layerMap!.delete(cb)
+      }
+    },
+  }
+}
 
 /**
  * Re-add terrain source, terrain exaggeration, sky layer,
@@ -39,9 +99,13 @@ function applyPostStyleLoad(map: mapboxgl.Map) {
 export default function MapContainer() {
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const cleanupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // useState (not useRef) for the map instance passed to children —
   // children need a re-render when the map becomes available.
   const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null)
+
+  // Adapter for shared overlay code
+  const [adapter, setAdapter] = useState<AppMapAdapter | null>(null)
 
   const {
     center,
@@ -61,17 +125,21 @@ export default function MapContainer() {
   // Track whether the initial style has loaded (to skip redundant setStyle on mount)
   const initialStyleRef = useRef(true)
 
-  // Phase 3 hooks
-  useRasterOverlays(mapInstance)
+  // Phase 3 hooks — now use adapter instead of raw map
+  useRasterOverlays(adapter)
 
   // --- Map initialization ---
   useEffect(() => {
-    // React Strict Mode (dev) fires mount → unmount → mount.
-    // Reuse the existing map on remount — Firefox can't recover a
-    // WebGL context after map.remove().
+    // Strict Mode remount: map exists and wasn't removed — reuse it.
+    // Cancel any pending deferred removal from the previous unmount.
     if (mapRef.current) {
+      if (cleanupTimerRef.current !== null) {
+        clearTimeout(cleanupTimerRef.current)
+        cleanupTimerRef.current = null
+      }
       const map = mapRef.current
       setMapInstance(map)
+      setAdapter(createMapboxAdapter(map))
       if (map.isStyleLoaded()) {
         setMapReady(true)
       } else {
@@ -107,6 +175,7 @@ export default function MapContainer() {
       applyPostStyleLoad(map)
       setMapReady(true)
       setMapInstance(map)
+      setAdapter(createMapboxAdapter(map))
     })
 
     // Sync viewport back to store on moveend (not on every move — too noisy).
@@ -120,13 +189,20 @@ export default function MapContainer() {
       })
     })
 
-    // Reset state on unmount but keep map alive — mapRef.current is
-    // intentionally NOT cleared so the Strict Mode remount path above
-    // can reuse it. On real unmount (route change), the DOM container
-    // is removed and the browser reclaims WebGL resources on navigation.
+    // Deferred cleanup: schedule map.remove() via setTimeout(0).
+    // Strict Mode remount is synchronous — the next mount effect runs
+    // before this timer fires and cancels it. A real unmount (provider
+    // switch, route change) has no subsequent mount, so the timer
+    // executes and releases the WebGL context.
     return () => {
       setMapReady(false)
       setMapInstance(null)
+      setAdapter(null)
+      cleanupTimerRef.current = setTimeout(() => {
+        map.remove()
+        mapRef.current = null
+        cleanupTimerRef.current = null
+      }, 0)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

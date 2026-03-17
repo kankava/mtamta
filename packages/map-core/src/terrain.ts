@@ -1,6 +1,10 @@
-// Mapbox Terrain-DEM v1 configuration for 3D terrain rendering.
-// Used by both web (mapbox-gl) and mobile (@rnmapbox/maps).
-//
+// Terrain configuration for both map providers.
+// Mapbox: explicit DEM source + setTerrain().
+// MapTiler: SDK manages DEM internally via enableTerrain() — only exaggeration is shared.
+
+import type { MapProvider } from './providers'
+
+// --- Mapbox Terrain-DEM v1 ---
 // DEM decoding formula: height = -10000 + ((R * 256 * 256 + G * 256 + B) * 0.1)
 // Max zoom: 14 (SDK interpolates beyond)
 
@@ -29,4 +33,29 @@ export const SKY_LAYER = {
     'sky-atmosphere-sun': [0, 0] as [number, number],
     'sky-atmosphere-sun-intensity': 15,
   },
+}
+
+// --- Provider-keyed terrain config ---
+
+export interface TerrainConfig {
+  /** DEM source ID — null for MapTiler (SDK manages internally) */
+  sourceId: string | null
+  /** DEM source spec — null for MapTiler */
+  source: { type: 'raster-dem'; url: string; tileSize: number; maxzoom: number } | null
+  exaggeration: number
+}
+
+export function getTerrainConfig(provider: MapProvider): TerrainConfig {
+  if (provider === 'maptiler') {
+    return {
+      sourceId: null,
+      source: null,
+      exaggeration: DEFAULT_TERRAIN_EXAGGERATION,
+    }
+  }
+  return {
+    sourceId: TERRAIN_SOURCE_ID,
+    source: TERRAIN_SOURCE,
+    exaggeration: DEFAULT_TERRAIN_EXAGGERATION,
+  }
 }

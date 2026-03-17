@@ -6,8 +6,15 @@ import {
 } from '@mtamta/map-core'
 import { Section, Toggle } from './shared'
 
+const PROVIDER_LABELS: Record<string, string> = {
+  mapbox: 'Mapbox GL JS',
+  maptiler: 'MapTiler SDK',
+}
+
 export default function SettingsTab() {
   const {
+    mapProvider,
+    setMapProvider,
     customExaggeration,
     setCustomExaggeration,
     terrainExaggeration,
@@ -44,6 +51,20 @@ export default function SettingsTab() {
             />
           </div>
         )}
+      </Section>
+
+      <Section title="Map Engine">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-white/80">
+            {mapProvider ? PROVIDER_LABELS[mapProvider] ?? mapProvider : 'None'}
+          </span>
+          <button
+            onClick={() => setMapProvider(null)}
+            className="text-xs text-accent hover:text-accent/80 transition-colors cursor-pointer"
+          >
+            Change
+          </button>
+        </div>
       </Section>
 
       <Section title="Projection">

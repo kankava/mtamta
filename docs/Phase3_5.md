@@ -1,6 +1,6 @@
 # Phase 3.5: Multi-Provider Support — Detailed Implementation Plan
 
-> **Status: NOT STARTED**
+> **Status: M1 COMPLETE — M2 NOT STARTED**
 >
 > Dual-provider web map support (Mapbox GL JS + MapTiler SDK). Introduces provider state, runtime boundary, AppMapAdapter interface, and lazy-loaded runtimes. Split into 2 milestones (M1 → M2). M3 (provider-specific features like geocoder, weather) deferred to after Phase 4.
 >
@@ -27,24 +27,24 @@
 
 ### 1. Provider types and capability matrix — `packages/map-core/`
 
-- [ ] Create `packages/map-core/src/providers.ts` — `MapProvider`, `FeatureId`, `CapabilityState`, `ProviderCapabilities` types
-- [ ] Create `packages/map-core/src/capabilities.ts` — hardcoded capability matrices for both providers, query functions (`getProviderCapabilities`, `isFeatureAvailable`, `getFeatureState`)
-- [ ] Export new types and functions from `packages/map-core/src/index.ts`
+- [x] Create `packages/map-core/src/providers.ts` — `MapProvider`, `FeatureId`, `CapabilityState`, `ProviderCapabilities` types
+- [x] Create `packages/map-core/src/capabilities.ts` — hardcoded capability matrices for both providers, query functions (`getProviderCapabilities`, `isFeatureAvailable`, `getFeatureState`)
+- [x] Export new types and functions from `packages/map-core/src/index.ts`
 
 ### 2. Provider-keyed style and terrain configs — `packages/map-core/`
 
-- [ ] `styles.ts` — add `MAPTILER_STYLE_IDS` and `resolveStyleUrlForProvider(provider, baseLayer, season)`. Keep existing `resolveStyleUrl` unchanged (Mapbox runtime continues using it)
-- [ ] `terrain.ts` — add `TerrainConfig` interface and `getTerrainConfig(provider)`. Mapbox config returns source ID + DEM URL as today. MapTiler config returns `null` for source/URL (SDK manages DEM internally via `enableTerrain()`) — only `exaggeration` is shared. Keep existing exports unchanged
-- [ ] Export new functions from `index.ts`
+- [x] `styles.ts` — add `MAPTILER_STYLE_IDS` and `resolveStyleForProvider(provider, baseLayer, season)`. Keep existing `resolveStyleUrl` unchanged (Mapbox runtime continues using it)
+- [x] `terrain.ts` — add `TerrainConfig` interface and `getTerrainConfig(provider)`. Mapbox config returns source ID + DEM URL as today. MapTiler config returns `null` for source/URL (SDK manages DEM internally via `enableTerrain()`) — only `exaggeration` is shared. Keep existing exports unchanged
+- [x] Export new functions from `index.ts`
 
 ### 3. Add mapProvider state to mapStore with localStorage
 
-- [ ] `apps/web/src/stores/mapStore.ts` — add `mapProvider: MapProvider | null`, `setMapProvider`, localStorage key `mtamta:mapProvider`, read on init, persist on set, clear on `null`
-- [ ] `apps/web/src/stores/mapStore.test.ts` — add tests for localStorage read/write/clear
+- [x] `apps/web/src/stores/mapStore.ts` — add `mapProvider: MapProvider | null`, `setMapProvider`, localStorage key `mtamta:mapProvider`, read on init, persist on set, clear on `null`
+- [x] `apps/web/src/stores/mapStore.test.ts` — add tests for localStorage read/write/clear
 
 ### 4. Define AppMapAdapter interface
 
-- [ ] Create `apps/web/src/map/runtime/shared/mapAdapter.ts` — pure type file, no vendor imports
+- [x] Create `apps/web/src/map/runtime/shared/mapAdapter.ts` — pure type file, no vendor imports
 
 ```ts
 export interface AppMapAdapter {
@@ -72,14 +72,14 @@ export interface AppMapAdapter {
 
 Pure file move with import path fixes. NO logic changes **except** the cleanup fix below.
 
-- [ ] Move `MapContainer.tsx` → `runtime/mapbox/MapContainer.tsx`
-- [ ] Move `MapControls.tsx` → `runtime/mapbox/MapControls.tsx`
-- [ ] Move `TerrainControl.ts` → `runtime/mapbox/terrain.ts`
-- [ ] Fix import paths in moved files:
+- [x] Move `MapContainer.tsx` → `runtime/mapbox/MapContainer.tsx`
+- [x] Move `MapControls.tsx` → `runtime/mapbox/MapControls.tsx`
+- [x] Move `TerrainControl.ts` → `runtime/mapbox/terrain.ts`
+- [x] Fix import paths in moved files:
   - `useMapStore`: `'../../stores/mapStore'` → `'../../../stores/mapStore'`
   - `useRasterOverlays`: `'./useRasterOverlays'` → `'../../useRasterOverlays'` (stays at old location until step 7)
   - `TerrainControl`: `'./TerrainControl'` → `'./terrain'`
-- [ ] Fix cleanup: add `map.remove()` on real unmount (per `Architecture.md:564`). The current code skips it because React Strict Mode (dev) fires mount→unmount→mount synchronously, and Firefox can't recover a WebGL context after `map.remove()`. Both runtimes must use this pattern:
+- [x] Fix cleanup: add `map.remove()` on real unmount (per `Architecture.md:564`). The current code skips it because React Strict Mode (dev) fires mount→unmount→mount synchronously, and Firefox can't recover a WebGL context after `map.remove()`. Both runtimes must use this pattern:
 
 ```ts
 const mapRef = useRef<MapInstance | null>(null)
@@ -121,38 +121,38 @@ useEffect(() => {
 ```
 
 The `setTimeout(0)` trick works because Strict Mode's unmount→mount cycle is synchronous — the remount effect runs before the timeout fires, so it cancels the deferred `map.remove()`. A real unmount has no subsequent mount, so the timeout executes and cleans up the WebGL context
-- [ ] Add `createMapboxAdapter(map)` factory to `runtime/mapbox/MapContainer.tsx` — wraps `mapboxgl.Map` to satisfy `AppMapAdapter` (wired in step 7)
-- [ ] Update `AppLayout.tsx` import: `'./MapContainer'` → `'./runtime/mapbox/MapContainer'`
-- [ ] Delete old files
+- [x] Add `createMapboxAdapter(map)` factory to `runtime/mapbox/MapContainer.tsx` — wraps `mapboxgl.Map` to satisfy `AppMapAdapter` (wired in step 7)
+- [x] Update `AppLayout.tsx` import: `'./MapContainer'` → `'./runtime/mapbox/MapContainer'`
+- [x] Delete old files
 
 ### 6. Create MapRuntime dispatcher and MapProviderGate
 
-- [ ] Create `apps/web/src/map/MapRuntime.tsx` — reads `mapProvider` from store, lazy-loads `runtime/mapbox/MapContainer` (MapTiler case commented out for M2), wraps in `<Suspense>`
-- [ ] Create `apps/web/src/map/MapProviderGate.tsx` — two-button selector (Mapbox / MapTiler), calls `setMapProvider`, styled to match dark glass UI
-- [ ] Update `AppLayout.tsx` — if `mapProvider === null` render `<MapProviderGate>`, else render `<MapRuntime>` + `<Sidebar>`
+- [x] Create `apps/web/src/map/MapRuntime.tsx` — reads `mapProvider` from store, lazy-loads `runtime/mapbox/MapContainer` (MapTiler case commented out for M2), wraps in `<Suspense>`
+- [x] Create `apps/web/src/map/MapProviderGate.tsx` — two-button selector (Mapbox / MapTiler), calls `setMapProvider`, styled to match dark glass UI
+- [x] Update `AppLayout.tsx` — if `mapProvider === null` render `<MapProviderGate>`, else render `<MapRuntime>` + `<Sidebar>`
 
 ### 7. Refactor rasterOverlays behind AppMapAdapter
 
-- [ ] Create `apps/web/src/map/runtime/shared/rasterOverlays.ts` — refactored from `useRasterOverlays.ts`:
+- [x] Create `apps/web/src/map/runtime/shared/rasterOverlays.ts` — refactored from `useRasterOverlays.ts`:
   - All functions take `AppMapAdapter` instead of `mapboxgl.Map`
   - `findFirstSymbolLayer(adapter)` → `adapter.getStyleLayers().find(l => l.type === 'symbol')?.id`
   - Source/layer operations → `adapter.getSource`, `adapter.addSource`, etc.
   - Style load events → `adapter.onStyleLoad`/`adapter.offStyleLoad`
   - **No mapbox-gl import** in this file
-- [ ] Update `runtime/mapbox/MapContainer.tsx` — create adapter via `createMapboxAdapter(map)`, pass to `useRasterOverlays(adapter)`
-- [ ] Delete `apps/web/src/map/useRasterOverlays.ts`
+- [x] Update `runtime/mapbox/MapContainer.tsx` — create adapter via `createMapboxAdapter(map)`, pass to `useRasterOverlays(adapter)`
+- [x] Delete `apps/web/src/map/useRasterOverlays.ts`
 
 ### 8. Provider capabilities UI hooks + Settings "Change provider"
 
-- [ ] Create `apps/web/src/map/runtime/shared/providerCapabilities.ts` — `useIsFeatureAvailable(feature)`, `useFeatureState(feature)` hooks reading from store + map-core
-- [ ] Update `SettingsTab.tsx` — add "Map Engine" section showing current provider name and "Change" button (calls `setMapProvider(null)`)
+- [x] Create `apps/web/src/map/runtime/shared/providerCapabilities.ts` — `useIsFeatureAvailable(feature)`, `useFeatureState(feature)` hooks reading from store + map-core
+- [x] Update `SettingsTab.tsx` — add "Map Engine" section showing current provider name and "Change" button (calls `setMapProvider(null)`)
 
 ### 9. Cleanup and final verification
 
-- [ ] Verify no imports from old file paths remain
-- [ ] `pnpm --filter @mtamta/web build` — clean build
-- [ ] `pnpm --filter @mtamta/web test` — all tests pass
-- [ ] `pnpm --filter @mtamta/map-core test` — all tests pass
+- [x] Verify no imports from old file paths remain
+- [x] `pnpm --filter @mtamta/web build` — clean build
+- [x] `pnpm --filter @mtamta/web test` — all tests pass (19)
+- [x] `pnpm --filter @mtamta/map-core test` — all tests pass (35)
 - [ ] Manual: auth flow → gate → Mapbox → styles → terrain → overlays → settings change → gate again
 
 ### M1 Verification Checklist

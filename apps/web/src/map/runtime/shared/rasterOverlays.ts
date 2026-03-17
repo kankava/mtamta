@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
-import mapboxgl from 'mapbox-gl'
 import { getTopoSource, resolveTopoTileUrl, OVERLAY_SOURCES } from '@mtamta/map-core'
-import { useMapStore } from '../stores/mapStore'
+import { useMapStore } from '../../../stores/mapStore'
+import type { AppMapAdapter } from './mapAdapter'
 
 // Source/layer IDs
 const TOPO_RASTER_SOURCE = 'topo-raster-source'
@@ -19,24 +19,19 @@ function overlayLayerId(id: string) {
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
 /** Find the first symbol layer to insert raster layers below labels */
-function findFirstSymbolLayer(map: mapboxgl.Map): string | undefined {
-  const layers = map.getStyle()?.layers
-  if (!layers) return undefined
-  for (const layer of layers) {
-    if (layer.type === 'symbol') return layer.id
-  }
-  return undefined
+function findFirstSymbolLayer(adapter: AppMapAdapter): string | undefined {
+  return adapter.getStyleLayers().find((l) => l.type === 'symbol')?.id
 }
 
 /** Remove a source+layer pair safely */
-function removeSourceAndLayer(map: mapboxgl.Map, layerId: string, sourceId: string) {
-  if (map.getLayer(layerId)) map.removeLayer(layerId)
-  if (map.getSource(sourceId)) map.removeSource(sourceId)
+function removeSourceAndLayer(adapter: AppMapAdapter, layerId: string, sourceId: string) {
+  if (adapter.getLayer(layerId)) adapter.removeLayer(layerId)
+  if (adapter.getSource(sourceId)) adapter.removeSource(sourceId)
 }
 
 /** Add a raster tile source + layer */
 function addRasterLayer(
-  map: mapboxgl.Map,
+  adapter: AppMapAdapter,
   sourceId: string,
   layerId: string,
   tileUrl: string,
@@ -48,10 +43,10 @@ function addRasterLayer(
     bounds?: [number, number, number, number]
   },
 ) {
-  const beforeLayer = findFirstSymbolLayer(map)
+  const beforeLayer = findFirstSymbolLayer(adapter)
 
-  if (!map.getSource(sourceId)) {
-    map.addSource(sourceId, {
+  if (!adapter.getSource(sourceId)) {
+    adapter.addSource(sourceId, {
       type: 'raster',
       tiles: [tileUrl],
       tileSize: opts.tileSize,
@@ -61,8 +56,8 @@ function addRasterLayer(
     })
   }
 
-  if (!map.getLayer(layerId)) {
-    map.addLayer(
+  if (!adapter.getLayer(layerId)) {
+    adapter.addLayer(
       {
         id: layerId,
         type: 'raster',
@@ -75,11 +70,11 @@ function addRasterLayer(
 }
 
 /** Apply topo overlay based on current store state */
-function applyTopoOverlay(map: mapboxgl.Map) {
+function applyTopoOverlay(adapter: AppMapAdapter) {
   const { topoSource, baseLayer, season } = useMapStore.getState()
 
   // Remove existing topo layer
-  removeSourceAndLayer(map, TOPO_RASTER_LAYER, TOPO_RASTER_SOURCE)
+  removeSourceAndLayer(adapter, TOPO_RASTER_LAYER, TOPO_RASTER_SOURCE)
 
   // Only show topo when outdoors base layer is active
   if (baseLayer !== 'outdoors' || !topoSource) return
@@ -88,7 +83,7 @@ function applyTopoOverlay(map: mapboxgl.Map) {
   if (!sourceDef) return
 
   const tileUrl = resolveTopoTileUrl(sourceDef, season, API_BASE_URL)
-  addRasterLayer(map, TOPO_RASTER_SOURCE, TOPO_RASTER_LAYER, tileUrl, {
+  addRasterLayer(adapter, TOPO_RASTER_SOURCE, TOPO_RASTER_LAYER, tileUrl, {
     tileSize: sourceDef.tileSize,
     maxZoom: sourceDef.maxZoom,
     opacity: 1,
@@ -98,7 +93,7 @@ function applyTopoOverlay(map: mapboxgl.Map) {
 }
 
 /** Apply overlay layers (pistes, ski touring, snowshoe) */
-function applyOverlays(map: mapboxgl.Map) {
+function applyOverlays(adapter: AppMapAdapter) {
   const { season, topoSource, overlayPistes, overlaySkiTouring, overlaySnowshoe } =
     useMapStore.getState()
 
@@ -118,10 +113,10 @@ function applyOverlays(map: mapboxgl.Map) {
     const topoOk = !overlay.topoSourceFilter || overlay.topoSourceFilter === topoSource
     const shouldShow = enabled && seasonOk && topoOk
 
-    removeSourceAndLayer(map, lyrId, srcId)
+    removeSourceAndLayer(adapter, lyrId, srcId)
 
     if (shouldShow) {
-      addRasterLayer(map, srcId, lyrId, overlay.tileUrl, {
+      addRasterLayer(adapter, srcId, lyrId, overlay.tileUrl, {
         tileSize: overlay.tileSize,
         maxZoom: overlay.maxZoom,
         opacity: 1,
@@ -132,9 +127,9 @@ function applyOverlays(map: mapboxgl.Map) {
 }
 
 /** Apply sentinel seasonal satellite overlay (disabled until Sentinel Hub is configured) */
-function applySentinel(map: mapboxgl.Map) {
+function applySentinel(adapter: AppMapAdapter) {
   // Always clean up in case it was previously active
-  removeSourceAndLayer(map, SENTINEL_LAYER, SENTINEL_SOURCE)
+  removeSourceAndLayer(adapter, SENTINEL_LAYER, SENTINEL_SOURCE)
 
   // Sentinel overlay adds seasonal/historical satellite imagery on top of
   // the Mapbox satellite base. Disabled until Sentinel Hub backend env vars
@@ -145,17 +140,18 @@ function applySentinel(map: mapboxgl.Map) {
 /**
  * Re-apply all raster overlays. Called after style.load or state changes.
  */
-export function applyAllRasterOverlays(map: mapboxgl.Map): void {
-  applyTopoOverlay(map)
-  applyOverlays(map)
-  applySentinel(map)
+export function applyAllRasterOverlays(adapter: AppMapAdapter): void {
+  applyTopoOverlay(adapter)
+  applyOverlays(adapter)
+  applySentinel(adapter)
 }
 
 /**
  * Hook that manages all raster overlay sources/layers on the map.
  * Reacts to store state changes and re-applies layers as needed.
+ * Takes an AppMapAdapter instead of a vendor-specific map instance.
  */
-export function useRasterOverlays(map: mapboxgl.Map | null): void {
+export function useRasterOverlays(adapter: AppMapAdapter | null): void {
   const topoSource = useMapStore((s) => s.topoSource)
   const baseLayer = useMapStore((s) => s.baseLayer)
   const season = useMapStore((s) => s.season)
@@ -165,10 +161,10 @@ export function useRasterOverlays(map: mapboxgl.Map | null): void {
   const sentinelYear = useMapStore((s) => s.sentinelYear)
 
   useEffect(() => {
-    if (!map || !map.isStyleLoaded()) return
-    applyAllRasterOverlays(map)
+    if (!adapter || !adapter.isStyleLoaded()) return
+    applyAllRasterOverlays(adapter)
   }, [
-    map,
+    adapter,
     topoSource,
     baseLayer,
     season,
@@ -180,12 +176,12 @@ export function useRasterOverlays(map: mapboxgl.Map | null): void {
 
   // Re-apply on style.load (after style swap)
   useEffect(() => {
-    if (!map) return
+    if (!adapter) return
 
-    const handler = () => applyAllRasterOverlays(map)
-    map.on('style.load', handler)
+    const handler = () => applyAllRasterOverlays(adapter)
+    adapter.onStyleLoad(handler)
     return () => {
-      map.off('style.load', handler)
+      adapter.offStyleLoad(handler)
     }
-  }, [map])
+  }, [adapter])
 }

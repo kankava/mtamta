@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useMapStore } from './mapStore'
+import { useMapStore, readStoredProvider } from './mapStore'
 import { DEFAULT_CENTER, DEFAULT_ZOOM, DEFAULT_TERRAIN_EXAGGERATION } from '@mtamta/map-core'
 
 describe('mapStore', () => {
   beforeEach(() => {
-    // Reset store to initial state between tests
+    localStorage.clear()
+    // Reset store to full initial state between tests
     useMapStore.setState({
       center: DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
@@ -14,8 +15,14 @@ describe('mapStore', () => {
       season: 'summer',
       terrainEnabled: false,
       terrainExaggeration: DEFAULT_TERRAIN_EXAGGERATION,
+      customExaggeration: false,
       projection: 'mercator',
       topoSource: null,
+      overlayPistes: false,
+      overlaySkiTouring: false,
+      overlaySnowshoe: false,
+      sentinelYear: new Date().getFullYear(),
+      mapProvider: null,
       sidebarOpen: true,
       sidebarTab: 'basemaps',
       isMapReady: false,
@@ -112,5 +119,38 @@ describe('mapStore', () => {
     expect(useMapStore.getState().projection).toBe('globe')
     useMapStore.getState().setProjection('mercator')
     expect(useMapStore.getState().projection).toBe('mercator')
+  })
+
+  it('mapProvider defaults to null when no localStorage value', () => {
+    expect(useMapStore.getState().mapProvider).toBeNull()
+  })
+
+  it('setMapProvider persists to localStorage', () => {
+    useMapStore.getState().setMapProvider('mapbox')
+    expect(useMapStore.getState().mapProvider).toBe('mapbox')
+    expect(localStorage.getItem('mtamta:mapProvider')).toBe('mapbox')
+  })
+
+  it('setMapProvider(null) removes from localStorage', () => {
+    useMapStore.getState().setMapProvider('maptiler')
+    expect(localStorage.getItem('mtamta:mapProvider')).toBe('maptiler')
+    useMapStore.getState().setMapProvider(null)
+    expect(useMapStore.getState().mapProvider).toBeNull()
+    expect(localStorage.getItem('mtamta:mapProvider')).toBeNull()
+  })
+
+  it('readStoredProvider returns valid provider from localStorage', () => {
+    localStorage.setItem('mtamta:mapProvider', 'maptiler')
+    expect(readStoredProvider()).toBe('maptiler')
+
+    localStorage.setItem('mtamta:mapProvider', 'mapbox')
+    expect(readStoredProvider()).toBe('mapbox')
+  })
+
+  it('readStoredProvider returns null for invalid or missing values', () => {
+    expect(readStoredProvider()).toBeNull()
+
+    localStorage.setItem('mtamta:mapProvider', 'bogus')
+    expect(readStoredProvider()).toBeNull()
   })
 })

@@ -6,7 +6,7 @@ import {
   SKY_LAYER,
   DEFAULT_TERRAIN_EXAGGERATION,
 } from '@mtamta/map-core'
-import { useMapStore } from '../stores/mapStore'
+import { useMapStore } from '../../../stores/mapStore'
 
 /**
  * Custom Mapbox GL control: 2D/3D terrain toggle button.

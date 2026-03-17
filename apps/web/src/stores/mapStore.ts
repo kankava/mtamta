@@ -6,7 +6,32 @@ import {
   DEFAULT_BEARING,
   DEFAULT_TERRAIN_EXAGGERATION,
 } from '@mtamta/map-core'
-import type { BaseLayer, Season, TopoSourceId } from '@mtamta/map-core'
+import type { BaseLayer, Season, TopoSourceId, MapProvider } from '@mtamta/map-core'
+
+const PROVIDER_STORAGE_KEY = 'mtamta:mapProvider'
+
+/** Exported for testing — reads provider from localStorage with validation. */
+export function readStoredProvider(): MapProvider | null {
+  try {
+    const raw = localStorage.getItem(PROVIDER_STORAGE_KEY)
+    if (raw === 'mapbox' || raw === 'maptiler') return raw
+    return null
+  } catch {
+    return null
+  }
+}
+
+function persistProvider(provider: MapProvider | null): void {
+  try {
+    if (provider === null) {
+      localStorage.removeItem(PROVIDER_STORAGE_KEY)
+    } else {
+      localStorage.setItem(PROVIDER_STORAGE_KEY, provider)
+    }
+  } catch {
+    // localStorage unavailable (SSR, private browsing quota)
+  }
+}
 
 export type BasemapPreset =
   | 'outdoors-summer'
@@ -76,6 +101,9 @@ interface MapState {
   sidebarOpen: boolean
   sidebarTab: SidebarTab
 
+  // Map provider
+  mapProvider: MapProvider | null
+
   // Map readiness
   isMapReady: boolean
 
@@ -91,6 +119,7 @@ interface MapState {
   setTerrainExaggeration: (exaggeration: number) => void
   setCustomExaggeration: (enabled: boolean) => void
   setProjection: (projection: Projection) => void
+  setMapProvider: (provider: MapProvider | null) => void
   setMapReady: (ready: boolean) => void
   setTopoSource: (source: TopoSourceId | null) => void
   setOverlayPistes: (enabled: boolean) => void
@@ -125,8 +154,14 @@ export const useMapStore = create<MapState>((set) => ({
   sidebarOpen: true,
   sidebarTab: 'basemaps',
 
+  mapProvider: readStoredProvider(),
+
   isMapReady: false,
 
+  setMapProvider: (mapProvider) => {
+    persistProvider(mapProvider)
+    set({ mapProvider })
+  },
   setViewport: (viewport) => set(viewport),
   selectBasemap: (preset) => set(BASEMAP_PRESETS[preset]),
   setTerrainEnabled: (terrainEnabled) => set({ terrainEnabled }),
