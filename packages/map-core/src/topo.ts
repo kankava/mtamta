@@ -53,13 +53,13 @@ export const TOPO_SOURCES: TopoSourceDef[] = [
     country: 'FR',
     bbox: [-5.14, 41.33, 9.56, 51.09],
     tileBounds: [-5.5, 41.0, 10.0, 51.5],
+    // Géoplateforme (data.geopf.fr) is open access — no API key required since 2024
     tileUrl:
       'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
     attribution: '&copy; <a href="https://www.ign.fr">IGN</a>',
     maxZoom: 18,
     tileSize: 256,
-    needsProxy: true,
-    proxyProvider: 'ign',
+    needsProxy: false,
   },
   {
     id: 'basemap-at',

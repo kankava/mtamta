@@ -89,10 +89,10 @@ describe('resolveTopoTileUrl', () => {
     expect(url).toBe(s.tileUrl)
   })
 
-  it('returns proxy URL for IGN', () => {
+  it('returns direct URL for IGN (open access, no proxy needed)', () => {
     const s = getTopoSource('ign')!
     const url = resolveTopoTileUrl(s, 'summer', apiBase)
-    expect(url).toBe(`${apiBase}/api/v1/tiles/ign/{z}/{x}/{y}`)
+    expect(url).toBe(s.tileUrl)
   })
 
   it('returns proxy URL for opentopomap', () => {

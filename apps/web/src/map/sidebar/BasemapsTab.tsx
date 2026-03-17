@@ -20,7 +20,9 @@ const SATELLITE_CARDS: BasemapCard[] = [
     preset: 'satellite-winter',
     label: 'Winter',
     flag: '\u{1F6F0}\u{FE0F}',
-    capabilityGate: 'season_winter',
+    // Sentinel-2 seasonal satellite not yet configured — disabled for all providers
+    disabled: true,
+    hint: 'Coming soon',
   },
 ]
 

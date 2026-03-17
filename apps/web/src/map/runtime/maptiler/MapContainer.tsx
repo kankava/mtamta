@@ -154,6 +154,10 @@ export default function MapContainer() {
       bearing,
       minZoom: MIN_ZOOM,
       maxZoom: MAX_ZOOM,
+      // Disable SDK's built-in controls — we add our own via MapControls
+      navigationControl: false,
+      geolocateControl: false,
+      terrainControl: false,
     } as MapOptions)
 
     mapRef.current = map

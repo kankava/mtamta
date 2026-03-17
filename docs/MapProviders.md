@@ -403,6 +403,8 @@ For both `Mapbox` and `MapTiler`:
 - User-profile sync for provider preference (server-side persistence)
 - Mobile runtime split if dual-provider mobile support becomes necessary
 - Per-feature provider fallback if product priorities later justify mixed stacks
-- Custom MapTiler styles for Winter/Summer modes
+- Custom Mapbox Studio styles (summer + winter) to match MapTiler's seasonal pair
+- MapTiler `topo-v2` as a "Map Style" preference in Settings (orthogonal to season axis)
+- Unified map control CSS — thin override layer targeting both `.mapboxgl-ctrl-group` and `.maplibregl-ctrl-group` to match the app's dark glass UI (background, border-radius, backdrop-filter). Keeps vendor control logic/icons, just unifies visual appearance across providers
 
 Those are explicitly out of scope for M1–M3.
