@@ -186,7 +186,7 @@ Same lifecycle pattern as Mapbox: ref + useEffect init, viewport sync on moveend
 Key API differences from Mapbox:
 - `import * as maptilersdk from '@maptiler/sdk'` + CSS import
 - `maptilersdk.config.apiKey = import.meta.env.VITE_MAPTILER_API_KEY`
-- Styles: string IDs like `'outdoor-v2'`, `'satellite'`
+- Styles: season-aware — `'outdoor-v2'` (summer), `'winter-v2'` (winter), `'satellite'`
 - Terrain: `map.enableTerrain(exaggeration)` / `map.disableTerrain()` (SDK manages DEM source internally)
 - Events: same as Mapbox (`load`, `style.load`, `moveend`)
 - Projection: `map.setProjection({ type: 'globe' })` (MapLibre v4+ API)
@@ -202,7 +202,7 @@ Key API differences from Mapbox:
 
 ### 5. Add capability gating to sidebar
 
-- [x] Update `BasemapsTab.tsx` — replace hardcoded `disabled: true` / `hint: 'Coming soon'` on winter cards with capability-driven logic: derive `disabled` and `hint` from `useFeatureState('season_winter')` so Mapbox winter cards become enabled (`available`) and MapTiler winter cards show "Coming soon" (`coming_soon`)
+- [x] Update `BasemapsTab.tsx` — replace hardcoded `disabled: true` / `hint: 'Coming soon'` on winter cards with capability-driven logic: derive `disabled` and `hint` from `useFeatureState('season_winter')`. Winter cards enabled for both providers (MapTiler uses `winter-v2` style)
 - [x] Update `SettingsTab.tsx` — globe toggle uses `useFeatureState('globe_projection')`
 
 ### M2 Verification Checklist
@@ -211,7 +211,7 @@ Key API differences from Mapbox:
 - [ ] 3D terrain works in MapTiler
 - [ ] Shared overlays render in MapTiler via AppMapAdapter
 - [ ] Globe projection works in both providers
-- [ ] Winter cards enabled for Mapbox, show "Coming soon" for MapTiler
+- [ ] Winter cards enabled for both providers; MapTiler switches to winter-v2 style
 - [ ] Only selected provider's SDK chunk is loaded
 - [ ] Switching providers via Settings works cleanly
 

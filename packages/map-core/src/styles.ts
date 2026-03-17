@@ -24,9 +24,16 @@ export function resolveStyleUrl(baseLayer: BaseLayer, _season: Season): string {
 
 // --- MapTiler ---
 
-export const MAPTILER_STYLE_IDS: Record<BaseLayer, string> = {
-  outdoors: 'outdoor-v2',
-  satellite: 'satellite',
+export const MAPTILER_STYLE_IDS: Record<BaseLayer, Record<Season, string>> = {
+  outdoors: { summer: 'outdoor-v2', winter: 'winter-v2' },
+  satellite: { summer: 'satellite', winter: 'satellite' },
+}
+
+/**
+ * Resolve the MapTiler style ID for a given base layer and season.
+ */
+export function resolveMaptilerStyle(baseLayer: BaseLayer, season: Season): string {
+  return MAPTILER_STYLE_IDS[baseLayer]?.[season] ?? 'outdoor-v2'
 }
 
 // --- Provider-keyed resolution ---
@@ -38,10 +45,10 @@ export const MAPTILER_STYLE_IDS: Record<BaseLayer, string> = {
 export function resolveStyleForProvider(
   provider: MapProvider,
   baseLayer: BaseLayer,
-  _season: Season,
+  season: Season,
 ): string {
   if (provider === 'maptiler') {
-    return MAPTILER_STYLE_IDS[baseLayer]
+    return resolveMaptilerStyle(baseLayer, season)
   }
   return STYLE_URLS[baseLayer]
 }

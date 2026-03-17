@@ -88,14 +88,36 @@ This matrix is the product contract. It determines which controls render as acti
 | Country topo raster overlays | `available` | `available` | XYZ tiles are renderer-neutral |
 | Raster overlays (seasonal satellite) | `available` | `available` | XYZ/WMS tiles are renderer-neutral |
 | Globe projection | `available` | `available` | Both SDKs support globe; MapTiler SDK is built on MapLibre v4+ which added globe support |
-| Summer mode | `available` | `available` | Mapbox Outdoors v12 / MapTiler Outdoor v2 (base style is summer) |
-| Winter mode | `available` | `coming_soon` | Custom Mapbox Studio styles; MapTiler equivalent planned |
+| Summer mode | `available` | `available` | Mapbox Outdoors v12 / MapTiler Outdoor v2 |
+| Winter mode | `available` | `available` | Mapbox Outdoors v12 + raster overlays / MapTiler Winter v2 (native pistes, lifts, avalanche zones) |
 | Trip route layers | `available` | `available` | Shared via `AppMapAdapter` |
 | Geocoder | `coming_soon` | `coming_soon` | Mapbox SearchBox ships in Phase 4 inside `runtime/mapbox/` (matrix updated to `available` when it lands); MapTiler Geocoding in M3 |
 | Weather | `coming_soon` | `coming_soon` | MapTiler weather API available; Mapbox-side TBD |
 | Directions / route planner | `coming_soon` | `coming_soon` | Mapbox Directions API; MapTiler equivalent TBD |
 
 This matrix should be updated as each feature slice lands.
+
+### Winter Style Strategy
+
+The two providers take different approaches to winter/seasonal map styles:
+
+**MapTiler** — Native seasonal styles. The SDK provides `outdoor-v2` (summer) and `winter-v2` (winter) as a designed pair. `winter-v2` includes ski pistes, lifts, cross-country trails, snow parks, avalanche zones, and a winter color palette. Style resolution is season-aware: `resolveMaptilerStyle(baseLayer, season)`.
+
+**Mapbox** — No built-in winter style. Both seasons currently use `outdoors-v12`. Winter features come from raster overlays (OpenSnowMap pistes, swisstopo ski touring/snowshoe routes). The base map retains its summer appearance.
+
+**Planned**: Create custom Mapbox Studio styles to match MapTiler's seasonal pair:
+- Fork `outdoors-v12` → custom summer style with mtamta branding/colors
+- Fork `outdoors-v12` → custom winter style with winter color palette, ski piste/lift data from OSM, avalanche zone styling
+- Published as `mapbox://styles/mtamta/summer-v1` and `mapbox://styles/mtamta/winter-v1` (or similar)
+- Once created, update `STYLE_URLS` in `styles.ts` to use them and make `resolveStyleUrl` season-aware (same pattern as MapTiler)
+
+| Card | Mapbox (current) | Mapbox (planned) | MapTiler |
+|---|---|---|---|
+| Global Summer | `outdoors-v12` | custom summer style | `outdoor-v2` |
+| Global Winter | `outdoors-v12` + raster overlays | custom winter style | `winter-v2` (native) |
+| Satellite | `satellite-streets-v12` | `satellite-streets-v12` | `satellite` |
+
+**Future option**: MapTiler also offers `topo-v2` (operational/SAR-focused) which could be added as a "Map Style" preference in Settings, orthogonal to the seasonal axis.
 
 ---
 

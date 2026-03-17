@@ -12,20 +12,20 @@ describe('capabilities', () => {
   it('returns full capability matrix for maptiler', () => {
     const caps = getProviderCapabilities('maptiler')
     expect(caps.base_outdoors).toBe('available')
-    expect(caps.season_winter).toBe('coming_soon')
+    expect(caps.season_winter).toBe('available')
     expect(caps.geocoder).toBe('coming_soon')
   })
 
   it('getFeatureState returns correct state per provider', () => {
     expect(getFeatureState('mapbox', 'season_winter')).toBe('available')
-    expect(getFeatureState('maptiler', 'season_winter')).toBe('coming_soon')
+    expect(getFeatureState('maptiler', 'season_winter')).toBe('available')
     expect(getFeatureState('mapbox', 'terrain_3d')).toBe('available')
     expect(getFeatureState('maptiler', 'terrain_3d')).toBe('available')
   })
 
   it('isFeatureAvailable returns boolean shortcut', () => {
     expect(isFeatureAvailable('mapbox', 'season_winter')).toBe(true)
-    expect(isFeatureAvailable('maptiler', 'season_winter')).toBe(false)
+    expect(isFeatureAvailable('maptiler', 'season_winter')).toBe(true)
     expect(isFeatureAvailable('maptiler', 'base_satellite')).toBe(true)
   })
 

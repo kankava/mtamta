@@ -52,6 +52,7 @@ export const TOPO_SOURCES: TopoSourceDef[] = [
     name: 'IGN France',
     country: 'FR',
     bbox: [-5.14, 41.33, 9.56, 51.09],
+    tileBounds: [-5.5, 41.0, 10.0, 51.5],
     tileUrl:
       'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
     attribution: '&copy; <a href="https://www.ign.fr">IGN</a>',
@@ -65,6 +66,7 @@ export const TOPO_SOURCES: TopoSourceDef[] = [
     name: 'basemap.at',
     country: 'AT',
     bbox: [9.53, 46.37, 17.16, 49.02],
+    tileBounds: [9.2, 46.0, 17.5, 49.3],
     tileUrl: 'https://maps.wien.gv.at/basemap/bmaphidpi/normal/google3857/{z}/{y}/{x}.jpeg',
     attribution: '&copy; <a href="https://basemap.at">basemap.at</a>',
     maxZoom: 19,
@@ -76,6 +78,7 @@ export const TOPO_SOURCES: TopoSourceDef[] = [
     name: 'TopPlusOpen',
     country: 'DE',
     bbox: [5.87, 47.27, 15.04, 55.06],
+    tileBounds: [5.5, 47.0, 15.5, 55.5],
     tileUrl:
       'https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web/default/WEBMERCATOR/{z}/{y}/{x}.png',
     attribution: '&copy; <a href="https://www.bkg.bund.de">BKG</a>',

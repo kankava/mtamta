@@ -23,7 +23,7 @@ const MAPTILER_CAPABILITIES: ProviderCapabilities = {
   raster_overlays: 'available',
   globe_projection: 'available',
   season_summer: 'available',
-  season_winter: 'coming_soon',
+  season_winter: 'available',
   trip_routes: 'available',
   geocoder: 'coming_soon',
   weather: 'coming_soon',

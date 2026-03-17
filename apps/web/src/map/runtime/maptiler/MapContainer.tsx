@@ -3,7 +3,7 @@ import { Map as MaptilerMap, config as maptilerConfig } from '@maptiler/sdk'
 import type { MapOptions, StyleSpecification } from '@maptiler/sdk'
 import '@maptiler/sdk/dist/maptiler-sdk.css'
 import {
-  MAPTILER_STYLE_IDS,
+  resolveMaptilerStyle,
   DEFAULT_TERRAIN_EXAGGERATION,
   MIN_ZOOM,
   MAX_ZOOM,
@@ -73,8 +73,11 @@ export function createMaptilerAdapter(map: MaptilerMap): AppMapAdapter {
   }
 }
 
-function resolveStyle(baseLayer: string): string {
-  return MAPTILER_STYLE_IDS[baseLayer as keyof typeof MAPTILER_STYLE_IDS] ?? 'outdoor-v2'
+function resolveStyle(baseLayer: string, season: string): string {
+  return resolveMaptilerStyle(
+    baseLayer as Parameters<typeof resolveMaptilerStyle>[0],
+    season as Parameters<typeof resolveMaptilerStyle>[1],
+  )
 }
 
 /**
@@ -144,7 +147,7 @@ export default function MapContainer() {
 
     const map = new MaptilerMap({
       container: containerRef.current!,
-      style: resolveStyle(baseLayer) as MapOptions['style'],
+      style: resolveStyle(baseLayer, season) as MapOptions['style'],
       center,
       zoom,
       pitch,
@@ -192,14 +195,14 @@ export default function MapContainer() {
   useEffect(() => {
     if (initialStyleRef.current) {
       initialStyleRef.current = false
-      prevStyleRef.current = resolveStyle(baseLayer)
+      prevStyleRef.current = resolveStyle(baseLayer, season)
       return
     }
 
     const map = mapRef.current
     if (!map) return
 
-    const newStyle = resolveStyle(baseLayer)
+    const newStyle = resolveStyle(baseLayer, season)
     if (newStyle === prevStyleRef.current) return
     prevStyleRef.current = newStyle
 
@@ -226,7 +229,7 @@ export default function MapContainer() {
   // --- Projection toggle ---
   useEffect(() => {
     const map = mapRef.current
-    if (!map) return
+    if (!map || !map.isStyleLoaded()) return
     map.setProjection(projection as 'mercator' | 'globe')
   }, [projection])
 
