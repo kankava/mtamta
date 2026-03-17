@@ -1,13 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import mapboxgl from 'mapbox-gl'
-import 'mapbox-gl/dist/mapbox-gl.css'
+import { Map as MaptilerMap, config as maptilerConfig } from '@maptiler/sdk'
+import type { MapOptions, StyleSpecification } from '@maptiler/sdk'
+import '@maptiler/sdk/dist/maptiler-sdk.css'
 import {
-  resolveStyleUrl,
-  TERRAIN_SOURCE_ID,
-  TERRAIN_SOURCE,
+  MAPTILER_STYLE_IDS,
   DEFAULT_TERRAIN_EXAGGERATION,
-  SKY_LAYER_ID,
-  SKY_LAYER,
   MIN_ZOOM,
   MAX_ZOOM,
 } from '@mtamta/map-core'
@@ -17,43 +14,43 @@ import { useRasterOverlays } from '../shared/rasterOverlays'
 import type { AppMapAdapter } from '../shared/mapAdapter'
 
 /**
- * Creates an AppMapAdapter wrapping a mapboxgl.Map instance.
- * Shared code (raster overlays, trip routes) uses this instead of raw SDK.
+ * Creates an AppMapAdapter wrapping a MapTiler SDK Map instance.
  */
-export function createMapboxAdapter(map: mapboxgl.Map): AppMapAdapter {
-  // Identity-based tracking: original cb → wrapped handler, keyed per layer.
+export function createMaptilerAdapter(map: MaptilerMap): AppMapAdapter {
   const clickHandlers = new Map<string, WeakMap<object, (...args: unknown[]) => void>>()
 
+  const m = map as any
+
   return {
-    isStyleLoaded: () => map.isStyleLoaded(),
+    isStyleLoaded: () => !!map.isStyleLoaded(),
     getStyleLayers: () => {
       const layers = map.getStyle()?.layers
       if (!layers) return []
       return layers.map((l) => ({ id: l.id, type: l.type }))
     },
     getSource: (id) => map.getSource(id),
-    addSource: (id, source) => map.addSource(id, source as mapboxgl.SourceSpecification),
+    addSource: (id, source) => map.addSource(id, source as Parameters<typeof map.addSource>[1]),
     removeSource: (id) => map.removeSource(id),
     getLayer: (id) => map.getLayer(id),
     addLayer: (layer, beforeId) =>
-      map.addLayer(layer as mapboxgl.LayerSpecification, beforeId),
+      map.addLayer(layer as Parameters<typeof map.addLayer>[0], beforeId),
     removeLayer: (id) => map.removeLayer(id),
     getBounds: () => {
-      const b = map.getBounds()!
+      const b = map.getBounds()
       return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]
     },
     getZoom: () => map.getZoom(),
     flyTo: (center, zoom) => map.flyTo({ center, ...(zoom != null && { zoom }) }),
-    onStyleLoad: (cb) => map.on('style.load', cb),
-    offStyleLoad: (cb) => map.off('style.load', cb),
-    onMoveEnd: (cb) => map.on('moveend', cb),
-    offMoveEnd: (cb) => map.off('moveend', cb),
+    onStyleLoad: (cb) => { map.on('style.load', cb) },
+    offStyleLoad: (cb) => { map.off('style.load', cb) },
+    onMoveEnd: (cb) => { map.on('moveend', cb) },
+    offMoveEnd: (cb) => { map.off('moveend', cb) },
     onClick: (layerId, cb) => {
-      const wrapper = (e: mapboxgl.MapMouseEvent & { features?: mapboxgl.GeoJSONFeature[] }) => {
+      const wrapper = (e: { lngLat: { lng: number; lat: number }; features?: unknown[] }) => {
         const event: { lngLat: [number, number]; features?: unknown[] } = {
           lngLat: [e.lngLat.lng, e.lngLat.lat],
         }
-        if (e.features) event.features = e.features as unknown[]
+        if (e.features) event.features = e.features
         cb(event)
       }
       let layerMap = clickHandlers.get(layerId)
@@ -62,49 +59,42 @@ export function createMapboxAdapter(map: mapboxgl.Map): AppMapAdapter {
         clickHandlers.set(layerId, layerMap)
       }
       layerMap.set(cb, wrapper as (...args: unknown[]) => void)
-      map.on('click', layerId, wrapper)
+      // MapTiler SDK layer-click overload requires cast
+      m.on('click', layerId, wrapper)
     },
     offClick: (layerId, cb) => {
       const layerMap = clickHandlers.get(layerId)
       const wrapper = layerMap?.get(cb)
       if (wrapper) {
-        map.off('click', layerId, wrapper)
+        m.off('click', layerId, wrapper)
         layerMap!.delete(cb)
       }
     },
   }
 }
 
-/**
- * Re-add terrain source, terrain exaggeration, sky layer,
- * and all raster overlays after a style swap.
- */
-function applyPostStyleLoad(map: mapboxgl.Map) {
-  addTerrainSource(map)
+function resolveStyle(baseLayer: string): string {
+  return MAPTILER_STYLE_IDS[baseLayer as keyof typeof MAPTILER_STYLE_IDS] ?? 'outdoor-v2'
+}
 
+/**
+ * Re-apply terrain after a style swap.
+ */
+function applyPostStyleLoad(map: MaptilerMap) {
   const state = useMapStore.getState()
   if (state.terrainEnabled) {
     const exaggeration = state.customExaggeration
       ? state.terrainExaggeration
       : DEFAULT_TERRAIN_EXAGGERATION
-    map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration })
-    if (!map.getLayer(SKY_LAYER_ID)) {
-      map.addLayer(SKY_LAYER as mapboxgl.LayerSpecification)
-    }
+    map.enableTerrain(exaggeration)
   }
-
-  // Raster overlays are handled by useRasterOverlays' own style.load listener.
 }
 
 export default function MapContainer() {
-  const mapRef = useRef<mapboxgl.Map | null>(null)
+  const mapRef = useRef<MaptilerMap | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const cleanupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // useState (not useRef) for the map instance passed to children —
-  // children need a re-render when the map becomes available.
-  const [mapInstance, setMapInstance] = useState<mapboxgl.Map | null>(null)
-
-  // Adapter for shared overlay code
+  const [mapInstance, setMapInstance] = useState<MaptilerMap | null>(null)
   const [adapter, setAdapter] = useState<AppMapAdapter | null>(null)
 
   const {
@@ -122,16 +112,13 @@ export default function MapContainer() {
     setMapReady,
   } = useMapStore()
 
-  // Track whether the initial style has loaded (to skip redundant setStyle on mount)
   const initialStyleRef = useRef(true)
 
-  // Phase 3 hooks — now use adapter instead of raw map
   useRasterOverlays(adapter)
 
   // --- Map initialization ---
   useEffect(() => {
-    // Strict Mode remount: map exists and wasn't removed — reuse it.
-    // Cancel any pending deferred removal from the previous unmount.
+    // Strict Mode remount: reuse existing map
     if (mapRef.current) {
       if (cleanupTimerRef.current !== null) {
         clearTimeout(cleanupTimerRef.current)
@@ -139,7 +126,7 @@ export default function MapContainer() {
       }
       const map = mapRef.current
       setMapInstance(map)
-      setAdapter(createMapboxAdapter(map))
+      setAdapter(createMaptilerAdapter(map))
       if (map.isStyleLoaded()) {
         setMapReady(true)
       } else {
@@ -148,37 +135,34 @@ export default function MapContainer() {
       return
     }
 
-    const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN
-    if (!token?.startsWith('pk.')) {
-      throw new Error(
-        'VITE_MAPBOX_ACCESS_TOKEN must be a public token (pk.*). ' +
-          'Never use a secret token (sk.*) in client-side code.',
-      )
+    const apiKey = import.meta.env.VITE_MAPTILER_API_KEY
+    if (!apiKey) {
+      throw new Error('VITE_MAPTILER_API_KEY is required for MapTiler runtime.')
     }
 
-    const map = new mapboxgl.Map({
-      accessToken: token,
+    maptilerConfig.apiKey = apiKey
+
+    const map = new MaptilerMap({
       container: containerRef.current!,
-      style: resolveStyleUrl(baseLayer, season),
-      projection,
+      style: resolveStyle(baseLayer) as MapOptions['style'],
       center,
       zoom,
       pitch,
       bearing,
       minZoom: MIN_ZOOM,
       maxZoom: MAX_ZOOM,
-    })
+    } as MapOptions)
 
     mapRef.current = map
 
     map.on('load', () => {
+      map.setProjection(projection as 'mercator' | 'globe')
       applyPostStyleLoad(map)
       setMapReady(true)
       setMapInstance(map)
-      setAdapter(createMapboxAdapter(map))
+      setAdapter(createMaptilerAdapter(map))
     })
 
-    // Sync viewport back to store on moveend (not on every move — too noisy).
     map.on('moveend', () => {
       const c = map.getCenter()
       setViewport({
@@ -189,11 +173,7 @@ export default function MapContainer() {
       })
     })
 
-    // Deferred cleanup: schedule map.remove() via setTimeout(0).
-    // Strict Mode remount is synchronous — the next mount effect runs
-    // before this timer fires and cancels it. A real unmount (provider
-    // switch, route change) has no subsequent mount, so the timer
-    // executes and releases the WebGL context.
+    // Deferred cleanup — same pattern as Mapbox runtime
     return () => {
       setMapReady(false)
       setMapInstance(null)
@@ -207,47 +187,47 @@ export default function MapContainer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // --- Style switching (base layer or season change) ---
+  // --- Style switching ---
   const prevStyleRef = useRef<string | null>(null)
   useEffect(() => {
-    // Skip on initial render — the map constructor already set the style.
     if (initialStyleRef.current) {
       initialStyleRef.current = false
-      prevStyleRef.current = resolveStyleUrl(baseLayer, season)
+      prevStyleRef.current = resolveStyle(baseLayer)
       return
     }
 
     const map = mapRef.current
     if (!map) return
 
-    const newStyle = resolveStyleUrl(baseLayer, season)
-
-    // Skip if resolved URL hasn't changed (e.g. season toggle within same base layer)
+    const newStyle = resolveStyle(baseLayer)
     if (newStyle === prevStyleRef.current) return
     prevStyleRef.current = newStyle
 
-    map.setStyle(newStyle, { diff: false } as Parameters<typeof map.setStyle>[1])
+    map.setStyle(newStyle as string | StyleSpecification, { diff: false })
 
-    // After style replacement, all sources/layers are gone.
     map.once('style.load', () => {
       applyPostStyleLoad(map)
     })
   }, [baseLayer, season])
 
-  // --- Terrain exaggeration sync (toggle handled by TerrainControl) ---
+  // --- Terrain sync ---
   useEffect(() => {
     const map = mapRef.current
-    if (!map || !map.isStyleLoaded() || !terrainEnabled) return
+    if (!map || !map.isStyleLoaded()) return
 
-    const exaggeration = customExaggeration ? terrainExaggeration : DEFAULT_TERRAIN_EXAGGERATION
-    map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration })
+    if (terrainEnabled) {
+      const exaggeration = customExaggeration ? terrainExaggeration : DEFAULT_TERRAIN_EXAGGERATION
+      map.enableTerrain(exaggeration)
+    } else {
+      map.disableTerrain()
+    }
   }, [terrainEnabled, terrainExaggeration, customExaggeration])
 
   // --- Projection toggle ---
   useEffect(() => {
     const map = mapRef.current
     if (!map) return
-    map.setProjection(projection)
+    map.setProjection(projection as 'mercator' | 'globe')
   }, [projection])
 
   return (
@@ -256,10 +236,4 @@ export default function MapContainer() {
       <MapControls map={mapInstance} />
     </>
   )
-}
-
-function addTerrainSource(map: mapboxgl.Map) {
-  if (!map.getSource(TERRAIN_SOURCE_ID)) {
-    map.addSource(TERRAIN_SOURCE_ID, TERRAIN_SOURCE)
-  }
 }

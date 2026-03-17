@@ -19,6 +19,12 @@ export default defineConfig({
           if (id.includes('node_modules/mapbox-gl')) {
             return 'mapbox-gl'
           }
+          if (
+            id.includes('node_modules/@maptiler/sdk') ||
+            id.includes('node_modules/maplibre-gl')
+          ) {
+            return 'maptiler-sdk'
+          }
         },
       },
     },

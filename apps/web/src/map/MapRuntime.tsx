@@ -3,15 +3,14 @@ import { useMapStore } from '../stores/mapStore'
 import type { MapProvider } from '@mtamta/map-core'
 
 const MapboxContainer = lazy(() => import('./runtime/mapbox/MapContainer'))
-// MapTiler runtime — uncomment in M2:
-// const MaptilerContainer = lazy(() => import('./runtime/maptiler/MapContainer'))
+const MaptilerContainer = lazy(() => import('./runtime/maptiler/MapContainer'))
 
 function RuntimeForProvider({ provider }: { provider: MapProvider }) {
   switch (provider) {
     case 'mapbox':
       return <MapboxContainer />
-    // case 'maptiler':
-    //   return <MaptilerContainer />
+    case 'maptiler':
+      return <MaptilerContainer />
     default:
       return null
   }

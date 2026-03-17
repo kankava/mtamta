@@ -1,13 +1,17 @@
 import { useMapStore, BASEMAP_PRESETS } from '../../stores/mapStore'
 import type { BasemapPreset } from '../../stores/mapStore'
+import { useFeatureState } from '../runtime/shared/providerCapabilities'
 import { Section } from './shared'
 
 interface BasemapCard {
   preset: BasemapPreset
   label: string
   flag?: string | undefined
+  /** If set, overrides capability-driven disabled/hint */
   disabled?: boolean | undefined
   hint?: string | undefined
+  /** FeatureId to check — derives disabled/hint from capability matrix */
+  capabilityGate?: 'season_winter' | undefined
 }
 
 const SATELLITE_CARDS: BasemapCard[] = [
@@ -16,8 +20,7 @@ const SATELLITE_CARDS: BasemapCard[] = [
     preset: 'satellite-winter',
     label: 'Winter',
     flag: '\u{1F6F0}\u{FE0F}',
-    disabled: true,
-    hint: 'Coming soon',
+    capabilityGate: 'season_winter',
   },
 ]
 
@@ -27,8 +30,7 @@ const TOPO_GLOBAL_CARDS: BasemapCard[] = [
     preset: 'outdoors-winter',
     label: 'Global Winter',
     flag: '\u{1F30D}',
-    disabled: true,
-    hint: 'Coming soon',
+    capabilityGate: 'season_winter',
   },
 ]
 
@@ -57,16 +59,31 @@ function isActivePreset(
 export default function BasemapsTab() {
   const { baseLayer, season, topoSource, selectBasemap } = useMapStore()
   const state = { baseLayer, season, topoSource }
+  const winterState = useFeatureState('season_winter')
+
+  const resolveCard = (card: BasemapCard) => {
+    if (card.capabilityGate === 'season_winter' && winterState !== 'available') {
+      return {
+        ...card,
+        disabled: true,
+        hint: winterState === 'coming_soon' ? 'Coming soon' : undefined,
+      }
+    }
+    return card
+  }
 
   const renderCards = (cards: BasemapCard[]) =>
-    cards.map((card) => (
-      <Card
-        key={card.preset}
-        card={card}
-        active={!card.disabled && isActivePreset(card.preset, state)}
-        onClick={card.disabled ? undefined : () => selectBasemap(card.preset)}
-      />
-    ))
+    cards.map((raw) => {
+      const card = resolveCard(raw)
+      return (
+        <Card
+          key={card.preset}
+          card={card}
+          active={!card.disabled && isActivePreset(card.preset, state)}
+          onClick={card.disabled ? undefined : () => selectBasemap(card.preset)}
+        />
+      )
+    })
 
   return (
     <div className="space-y-5">

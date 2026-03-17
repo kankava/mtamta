@@ -2,7 +2,7 @@ import { useMapStore } from '../stores/mapStore'
 import type { MapProvider } from '@mtamta/map-core'
 
 /** Providers whose runtime is implemented. Updated as milestones land. */
-const IMPLEMENTED_PROVIDERS: ReadonlySet<MapProvider> = new Set(['mapbox'])
+const IMPLEMENTED_PROVIDERS: ReadonlySet<MapProvider> = new Set(['mapbox', 'maptiler'])
 
 const PROVIDERS: Array<{
   id: MapProvider

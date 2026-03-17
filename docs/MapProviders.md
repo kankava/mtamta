@@ -52,23 +52,20 @@ export type MapProvider = 'mapbox' | 'maptiler'
 export type FeatureId =
   | 'base_outdoors'
   | 'base_satellite'
-  | 'season_summer'
-  | 'season_winter'
   | 'terrain_3d'
-  | 'trip_routes'
-  | 'raster_topo_overlays'
+  | 'topo_overlays'
   | 'raster_overlays'
   | 'globe_projection'
-  | 'search_geocoder'
+  | 'season_summer'
+  | 'season_winter'
+  | 'trip_routes'
+  | 'geocoder'
   | 'weather'
   | 'directions'
 
 export type CapabilityState = 'available' | 'coming_soon' | 'unsupported'
 
-export interface ProviderCapabilities {
-  provider: MapProvider
-  features: Record<FeatureId, CapabilityState>
-}
+export type ProviderCapabilities = Record<FeatureId, CapabilityState>
 ```
 
 Notes:
@@ -91,7 +88,7 @@ This matrix is the product contract. It determines which controls render as acti
 | Country topo raster overlays | `available` | `available` | XYZ tiles are renderer-neutral |
 | Raster overlays (seasonal satellite) | `available` | `available` | XYZ/WMS tiles are renderer-neutral |
 | Globe projection | `available` | `available` | Both SDKs support globe; MapTiler SDK is built on MapLibre v4+ which added globe support |
-| Summer mode | `available` | `coming_soon` | Custom Mapbox Studio styles; MapTiler equivalent planned |
+| Summer mode | `available` | `available` | Mapbox Outdoors v12 / MapTiler Outdoor v2 (base style is summer) |
 | Winter mode | `available` | `coming_soon` | Custom Mapbox Studio styles; MapTiler equivalent planned |
 | Trip route layers | `available` | `available` | Shared via `AppMapAdapter` |
 | Geocoder | `coming_soon` | `coming_soon` | Mapbox SearchBox ships in Phase 4 inside `runtime/mapbox/` (matrix updated to `available` when it lands); MapTiler Geocoding in M3 |
@@ -244,15 +241,15 @@ Do **not** write this to the user profile yet.
 
 **Goal**: Introduce provider state and runtime boundaries without changing current Mapbox behavior.
 
-- [ ] Add `MapProvider` types and capability model to `@mtamta/map-core`
-- [ ] Add `mapProvider` state to `mapStore` with localStorage read/write
-- [ ] Create post-login `MapProviderGate` (skipped when localStorage has a stored value)
-- [ ] Extract current `MapContainer` into `runtime/mapbox/MapContainer.tsx`
-- [ ] Extract current controls into `runtime/mapbox/MapControls.tsx`
-- [ ] Define `AppMapAdapter` interface in `runtime/shared/mapAdapter.ts`
-- [ ] Refactor shared overlays behind `AppMapAdapter`
-- [ ] Route selected provider into `MapRuntime.tsx` dispatcher
-- [ ] Ensure zero behavior regression in current Mapbox stack
+- [x] Add `MapProvider` types and capability model to `@mtamta/map-core`
+- [x] Add `mapProvider` state to `mapStore` with localStorage read/write
+- [x] Create post-login `MapProviderGate` (skipped when localStorage has a stored value)
+- [x] Extract current `MapContainer` into `runtime/mapbox/MapContainer.tsx`
+- [x] Extract current controls into `runtime/mapbox/MapControls.tsx`
+- [x] Define `AppMapAdapter` interface in `runtime/shared/mapAdapter.ts`
+- [x] Refactor shared overlays behind `AppMapAdapter`
+- [x] Route selected provider into `MapRuntime.tsx` dispatcher
+- [x] Ensure zero behavior regression in current Mapbox stack
 
 Verification:
 
@@ -268,12 +265,12 @@ Verification:
 
 **Goal**: Add a working MapTiler map runtime with base-map and overlay parity.
 
-- [ ] Implement `runtime/maptiler/MapContainer.tsx` using `@maptiler/sdk`
-- [ ] Implement `runtime/maptiler/MapControls.tsx`
-- [ ] Wire MapTiler style resolution (Outdoor v2, Satellite, Terrain RGB v2)
-- [ ] Verify shared overlays (country topo, seasonal satellite) work via `AppMapAdapter`
-- [ ] Add capability gating for incomplete MapTiler features (`Coming soon` UI)
-- [ ] Both providers boot cleanly from the provider gate
+- [x] Implement `runtime/maptiler/MapContainer.tsx` using `@maptiler/sdk`
+- [x] Implement `runtime/maptiler/MapControls.tsx`
+- [x] Wire MapTiler style resolution (Outdoor v2, Satellite, Terrain RGB v2)
+- [x] Verify shared overlays (country topo, seasonal satellite) work via `AppMapAdapter`
+- [x] Add capability gating for incomplete MapTiler features (`Coming soon` UI)
+- [x] Both providers boot cleanly from the provider gate
 
 Verification:
 

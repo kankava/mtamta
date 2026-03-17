@@ -1,6 +1,6 @@
 # Phase 3.5: Multi-Provider Support — Detailed Implementation Plan
 
-> **Status: M1 COMPLETE — M2 NOT STARTED**
+> **Status: M1 + M2 COMPLETE** — Manual testing remaining.
 >
 > Dual-provider web map support (Mapbox GL JS + MapTiler SDK). Introduces provider state, runtime boundary, AppMapAdapter interface, and lazy-loaded runtimes. Split into 2 milestones (M1 → M2). M3 (provider-specific features like geocoder, weather) deferred to after Phase 4.
 >
@@ -173,13 +173,13 @@ The `setTimeout(0)` trick works because Strict Mode's unmount→mount cycle is s
 
 ### 1. Install `@maptiler/sdk` and update Vite config
 
-- [ ] `apps/web/package.json` — add `@maptiler/sdk`
-- [ ] `apps/web/vite.config.ts` — add manual chunk for `@maptiler/sdk` + `maplibre-gl`
-- [ ] `.env.local` — add `VITE_MAPTILER_API_KEY`
+- [x] `apps/web/package.json` — add `@maptiler/sdk`
+- [x] `apps/web/vite.config.ts` — add manual chunk for `@maptiler/sdk` + `maplibre-gl`
+- [x] `.env.local` — add `VITE_MAPTILER_API_KEY`
 
 ### 2. Implement MapTiler MapContainer with adapter
 
-- [ ] Create `apps/web/src/map/runtime/maptiler/MapContainer.tsx`
+- [x] Create `apps/web/src/map/runtime/maptiler/MapContainer.tsx`
 
 Same lifecycle pattern as Mapbox: ref + useEffect init, viewport sync on moveend, style switching, `createMaptilerAdapter(map)` factory, passes adapter to `useRasterOverlays`.
 
@@ -193,17 +193,17 @@ Key API differences from Mapbox:
 
 ### 3. Implement MapTiler controls and terrain
 
-- [ ] Create `apps/web/src/map/runtime/maptiler/MapControls.tsx` — SDK built-in NavigationControl, GeolocateControl, ScaleControl + custom terrain toggle
-- [ ] Create `apps/web/src/map/runtime/maptiler/terrain.ts` — custom IControl using `map.enableTerrain()`/`map.disableTerrain()`, subscribes to mapStore. CSS class: `maplibregl-ctrl`
+- [x] Create `apps/web/src/map/runtime/maptiler/MapControls.tsx` — SDK built-in NavigationControl, GeolocateControl, ScaleControl + custom terrain toggle
+- [x] Create `apps/web/src/map/runtime/maptiler/terrain.ts` — custom IControl using `map.enableTerrain()`/`map.disableTerrain()`, subscribes to mapStore. CSS class: `maplibregl-ctrl`
 
 ### 4. Wire MapTiler into MapRuntime dispatcher
 
-- [ ] Update `MapRuntime.tsx` — uncomment MapTiler lazy import and `case 'maptiler'`
+- [x] Update `MapRuntime.tsx` — uncomment MapTiler lazy import and `case 'maptiler'`
 
 ### 5. Add capability gating to sidebar
 
-- [ ] Update `BasemapsTab.tsx` — replace hardcoded `disabled: true` / `hint: 'Coming soon'` on winter cards with capability-driven logic: derive `disabled` and `hint` from `useFeatureState('season_winter')` so Mapbox winter cards become enabled (`available`) and MapTiler winter cards show "Coming soon" (`coming_soon`)
-- [ ] Update `SettingsTab.tsx` — globe toggle uses `useFeatureState('globe_projection')`
+- [x] Update `BasemapsTab.tsx` — replace hardcoded `disabled: true` / `hint: 'Coming soon'` on winter cards with capability-driven logic: derive `disabled` and `hint` from `useFeatureState('season_winter')` so Mapbox winter cards become enabled (`available`) and MapTiler winter cards show "Coming soon" (`coming_soon`)
+- [x] Update `SettingsTab.tsx` — globe toggle uses `useFeatureState('globe_projection')`
 
 ### M2 Verification Checklist
 

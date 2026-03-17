@@ -9,6 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@maptiler/sdk": "^3.11.1",
     "@mtamta/map-core": "workspace:*",
     "@mtamta/shared": "workspace:*",
     "@react-oauth/google": "^0.13.4",

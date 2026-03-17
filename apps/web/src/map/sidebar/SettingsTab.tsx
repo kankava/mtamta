@@ -4,6 +4,7 @@ import {
   MAX_TERRAIN_EXAGGERATION,
   TERRAIN_EXAGGERATION_STEP,
 } from '@mtamta/map-core'
+import { useFeatureState } from '../runtime/shared/providerCapabilities'
 import { Section, Toggle } from './shared'
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -22,6 +23,9 @@ export default function SettingsTab() {
     projection,
     setProjection,
   } = useMapStore()
+
+  const globeState = useFeatureState('globe_projection')
+  const globeDisabled = globeState !== 'available'
 
   return (
     <div className="space-y-5">
@@ -69,22 +73,28 @@ export default function SettingsTab() {
 
       <Section title="Projection">
         <div className="flex gap-2">
-          {(['mercator', 'globe'] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => setProjection(p)}
-              className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium transition-colors border ${
-                projection === p
-                  ? 'bg-accent/15 border-accent text-accent'
-                  : 'bg-white/5 border-white/10 text-white/50 hover:text-white/70'
-              }`}
-            >
-              <span className="text-sm leading-none">
-                {p === 'mercator' ? '\u{1F5FA}\u{FE0F}' : '\u{1F30D}'}
-              </span>
-              {p === 'mercator' ? 'Flat' : 'Globe'}
-            </button>
-          ))}
+          {(['mercator', 'globe'] as const).map((p) => {
+            const isDisabled = p === 'globe' && globeDisabled
+            return (
+              <button
+                key={p}
+                disabled={isDisabled}
+                onClick={() => setProjection(p)}
+                className={`flex-1 flex items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-medium transition-colors border ${
+                  isDisabled
+                    ? 'bg-white/[0.02] border-white/5 text-white/25 cursor-not-allowed'
+                    : projection === p
+                      ? 'bg-accent/15 border-accent text-accent'
+                      : 'bg-white/5 border-white/10 text-white/50 hover:text-white/70'
+                }`}
+              >
+                <span className="text-sm leading-none">
+                  {p === 'mercator' ? '\u{1F5FA}\u{FE0F}' : '\u{1F30D}'}
+                </span>
+                {p === 'mercator' ? 'Flat' : 'Globe'}
+              </button>
+            )
+          })}
         </div>
       </Section>
     </div>
