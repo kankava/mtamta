@@ -27,12 +27,8 @@ export default function MapProviderGate() {
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-[#0a0f1a]">
       <div className="w-full max-w-sm px-6">
-        <h2 className="text-lg font-semibold text-white/90 text-center mb-1">
-          Choose Map Engine
-        </h2>
-        <p className="text-xs text-white/40 text-center mb-6">
-          You can switch anytime in Settings
-        </p>
+        <h2 className="text-lg font-semibold text-white/90 text-center mb-1">Choose Map Engine</h2>
+        <p className="text-xs text-white/40 text-center mb-6">You can switch anytime in Settings</p>
         <div className="flex flex-col gap-3">
           {PROVIDERS.map((p) => {
             const available = IMPLEMENTED_PROVIDERS.has(p.id)
@@ -52,9 +48,7 @@ export default function MapProviderGate() {
                 >
                   {p.label}
                   {!available && (
-                    <span className="ml-2 text-[10px] font-normal text-white/20">
-                      Coming soon
-                    </span>
+                    <span className="ml-2 text-[10px] font-normal text-white/20">Coming soon</span>
                   )}
                 </span>
                 <span

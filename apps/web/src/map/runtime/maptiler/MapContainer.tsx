@@ -41,10 +41,18 @@ export function createMaptilerAdapter(map: MaptilerMap): AppMapAdapter {
     },
     getZoom: () => map.getZoom(),
     flyTo: (center, zoom) => map.flyTo({ center, ...(zoom != null && { zoom }) }),
-    onStyleLoad: (cb) => { map.on('style.load', cb) },
-    offStyleLoad: (cb) => { map.off('style.load', cb) },
-    onMoveEnd: (cb) => { map.on('moveend', cb) },
-    offMoveEnd: (cb) => { map.off('moveend', cb) },
+    onStyleLoad: (cb) => {
+      map.on('style.load', cb)
+    },
+    offStyleLoad: (cb) => {
+      map.off('style.load', cb)
+    },
+    onMoveEnd: (cb) => {
+      map.on('moveend', cb)
+    },
+    offMoveEnd: (cb) => {
+      map.off('moveend', cb)
+    },
     onClick: (layerId, cb) => {
       const wrapper = (e: { lngLat: { lng: number; lat: number }; features?: unknown[] }) => {
         const event: { lngLat: [number, number]; features?: unknown[] } = {

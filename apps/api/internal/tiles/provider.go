@@ -1,7 +1,6 @@
 package tiles
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/kankava/mtamta/internal/config"
@@ -62,17 +61,8 @@ func BuildProviders(cfg *config.Config) map[string]*Provider {
 		RateLimit:      2000,
 	}
 
-	// IGN France — needs API key (WMTS uses TILEMATRIX/TILEROW/TILECOL = z/y/x)
-	if cfg.IGNApiKey != "" {
-		providers["ign"] = &Provider{
-			ID:          "ign",
-			UpstreamURL: fmt.Sprintf("https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX=%%d&TILEROW=%%d&TILECOL=%%d&apikey=%s", cfg.IGNApiKey),
-			FormatOrder: "zyx",
-			CacheTTL:    24 * time.Hour,
-			CachePrefix: "tile:ign",
-			Headers:     map[string]string{},
-		}
-	}
+	// IGN France is not proxied — the public Géoplateforme PLANIGNV2 WMTS
+	// endpoint is open access (no API key), so the web app loads it directly.
 
 	return providers
 }

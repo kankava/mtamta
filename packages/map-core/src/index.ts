@@ -7,7 +7,13 @@ export {
   MAX_ZOOM,
   DEFAULT_VIEWPORT,
 } from './config'
-export { STYLE_URLS, resolveStyleUrl, MAPTILER_STYLE_IDS, resolveMaptilerStyle, resolveStyleForProvider } from './styles'
+export {
+  STYLE_URLS,
+  resolveStyleUrl,
+  MAPTILER_STYLE_IDS,
+  resolveMaptilerStyle,
+  resolveStyleForProvider,
+} from './styles'
 export type { BaseLayer, Season } from './styles'
 export {
   TERRAIN_SOURCE_ID,

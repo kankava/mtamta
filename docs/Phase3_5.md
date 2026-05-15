@@ -1,8 +1,8 @@
 # Phase 3.5: Multi-Provider Support — Detailed Implementation Plan
 
-> **Status: M1 + M2 COMPLETE** — Manual testing remaining.
+> **Status: M1 + M2 COMPLETE** (manual testing remaining) — **M3 (Mapbox Standard migration) PLANNED, scheduled before Phase 4.**
 >
-> Dual-provider web map support (Mapbox GL JS + MapTiler SDK). Introduces provider state, runtime boundary, AppMapAdapter interface, and lazy-loaded runtimes. Split into 2 milestones (M1 → M2). M3 (provider-specific features like geocoder, weather) deferred to after Phase 4.
+> Dual-provider web map support (Mapbox GL JS + MapTiler SDK). Introduces provider state, runtime boundary, AppMapAdapter interface, and lazy-loaded runtimes. Milestones: M1 + M2 (complete), M3 — Mapbox Standard migration (before Phase 4), M4 — provider-specific features like geocoder/weather (deferred to after Phase 4).
 >
 > **Spec**: [`MapProviders.md`](MapProviders.md) is the finalized product spec. This plan is the step-by-step implementation guide.
 
@@ -207,13 +207,75 @@ Key API differences from Mapbox:
 
 ### M2 Verification Checklist
 
-- [ ] Select MapTiler from gate → map renders outdoors and satellite
+- [ ] Select MapTiler from gate → map renders Satellite Summer by default and can switch to outdoors
 - [ ] 3D terrain works in MapTiler
 - [ ] Shared overlays render in MapTiler via AppMapAdapter
 - [ ] Globe projection works in both providers
 - [ ] Winter cards enabled for both providers; MapTiler switches to winter-v2 style
 - [ ] Only selected provider's SDK chunk is loaded
 - [ ] Switching providers via Settings works cleanly
+
+---
+
+## M3 — Mapbox Standard Migration
+
+> **Status: PLANNED** — scheduled before Phase 4.
+>
+> Migrate the Mapbox runtime from the `outdoors-v12` core style to **Mapbox Standard** so it gains a true seasonal pair: the official **Outdoors** and **Outdoors Winter** themes (Mapbox Dec 2025 release), matching MapTiler's native `outdoor-v2` / `winter-v2`. Sequenced before Phase 4 because Standard changes the custom-layer insertion model (named slots vs `addLayer(..., beforeId)`), and Phase 4 trip-route layers build on `AppMapAdapter` — settling the adapter contract first avoids reworking Phase 4 code.
+
+### 0. Spike — confirm the Standard themes API
+
+- [ ] Read the Mapbox Standard docs (`docs.mapbox.com/map-styles/standard`) and confirm how the **Outdoors** / **Outdoors Winter** themes are selected: a `setConfigProperty` value, a style import/fragment, or distinct style IDs
+- [ ] Confirm the themes are available on the project's Mapbox token / plan
+- [ ] Confirm Standard's slot names (`bottom` / `middle` / `top`) and which slot keeps raster topo below labels
+- [ ] Record findings in this section before starting step 1 — the rest of the milestone depends on the answer
+
+### 1. Season-aware Mapbox style resolution — `packages/map-core/src/styles.ts`
+
+- [ ] Replace the `outdoors` entry in `STYLE_URLS` with the Mapbox Standard style reference
+- [ ] Make `resolveStyleUrl(baseLayer, season)` actually use `season` for Mapbox — Outdoors theme for summer, Outdoors Winter for winter (mechanism per the spike)
+- [ ] Decide satellite: Mapbox Standard Satellite vs keep `satellite-streets-v12`
+- [ ] Update `styles.test.ts`
+
+### 2. Boot Mapbox Standard — `runtime/mapbox/MapContainer.tsx`
+
+- [ ] Initialize the map with the Mapbox Standard style
+- [ ] On season change, apply the theme via config update (`setConfigProperty`) instead of a full `setStyle` reload — faster, no layer teardown
+- [ ] Verify the baseLayer outdoors↔satellite reload path still works
+
+### 3. Slot-based layer insertion — `AppMapAdapter` + `rasterOverlays.ts`
+
+- [ ] Add an optional `slot` field to the adapter's `addLayer` input
+- [ ] Mapbox adapter (`createMapboxAdapter`): place raster topo/overlay layers in the slot the spike identified; stop relying on `findFirstSymbolLayer()` + `beforeId` (Standard's internal layers aren't enumerable the same way)
+- [ ] MapTiler/MapLibre adapter: ignore `slot`, keep current `beforeId` behavior — no regression
+- [ ] `rasterOverlays.ts` — pass the slot; behavior identical for MapTiler
+
+### 4. Terrain, sky, and projection under Standard
+
+- [ ] Verify 3D terrain still enables/disables (Standard manages lighting/terrain differently)
+- [ ] Reconcile the custom `sky-layer` with Standard's built-in atmosphere — remove the custom sky layer if Standard supersedes it
+- [ ] Verify globe projection still works
+- [ ] Update `terrain.ts` Mapbox config if needed
+
+### 5. Capability matrix + cleanup — `capabilities.ts`
+
+- [ ] Confirm Mapbox `season_winter` is genuinely `available` post-migration (already in the matrix, but it was previously cosmetic-only)
+- [ ] Remove now-dead code (custom sky layer, `outdoors-v12` references)
+
+### M3 Verification Checklist
+
+- [ ] `pnpm --filter @mtamta/web build` / `test` and `map-core test` — clean
+- [ ] Mapbox: Global Summer and Global Winter render visibly different base styles
+- [ ] All overlays (topo, pistes, ski touring, snowshoe, OpenTopoMap) insert correctly via slots, below labels
+- [ ] 3D terrain, sky/atmosphere, and globe work on Mapbox Standard
+- [ ] MapTiler runtime has zero regression (full pass)
+- [ ] Only the selected provider's SDK chunk loads; build is clean
+
+### Risks / Open Questions
+
+- **Theme API uncertainty** — the exact selection mechanism for Outdoors / Outdoors Winter is resolved in the step-0 spike. If the themes turn out to be plan-gated or unavailable on the token, fall back to keeping `outdoors-v12` and re-defer this milestone.
+- **Bundle / perf** — Mapbox Standard is a heavier 3D style; compare chunk size and initial render time against `outdoors-v12`.
+- **Slot abstraction leak** — `slot` is a Mapbox-Standard concept; keep it optional on `AppMapAdapter` so the MapTiler adapter stays clean.
 
 ---
 

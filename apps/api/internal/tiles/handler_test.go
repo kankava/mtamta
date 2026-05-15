@@ -200,18 +200,18 @@ func TestServeTile_FormatOrderZYX(t *testing.T) {
 	defer rc.Close()
 
 	providers := map[string]*Provider{
-		"ign": {
-			ID:          "ign",
+		"wmts": {
+			ID:          "wmts",
 			UpstreamURL: upstream.URL + "?TILEMATRIX=%d&TILEROW=%d&TILECOL=%d",
 			FormatOrder: "zyx",
 			CacheTTL:    1 * time.Minute,
-			CachePrefix: "tile:ign",
+			CachePrefix: "tile:wmts",
 			Headers:     map[string]string{},
 		},
 	}
 	h := NewHandler(providers, rc)
 
-	rr := makeRequest(h, "ign", 10, 100, 200)
+	rr := makeRequest(h, "wmts", 10, 100, 200)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rr.Code)
 	}

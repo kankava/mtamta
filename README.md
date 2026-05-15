@@ -131,6 +131,7 @@ This starts Docker services, the Go API with [air](https://github.com/air-verse/
 | `VITE_API_URL` | API base URL (e.g. `http://localhost:8080`) |
 | `VITE_GOOGLE_CLIENT_ID` | Google OAuth client ID (same as API) |
 | `VITE_MAPBOX_ACCESS_TOKEN` | Mapbox public token (`pk.*`) |
+| `VITE_MAPTILER_API_KEY` | MapTiler API key |
 
 ## Google OAuth Setup
 
@@ -230,7 +231,7 @@ Pushes to `main` trigger the full pipeline (`.github/workflows/ci.yml`):
 Railway auto-deploys the API separately after CI passes (Wait for CI).
 
 Required GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`
-Required GitHub variables: `VITE_API_URL`, `VITE_GOOGLE_CLIENT_ID`, `VITE_MAPBOX_ACCESS_TOKEN`
+Required GitHub variables: `VITE_API_URL`, `VITE_GOOGLE_CLIENT_ID`, `VITE_MAPBOX_ACCESS_TOKEN`, `VITE_MAPTILER_API_KEY`
 
 See [docs/Deployment.md](docs/Deployment.md) for full deployment reference.
 

@@ -5,6 +5,8 @@
 > Country-specific topographic maps, seasonal satellite imagery, and ski-focused overlays. Split into 4 sub-milestones (3a → 3b → 3c → 3d). Complete tasks top-to-bottom within each sub-milestone.
 >
 > **Note**: Sub-milestone 3d replaced `LayerPanel.tsx` and `StyleSwitcher.tsx` with a collapsible sidebar, and removed `topoOpacity` (full opacity always). References to those in 3a–3c are historical.
+>
+> **Note**: IGN was later switched to a direct, key-less source. The public Géoplateforme `PLANIGNV2` WMTS endpoint (`data.geopf.fr`) needs no API key, so IGN now has `needsProxy: false` and loads directly from the client like the other country topo sources. The IGN backend proxy provider in 3b still exists but is unused by the web app. References to IGN being proxied in 3a–3c are historical.
 
 ---
 
@@ -40,7 +42,7 @@ export interface TopoSourceDef {
   attribution: string
   maxZoom: number
   tileSize: 256 | 512
-  needsProxy: boolean          // true for IGN, OpenTopoMap
+  needsProxy: boolean          // true for OpenTopoMap only
   proxyProvider?: string       // key for /api/v1/tiles/{provider}/
 }
 ```
@@ -56,7 +58,7 @@ Providers:
 | ID | Country | Direct/Proxy | Winter variant |
 |----|---------|-------------|----------------|
 | swisstopo | CH | Direct | Yes (pixelkarte-grau) |
-| ign | FR | Proxy (API key) | No |
+| ign | FR | Direct (public PLANIGNV2, no key) | No |
 | basemap-at | AT | Direct | No |
 | bkg | DE | Direct | No |
 | kartverket | NO | Direct | No |
@@ -131,7 +133,7 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
   - Overlay catalog: count, all winter-only, ski-touring/snowshoe require swisstopo
   - `findTopoSourceForPoint`: CH, FR, AT, DE, NO, US, ocean (null), border overlap (smallest bbox wins), OpenTopoMap excluded
   - `getTopoSource`: valid ID, unknown ID
-  - `resolveTopoTileUrl`: direct summer, winter variant, proxy IGN, proxy opentopomap
+  - `resolveTopoTileUrl`: direct summer, winter variant, direct IGN, proxy opentopomap
 
 ### 10. Layer test update — `packages/map-core/src/layers.test.ts`
 
@@ -303,7 +305,7 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
 - [x] `cd apps/api && go build ./...` — compiles
 - [x] `cd apps/api && go test ./internal/tiles/...` — unit tests pass
 - [x] `cd apps/web && pnpm build` — web app builds
-- [ ] Manual: open map → no topo overlay on startup (Mapbox Outdoors only)
+- [ ] Manual: open map → Satellite Summer basemap on startup, no topo overlay
 - [ ] Manual: select "swisstopo" card → swisstopo tiles render
 - [ ] Manual: switch to satellite → topo overlay hidden
 - [ ] Manual: select "swisstopo Winter" card → swisstopo switches to winter variant, pistes overlay appears

@@ -60,7 +60,7 @@ export default function SettingsTab() {
       <Section title="Map Engine">
         <div className="flex items-center justify-between">
           <span className="text-sm text-white/80">
-            {mapProvider ? PROVIDER_LABELS[mapProvider] ?? mapProvider : 'None'}
+            {mapProvider ? (PROVIDER_LABELS[mapProvider] ?? mapProvider) : 'None'}
           </span>
           <button
             onClick={() => setMapProvider(null)}

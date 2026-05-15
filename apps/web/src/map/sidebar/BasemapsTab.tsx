@@ -34,6 +34,7 @@ const TOPO_GLOBAL_CARDS: BasemapCard[] = [
     flag: '\u{1F30D}',
     capabilityGate: 'season_winter',
   },
+  { preset: 'opentopomap', label: 'OpenTopoMap', flag: '\u{1F5FA}\u{FE0F}' },
 ]
 
 const TOPO_COUNTRY_CARDS: BasemapCard[] = [

@@ -36,6 +36,7 @@ function persistProvider(provider: MapProvider | null): void {
 export type BasemapPreset =
   | 'outdoors-summer'
   | 'outdoors-winter'
+  | 'opentopomap'
   | 'satellite-summer'
   | 'satellite-winter'
   | 'swisstopo'
@@ -55,6 +56,7 @@ interface BasemapConfig {
 const BASEMAP_PRESETS: Record<BasemapPreset, BasemapConfig> = {
   'outdoors-summer': { baseLayer: 'outdoors', season: 'summer', topoSource: null },
   'outdoors-winter': { baseLayer: 'outdoors', season: 'winter', topoSource: null },
+  opentopomap: { baseLayer: 'outdoors', season: 'summer', topoSource: 'opentopomap' },
   'satellite-summer': { baseLayer: 'satellite', season: 'summer', topoSource: null },
   'satellite-winter': { baseLayer: 'satellite', season: 'winter', topoSource: null },
   swisstopo: { baseLayer: 'outdoors', season: 'summer', topoSource: 'swisstopo' },

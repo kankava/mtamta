@@ -2,7 +2,7 @@
 
 > **Status: ACCEPTED**
 >
-> Finalized implementation reference for dual-provider web map rendering. Provider selection persisted in localStorage from day one. MapTiler SDK (MapLibre-based) as the alternative provider. M1+M2 complete before Phase 4; M3 deferred.
+> Finalized implementation reference for dual-provider web map rendering. Provider selection persisted in localStorage from day one. MapTiler SDK (MapLibre-based) as the alternative provider. M1+M2 complete; M3 (Mapbox Standard migration) scheduled before Phase 4; M4 (provider-specific features) deferred to after Phase 4.
 
 ---
 
@@ -91,7 +91,7 @@ This matrix is the product contract. It determines which controls render as acti
 | Summer mode | `available` | `available` | Mapbox Outdoors v12 / MapTiler Outdoor v2 |
 | Winter mode | `available` | `available` | Mapbox Outdoors v12 + raster overlays / MapTiler Winter v2 (native pistes, lifts, avalanche zones) |
 | Trip route layers | `available` | `available` | Shared via `AppMapAdapter` |
-| Geocoder | `coming_soon` | `coming_soon` | Mapbox SearchBox ships in Phase 4 inside `runtime/mapbox/` (matrix updated to `available` when it lands); MapTiler Geocoding in M3 |
+| Geocoder | `coming_soon` | `coming_soon` | Mapbox SearchBox ships in Phase 4 inside `runtime/mapbox/` (matrix updated to `available` when it lands); MapTiler Geocoding in M4 |
 | Weather | `coming_soon` | `coming_soon` | MapTiler weather API available; Mapbox-side TBD |
 | Directions / route planner | `coming_soon` | `coming_soon` | Mapbox Directions API; MapTiler equivalent TBD |
 
@@ -103,19 +103,19 @@ The two providers take different approaches to winter/seasonal map styles:
 
 **MapTiler** — Native seasonal styles. The SDK provides `outdoor-v2` (summer) and `winter-v2` (winter) as a designed pair. `winter-v2` includes ski pistes, lifts, cross-country trails, snow parks, avalanche zones, and a winter color palette. Style resolution is season-aware: `resolveMaptilerStyle(baseLayer, season)`.
 
-**Mapbox** — No built-in winter style. Both seasons currently use `outdoors-v12`. Winter features come from raster overlays (OpenSnowMap pistes, swisstopo ski touring/snowshoe routes). The base map retains its summer appearance.
+**Mapbox** — The `outdoors-v12` core style has no winter variant. Both seasons currently resolve to `outdoors-v12` (`resolveStyleUrl` ignores the season argument), so winter features come only from raster overlays (OpenSnowMap pistes, swisstopo ski touring/snowshoe routes) — the base map keeps its summer appearance.
 
-**Planned**: Create custom Mapbox Studio styles to match MapTiler's seasonal pair:
-- Fork `outdoors-v12` → custom summer style with mtamta branding/colors
-- Fork `outdoors-v12` → custom winter style with winter color palette, ski piste/lift data from OSM, avalanche zone styling
-- Published as `mapbox://styles/mtamta/summer-v1` and `mapbox://styles/mtamta/winter-v1` (or similar)
-- Once created, update `STYLE_URLS` in `styles.ts` to use them and make `resolveStyleUrl` season-aware (same pattern as MapTiler)
+As of the December 2025 release, **Mapbox Standard** ships official **Outdoors** and **Outdoors Winter** themes. The Outdoors Winter theme adds colour-coded ski runs, contours, mountain peaks, and terrain hillshading on a winter palette. This is now the recommended route to summer/winter parity with MapTiler — it supersedes the earlier idea of hand-building custom Mapbox Studio styles.
+
+**Planned**: Migrate the Mapbox runtime from the `outdoors-v12` core style to **Mapbox Standard**, then make `resolveStyleUrl` season-aware by selecting the Outdoors vs Outdoors Winter theme (same season-aware pattern as MapTiler's `resolveMaptilerStyle`).
+
+> **Migration note**: Mapbox Standard is _not_ a drop-in swap for `outdoors-v12`. It is a 3D vector style with a different architecture — themes/config are set via `setConfigProperty`, and custom layers go into named **slots** (`bottom`/`middle`/`top`) instead of `addLayer(layer, beforeId)`. `rasterOverlays.ts` currently inserts topo rasters below labels via `findFirstSymbolLayer()` + `beforeId`; under Standard that must move to the `slot` property. Treat this as a runtime change, not a style-URL swap.
 
 | Card | Mapbox (current) | Mapbox (planned) | MapTiler |
 |---|---|---|---|
-| Global Summer | `outdoors-v12` | custom summer style | `outdoor-v2` |
-| Global Winter | `outdoors-v12` + raster overlays | custom winter style | `winter-v2` (native) |
-| Satellite | `satellite-streets-v12` | `satellite-streets-v12` | `satellite` |
+| Global Summer | `outdoors-v12` | Mapbox Standard — Outdoors theme | `outdoor-v2` |
+| Global Winter | `outdoors-v12` + raster overlays | Mapbox Standard — Outdoors Winter theme | `winter-v2` (native) |
+| Satellite | `satellite-streets-v12` | Mapbox Standard Satellite (or `satellite-streets-v12`) | `satellite` |
 
 **Future option**: MapTiler also offers `topo-v2` (operational/SAR-focused) which could be added as a "Map Style" preference in Settings, orthogonal to the seasonal axis.
 
@@ -133,13 +133,13 @@ apps/web/src/map/
       MapControls.tsx       # Mapbox-specific controls                       (M1)
       terrain.ts            # Mapbox Terrain-DEM v1 wiring                   (M1)
       MapSearch.tsx         # Mapbox SearchBox integration                   (Phase 4)
-      weather.ts            # Weather overlay (Mapbox-side)                  (M3)
+      weather.ts            # Weather overlay (Mapbox-side)                  (M4)
     maptiler/
       MapContainer.tsx      # MapTiler SDK map init, style switching         (M2)
       MapControls.tsx       # MapTiler-specific controls                     (M2)
       terrain.ts            # MapTiler Terrain RGB v2 wiring                 (M2)
-      MapSearch.tsx         # MapTiler Geocoding integration                 (M3)
-      weather.ts            # MapTiler weather API                           (M3)
+      MapSearch.tsx         # MapTiler Geocoding integration                 (M4)
+      weather.ts            # MapTiler weather API                           (M4)
     shared/
       mapAdapter.ts         # AppMapAdapter type definition
       tripLayers.ts         # Trip route layer lifecycle (uses AppMapAdapter)
@@ -304,11 +304,31 @@ Verification:
 - [ ] Features marked `coming_soon` show disabled with "Coming soon" label
 - [ ] Globe projection works in MapTiler runtime
 
-### M3 — Provider-Specific Features (deferred to after Phase 4)
+### M3 — Mapbox Standard Migration (before Phase 4)
+
+**Goal**: Give the Mapbox runtime a true seasonal style pair by migrating from the `outdoors-v12` core style to **Mapbox Standard** with the official **Outdoors** and **Outdoors Winter** themes — matching MapTiler's native `outdoor-v2` / `winter-v2` pair.
+
+**Why before Phase 4**: Phase 4 (Trip System) adds trip-route layers via `AppMapAdapter`. Mapbox Standard changes how custom layers are inserted (named **slots** instead of `addLayer(..., beforeId)`), so the adapter's layer-insertion contract must be settled before trip layers build on it. Step-by-step plan: [Phase3_5.md → M3](Phase3_5.md#m3--mapbox-standard-migration).
+
+- [ ] Spike: confirm the Standard Outdoors / Outdoors Winter theme API and token availability
+- [ ] Make Mapbox style resolution season-aware (Outdoors ↔ Outdoors Winter)
+- [ ] Boot Mapbox Standard; switch season via config update, not full `setStyle`
+- [ ] Extend `AppMapAdapter` + `rasterOverlays.ts` for slot-based layer insertion (keep `beforeId` for the MapLibre/MapTiler adapter)
+- [ ] Verify terrain, sky/atmosphere, globe, and all raster overlays under Standard
+- [ ] Zero regression in the MapTiler runtime
+
+Verification:
+
+- [ ] Mapbox: Global Summer and Global Winter render visibly different base styles
+- [ ] Topo / pistes / swisstopo / OpenTopoMap overlays still render below labels in the Mapbox runtime
+- [ ] 3D terrain + globe still work in the Mapbox runtime
+- [ ] MapTiler runtime unchanged (regression check)
+
+### M4 — Provider-Specific Features (deferred to after Phase 4)
 
 **Goal**: Add MapTiler equivalents for provider-specific features already shipped in the Mapbox runtime.
 
-Note: Mapbox SearchBox geocoder is implemented in Phase 4 (inside `runtime/mapbox/`). M3 adds the MapTiler equivalent and any remaining provider-specific features.
+Note: Mapbox SearchBox geocoder is implemented in Phase 4 (inside `runtime/mapbox/`). M4 adds the MapTiler equivalent and any remaining provider-specific features.
 
 - [ ] Geocoder for MapTiler stack (MapTiler Geocoding API)
 - [ ] Weather integration per provider
@@ -403,8 +423,7 @@ For both `Mapbox` and `MapTiler`:
 - User-profile sync for provider preference (server-side persistence)
 - Mobile runtime split if dual-provider mobile support becomes necessary
 - Per-feature provider fallback if product priorities later justify mixed stacks
-- Custom Mapbox Studio styles (summer + winter) to match MapTiler's seasonal pair
 - MapTiler `topo-v2` as a "Map Style" preference in Settings (orthogonal to season axis)
 - Unified map control CSS — thin override layer targeting both `.mapboxgl-ctrl-group` and `.maplibregl-ctrl-group` to match the app's dark glass UI (background, border-radius, backdrop-filter). Keeps vendor control logic/icons, just unifies visual appearance across providers
 
-Those are explicitly out of scope for M1–M3.
+Those are explicitly out of scope for the Phase 3.5 milestones (M1–M4).

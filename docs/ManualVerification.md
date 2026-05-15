@@ -38,12 +38,13 @@
 
 ### Basemap cards and topo overlays
 
-- [ ] Open map → no topo overlay on startup (Mapbox Outdoors only)
+- [ ] Open map → Satellite Summer basemap on startup, no topo overlay
 - [ ] Click each basemap card — map style and topo overlay change correctly
 - [ ] Basemap cards atomically set baseLayer + season + topoSource in one action
 - [ ] Clicking a country topo card (e.g. swisstopo) loads the topo overlay
 - [ ] Switching back to a global Outdoors card removes the topo overlay
-- [ ] Mapbox Outdoors is used as default (global cards set `topoSource: null`)
+- [ ] Satellite Summer is used as default for both Mapbox and MapTiler (`topoSource: null`)
+- [ ] OpenTopoMap card (3rd Global topo card) loads worldwide topo tiles in both Mapbox and MapTiler
 - [ ] Country-specific topo sources render for all 6 supported countries (CH, FR, AT, DE, NO, US)
 - [ ] Map attribution updates dynamically to reflect the active topo source
 
@@ -58,7 +59,7 @@
 ### Tile proxy and caching (requires API running)
 
 - [ ] OpenTopoMap tiles proxied through `/api/v1/tiles/opentopomap/...`
-- [ ] IGN tiles proxied through backend (API key not exposed to client)
+- [ ] IGN tiles load directly from `data.geopf.fr` (public PLANIGNV2 endpoint, no backend proxy)
 - [ ] Sentinel-2 tiles proxied through backend (Instance ID not exposed)
 - [ ] Country topo tiles cached in Redis with 24-hour TTL
 - [ ] Sentinel-2 tiles cached in Redis with 7-day TTL
@@ -122,7 +123,7 @@ Clear localStorage (`mtamta:mapProvider`) or use incognito.
 
 Select **Mapbox** from the gate.
 
-- [ ] Map loads full-screen with Mapbox Outdoors, no topo overlay
+- [ ] Map loads full-screen with Satellite Summer, no topo overlay
 - [ ] Switch between topographic and satellite base layers
 - [ ] Toggle winter/summer mode → style updates
 - [ ] Click each basemap card → style and topo overlay change atomically
@@ -150,7 +151,7 @@ Click **Change** in Settings.
 
 Select **MapTiler**.
 
-- [ ] Map renders with MapTiler outdoors style
+- [ ] Map renders with MapTiler satellite style by default
 - [ ] Switch to satellite → satellite renders
 - [ ] Enable terrain → 3D terrain works
 - [ ] Shared overlays (topo, pistes) render via adapter
@@ -166,7 +167,7 @@ Select **MapTiler**.
 ### 8. Tile proxy and caching (requires API)
 
 - [ ] OpenTopoMap tiles load through `/api/v1/tiles/opentopomap/...`
-- [ ] IGN tiles proxied (no API key in browser requests)
+- [ ] IGN tiles load directly from `data.geopf.fr` (no API key in browser requests)
 - [ ] Sentinel-2 tiles proxied (no Instance ID in browser requests)
 - [ ] Second tile request faster (Redis cache hit)
 

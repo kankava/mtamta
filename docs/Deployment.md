@@ -92,7 +92,7 @@ All services have free tiers sufficient for development:
 | `ALLOWED_EMAILS` | `<your email>` | Restricts sign-ups |
 | `APPLE_CLIENT_ID` | `<from Apple Developer>` | Optional — Apple OAuth |
 | `SENTRY_DSN` | `<from Sentry>` | Optional — error tracking |
-| `IGN_API_KEY` | `<from IGN Géoplateforme>` | Optional — France topo tiles |
+| `IGN_API_KEY` | — | Deprecated — IGN now uses the public key-less PLANIGNV2 endpoint; leave unset |
 | `SENTINEL_HUB_INSTANCE_ID` | `<from Sentinel Hub>` | Optional — seasonal satellite tiles |
 | `SENTINEL_HUB_CLIENT_ID` | `<from Sentinel Hub>` | Optional — satellite OAuth |
 | `SENTINEL_HUB_CLIENT_SECRET` | `<from Sentinel Hub>` | Optional — satellite OAuth |
@@ -119,6 +119,7 @@ Auto-build is **disabled** — web deploys are handled by the CI `deploy-web` jo
 | `VITE_API_URL` | `https://mtamta-production.up.railway.app` |
 | `VITE_GOOGLE_CLIENT_ID` | `<from Google Cloud Console>` |
 | `VITE_MAPBOX_ACCESS_TOKEN` | `<Mapbox public token (pk.*)>` |
+| `VITE_MAPTILER_API_KEY` | `<MapTiler API key>` |
 | `NODE_VERSION` | `22` |
 
 These are also set as GitHub Actions **variables** (not secrets) so CI can build the web app with the correct values. Keep both in sync.
@@ -145,6 +146,7 @@ No `RAILWAY_TOKEN` needed — Railway auto-deploys via GitHub connection.
 | `VITE_API_URL` | `https://mtamta-production.up.railway.app` | Baked into web bundle at build time |
 | `VITE_GOOGLE_CLIENT_ID` | `<from Google Cloud Console>` | Public — visible in frontend code |
 | `VITE_MAPBOX_ACCESS_TOKEN` | `<Mapbox public token (pk.*)>` | Public — visible in frontend code |
+| `VITE_MAPTILER_API_KEY` | `<MapTiler API key>` | Public — visible in frontend code |
 
 ---
 

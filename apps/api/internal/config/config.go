@@ -19,7 +19,6 @@ type Config struct {
 	AllowedEmails  []string // comma-separated list; if empty, sign-up is open
 
 	// Tile proxy (Phase 3)
-	IGNApiKey             string
 	SentinelHubInstanceID string
 	SentinelHubClientID   string
 	SentinelHubSecret     string
@@ -38,7 +37,6 @@ func Load() *Config {
 		SentryDSN:      getEnv("SENTRY_DSN", ""),
 		AllowedEmails:  parseCSV(getEnv("ALLOWED_EMAILS", "")),
 
-		IGNApiKey:             getEnv("IGN_API_KEY", ""),
 		SentinelHubInstanceID: getEnv("SENTINEL_HUB_INSTANCE_ID", ""),
 		SentinelHubClientID:   getEnv("SENTINEL_HUB_CLIENT_ID", ""),
 		SentinelHubSecret:     getEnv("SENTINEL_HUB_CLIENT_SECRET", ""),

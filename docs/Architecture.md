@@ -94,7 +94,7 @@ The platform combines rich interactive maps (topographic, satellite, 3D terrain)
 | **Liftie** | Free | — | MIT license, self-hostable |
 | **Avalanche APIs** | Free | — | Public data / CC BY 4.0 |
 | **Windy webcams** | Free (thumbnails, 10-min expiry, must link to windy.com) | 9,990 EUR/year (full images, 24h tokens) | Free tier likely sufficient initially |
-| **IGN Géoplateforme** | Free (2M tiles/day) | Paid tiers available | Requires free API key; France only; attribution required |
+| **IGN Géoplateforme** | Free (public WMTS) | Paid tiers for restricted layers (SCAN 25/100) | Public `PLANIGNV2` layer needs no API key; France only; attribution required |
 | **OpenTopoMap** | Free (fair use) | — | Community-run; ~2 req/sec rate limit; CC-BY-SA attribution |
 | **Copernicus Sentinel Hub** | Free (10K PU/month, 10K req/month) | From 25 EUR/month | Seasonal satellite imagery (Sentinel-2); requires free registration; proxy through backend |
 | **Copernicus HR-WSI** | Free | — | Satellite-derived snow cover for Europe (20m); successor to HR-S&I |
@@ -604,12 +604,12 @@ Layers are toggled via the UI and managed through the shared `map-core` package.
 |---|---|---|---|
 | **Base** | Topographic | Vector | Topographic base style (Mapbox Outdoors v12 / MapTiler Outdoor v2) |
 | **Base** | Satellite | Raster | Satellite base style (Mapbox Satellite Streets v12 / MapTiler Satellite) |
-| **Base** | Country Topographic | Raster (WMTS/XYZ) | National mapping agency tiles, explicitly selected via sidebar cards (swisstopo, IGN, basemap.at, BKG, Kartverket, USGS); OpenTopoMap as global fallback in catalog; Mapbox Outdoors global default |
+| **Base** | Country Topographic | Raster (WMTS/XYZ) | National mapping agency tiles, explicitly selected via sidebar cards (swisstopo, IGN, basemap.at, BKG, Kartverket, USGS); OpenTopoMap as a worldwide topo card; Satellite Summer is the app default |
 | **Base** | Satellite — Summer | Raster (WMS) | Sentinel-2 via Copernicus Sentinel Hub (Jun–Aug composite, 10m, MAXCC=20); proxied through backend |
 | **Base** | Satellite — Winter | Raster (WMS) | Sentinel-2 via Copernicus Sentinel Hub (Dec–Feb composite, 10m, MAXCC=30); proxied through backend |
 | **Base** | 3D Terrain | DEM | Provider DEM (Mapbox Terrain-DEM v1 / MapTiler Terrain RGB v2) |
-| **Mode** | Winter style | Style switch | Custom Mapbox Studio style (from Outdoors base) |
-| **Mode** | Summer style | Style switch | Custom Mapbox Studio style (from Outdoors base) |
+| **Mode** | Winter style | Style switch | MapTiler `winter-v2` (native); Mapbox uses `outdoors-v12` for both seasons until the runtime migrates to Mapbox Standard's Outdoors Winter theme |
+| **Mode** | Summer style | Style switch | MapTiler `outdoor-v2`; Mapbox `outdoors-v12` (planned: Mapbox Standard Outdoors theme) |
 | **Overlay** | Slope angle | Raster tiles | Copernicus GLO-30 DEM (pre-generated) + Mapbox Terrain RGB (client-side fallback) |
 | **Overlay** | Sun/shade exposure | Raster tiles | Copernicus GLO-30 DEM (pre-generated) |
 | **Overlay** | Steep/flat terrain | Raster tiles | Copernicus GLO-30 DEM (pre-generated) |
@@ -695,8 +695,8 @@ See [`MapProviders.md`](MapProviders.md) for the full implementation reference: 
 | Outdoor v2 (MapTiler) | `https://api.maptiler.com/maps/outdoor-v2/style.json` | MapTiler equivalent — contours, hillshade, trails |
 | Satellite Streets v12 (Mapbox) | `mapbox://styles/mapbox/satellite-streets-v12` | Satellite with road/label overlays |
 | Satellite (MapTiler) | `https://api.maptiler.com/maps/satellite/style.json` | MapTiler satellite with labels |
-| Custom Winter | `mapbox://styles/{username}/winter` | Snow-tinted terrain, blue water, white roads (built in Mapbox Studio from Outdoors base) |
-| Custom Summer | `mapbox://styles/{username}/summer` | Green vegetation emphasis (built in Mapbox Studio from Outdoors base) |
+| Mapbox Standard — Outdoors Winter | Mapbox Standard style + Outdoors Winter theme | Planned — official winter theme (Dec 2025): ski runs, contours, peaks, hillshade, winter palette. Requires migrating the Mapbox runtime off `outdoors-v12` |
+| Mapbox Standard — Outdoors | Mapbox Standard style + Outdoors theme | Planned — official outdoor theme to pair with Outdoors Winter |
 | OpenTopoMap | `https://tile.opentopomap.org/{z}/{x}/{y}.png` | Outdoor-focused manually-selectable topo source (raster XYZ, max z17, CC-BY-SA) |
 | Sentinel-2 Summer | Copernicus Sentinel Hub WMS (proxied) | Seasonal satellite composite: Jun–Aug, 10m, MAXCC ≤20% |
 | Sentinel-2 Winter | Copernicus Sentinel Hub WMS (proxied) | Seasonal satellite composite: Dec–Feb, 10m, MAXCC ≤30% |
@@ -750,25 +750,26 @@ Mapbox GL JS, MapTiler SDK, and `@rnmapbox/maps` all support 3D terrain natively
 
 #### Country-Specific Topographic Maps
 
-National mapping agencies provide high-detail topographic maps that significantly exceed Mapbox Outdoors quality for their respective regions. These are added as raster tile sources (WMTS/XYZ) and function as alternative base layers within the "Topographic" category. Mapbox Outdoors remains the global default; OpenTopoMap is available as a manually-selectable outdoor-focused topo source.
+National mapping agencies provide high-detail topographic maps that significantly exceed Mapbox Outdoors quality for their respective regions. These are added as raster tile sources (WMTS/XYZ) and function as alternative base layers within the "Topographic" category. Satellite Summer is the app default basemap; Mapbox Outdoors and OpenTopoMap are manually selectable outdoor-focused topo options.
 
 | Source | Region | Tile URL / Endpoint | Type | Max Zoom | API Key | License |
 |---|---|---|---|---|---|---|
 | swisstopo | Switzerland | `https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg` | XYZ (JPEG) | z21 | No | Free with attribution |
 | swisstopo (winter) | Switzerland | `https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-grau/default/current/3857/{z}/{x}/{y}.jpeg` | XYZ (JPEG) | z21 | No | Free with attribution |
-| IGN Géoplateforme | France | WMTS via `data.geopf.fr` (SCAN25, PLAN.IGN layers) | WMTS | z19 | Yes (free tier: 2M tiles/day) | Free with attribution |
+| IGN Géoplateforme | France | WMTS via `data.geopf.fr` (`GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2` layer) | WMTS | z18 | No (public endpoint) | Free with attribution |
 | basemap.at | Austria | WMTS via `basemap.at` (bmaphidpi layer) | WMTS | z19 | No | CC-BY 4.0 |
 | BKG TopPlusOpen | Germany | `https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web/default/WEBMERCATOR/{z}/{y}/{x}.png` | WMTS (PNG) | z26 | No | DL-DE-BY 2.0 |
 | Kartverket | Norway | WMTS via `opencache.statkart.no` (topo4 layer) | WMTS | z20 | No | CC-BY 4.0 |
 | USGS National Map | USA | WMTS via `basemap.nationalmap.gov` (USGSTopo layer) | WMTS | z16 | No | Public domain |
 | OpenTopoMap | Global | `https://tile.opentopomap.org/{z}/{x}/{y}.png` | XYZ (PNG) | z17 | No | CC-BY-SA 3.0 |
 
-**Selection model**: Topo overlays load only when the user explicitly selects a country topo card in the sidebar. Global Outdoors cards set `topoSource: null`, showing the Mapbox Outdoors base style without any raster overlay.
+**Selection model**: Topo overlays load only when the user explicitly selects a topo card in the sidebar. The Global Summer/Winter cards set `topoSource: null`, showing the provider's outdoor base style without any raster overlay.
 
 1. **Country-specific source** — user selects a country topo card (e.g. swisstopo, IGN)
-2. **Mapbox Outdoors v12** — global default when no country topo card is selected
+2. **OpenTopoMap** — worldwide topo card (`topoSource: 'opentopomap'`), proxied through the backend; the third card in the Global topo group
+3. **Provider outdoor base** — Mapbox Outdoors v12 / MapTiler Outdoor v2 when no topo card is selected
 
-OpenTopoMap is kept in the source catalog as a proxy-only global fallback but has no dedicated UI card.
+OpenTopoMap renders identically in both providers via the shared `AppMapAdapter` raster-overlay path.
 
 > **Why raster?** Country topo sources are pre-rendered cartographic products from national mapping agencies. Using their raster tiles gives expert-quality cartography (contour styling, hillshading, trail symbols, local labels) with zero styling effort. Vector tile alternatives exist for some providers but would require building and maintaining per-country Mapbox GL style specs — significant effort for marginal benefit when the goal is to overlay national topo quality on the Mapbox vector basemap.
 
@@ -789,7 +790,7 @@ Country bounding boxes (approximate, stored in `packages/map-core`):
 
 **Attribution**: Each source requires different attribution text. The map attribution control must dynamically update when the active topo source changes. Attribution strings are stored per-source in `packages/map-core`.
 
-**Tile caching**: Country topo tiles cached in Redis using existing `tile:{z}:{x}:{y}:{layer}` pattern with 24h TTL (these tiles change infrequently). IGN tiles proxied through Go backend (API key must not be exposed to client); all others loaded directly from client. Monitor Redis memory usage; consider migrating topo tile cache to S3/disk if memory exceeds budget.
+**Tile caching**: Country topo tiles cached in Redis using existing `tile:{z}:{x}:{y}:{layer}` pattern with 24h TTL (these tiles change infrequently). Only OpenTopoMap is proxied through the Go backend (to respect its fair-use rate limit); all country topo sources — including IGN, which uses the public key-less `PLANIGNV2` endpoint — load directly from the client. Monitor Redis memory usage; consider migrating topo tile cache to S3/disk if memory exceeds budget.
 
 #### Seasonal Satellite Imagery
 
@@ -827,8 +828,8 @@ https://sh.dataspace.copernicus.eu/ogc/wms/{INSTANCE_ID}?
 
 | Layer | Source | Notes |
 |---|---|---|
-| Winter mode | Custom Mapbox Studio style (coupled seasonal switch) | Snow-tinted terrain, blue water, ski-focused POIs. Auto-activates: swisstopo winter base map (CH), Sentinel-2 winter satellite, swisstopo ski touring/snowshoe overlays (CH), OpenSnowMap pistes overlay. User can override individual layers |
-| Summer mode | Custom Mapbox Studio style (coupled seasonal switch) | Green vegetation, hiking-focused POIs. Auto-activates: standard swisstopo (CH), Sentinel-2 summer satellite. User can override individual layers |
+| Winter mode | Season-aware base style (coupled seasonal switch) | MapTiler `winter-v2` gives ski-focused POIs and a winter palette natively; Mapbox keeps `outdoors-v12` until it migrates to Mapbox Standard's Outdoors Winter theme. Auto-activates: swisstopo winter base map (CH), Sentinel-2 winter satellite, swisstopo ski touring/snowshoe overlays (CH), OpenSnowMap pistes overlay. User can override individual layers |
+| Summer mode | Season-aware base style (coupled seasonal switch) | MapTiler `outdoor-v2`; Mapbox `outdoors-v12`. Auto-activates: standard swisstopo (CH), Sentinel-2 summer satellite. User can override individual layers |
 
 #### Terrain Overlays (toggleable, with opacity slider)
 
@@ -1857,7 +1858,7 @@ SENTINEL_INSTANCE_ID=...
 
 # External APIs
 WINDY_API_KEY=...
-IGN_API_KEY=...
+# IGN_API_KEY — no longer required; IGN uses the public key-less PLANIGNV2 endpoint
 
 # Monitoring
 SENTRY_DSN=...

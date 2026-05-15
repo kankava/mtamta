@@ -204,7 +204,7 @@ mtamta/
    - Mapbox access token configuration
    - Base style: Mapbox Outdoors v12 (`mapbox://styles/mapbox/outdoors-v12`)
    - Satellite style: Mapbox Satellite Streets v12 (`mapbox://styles/mapbox/satellite-streets-v12`)
-   - Winter/summer toggle mechanism (placeholder — both resolve to Outdoors v12 in Phase 2; custom Mapbox Studio styles in Phase 3)
+   - Winter/summer toggle mechanism (on Mapbox both seasons still resolve to Outdoors v12; a true seasonal pair awaits migrating the Mapbox runtime to Mapbox Standard's Outdoors / Outdoors Winter themes — see MapProviders.md)
    - Layer registry: metadata for each toggleable layer (see Architecture.md Layer Catalog)
    - 3D terrain source: `mapbox.mapbox-terrain-dem-v1` (Terrain-DEM v1, 512px tiles, max z14, default exaggeration 1.5)
 
@@ -263,7 +263,7 @@ apps/web/src/
 
 - [ ] Map renders full-screen on page load at a default location
 - [ ] User can switch between topographic and satellite base layers
-- [ ] User can toggle winter/summer mode and the map style updates (placeholder — both resolve to Outdoors v12 until custom Mapbox Studio styles are created in Phase 3)
+- [ ] User can toggle winter/summer mode and the map style updates (on Mapbox both still resolve to Outdoors v12; MapTiler switches to winter-v2 natively — Mapbox seasonal parity awaits a Mapbox Standard migration, see MapProviders.md)
 - [ ] 3D terrain can be enabled; tilting the map shows terrain relief
 - [ ] Map state (center, zoom, layers) persists across style switches
 - [ ] Layer panel shows all available layers with toggle controls
@@ -281,7 +281,7 @@ apps/web/src/
 
 ### Features
 
-- Country-specific topographic base layers (swisstopo, IGN, basemap.at, BKG, Kartverket, USGS) with explicit country topo selection via sidebar cards and Mapbox Outdoors as global default
+- Country-specific topographic base layers (swisstopo, IGN, basemap.at, BKG, Kartverket, USGS) with explicit country topo selection via sidebar cards; Satellite Summer remains the app default basemap
 - Seasonal satellite imagery (summer/winter) via Copernicus Sentinel-2, proxied through backend
 - Atomic basemap presets that set baseLayer + season + topoSource in one action (no separate winter/summer toggle)
 - swisstopo winter base map variant with ski touring and snowshoe route overlays
@@ -290,7 +290,7 @@ apps/web/src/
 ### Sub-milestones
 
 - **3a — Country topo providers**: Source catalog, bounding boxes, attribution (tasks 1, 2, 3)
-- **3b — Backend proxy & caching**: Tile proxy for IGN/OpenTopoMap/Sentinel-2, Redis caching (tasks 4, 5, 6)
+- **3b — Backend proxy & caching**: Tile proxy for OpenTopoMap/Sentinel-2, Redis caching (tasks 4, 5, 6)
 - **3c — Seasonal & overlays**: Sentinel-2 satellite imagery, swisstopo winter variant, OpenSnowMap pistes
 - **3d — UI Redesign**: Collapsible left sidebar replacing LayerPanel + StyleSwitcher, Tailwind CSS v4 migration, basemap cards that atomically set baseLayer + season + topoSource (no separate winter/summer toggle), NavBar moved into sidebar header, topoOpacity slider removed (full opacity always)
 
@@ -313,7 +313,7 @@ apps/web/src/
    - Dynamic map attribution: update attribution control text when topo source changes
 
 3. **Map state extensions** (`apps/web/src/stores/mapStore.ts`)
-   - Active topo source (`TopoSourceId | null` — null = Mapbox Outdoors only)
+   - Active topo source (`TopoSourceId | null` — null = no country topo overlay)
    - `BasemapPreset` type and `BASEMAP_PRESETS` lookup table (11 presets)
    - `selectBasemap(preset)` action — atomically sets baseLayer + season + topoSource
    - Sidebar state: `sidebarOpen`, `sidebarTab`
@@ -321,11 +321,10 @@ apps/web/src/
 
 4. **Backend proxy & caching**
    - Configure raster tile sources for each national mapping agency (WMTS/XYZ endpoints)
-   - IGN Géoplateforme: register free API key, configure WMTS tile URL template
+   - IGN Géoplateforme: configure the public `GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2` WMTS tile URL template (key-less `data.geopf.fr` endpoint)
    - Overlap handling for border regions: smallest bbox wins (most specific/detailed source)
    - Attribution manager: swap attribution text when active topo source changes
-   - Proxy endpoint for IGN tiles: `GET /api/v1/tiles/ign/{z}/{x}/{y}` (API key must not be exposed to client)
-   - swisstopo, basemap.at, BKG, Kartverket, and USGS tiles loaded directly from source (no proxy needed — no API keys, generous rate limits)
+   - swisstopo, IGN, basemap.at, BKG, Kartverket, and USGS tiles loaded directly from source (no proxy needed — no API keys, generous rate limits)
    - Proxy endpoint for OpenTopoMap tiles: `GET /api/v1/tiles/opentopomap/{z}/{x}/{y}` — proxy with Redis cache (`tile:opentopomap:{z}:{x}:{y}`, 24h TTL) to stay within OpenTopoMap's ~2 req/sec fair-use limit
    - swisstopo winter variant: swap tile URL when season mode = winter and viewport is in Switzerland
    - swisstopo winter sport overlays: ski touring + snowshoe route layers, enabled in winter mode
@@ -334,7 +333,7 @@ apps/web/src/
    - OpenSnowMap pistes overlay source integration
 
 5. **Basic tile proxy handler** (`apps/api/internal/geo/tileproxy.go`)
-   - Implement basic tile proxy handler for IGN, OpenTopoMap, and Sentinel-2 tiles. The full terrain tile generation pipeline is in Phase 7; this phase only adds HTTP proxy + Redis caching for external tile sources
+   - Implement basic tile proxy handler for OpenTopoMap and Sentinel-2 tiles. The full terrain tile generation pipeline is in Phase 7; this phase only adds HTTP proxy + Redis caching for external tile sources
    - Redis caching for country topo tiles (where proxied): `tile:{z}:{x}:{y}:{layer}`, 24-hour TTL
 
 6. **Tile proxy tests**
@@ -366,10 +365,10 @@ apps/web/src/map/
 
 - [ ] Clicking a country topo card (e.g. swisstopo) loads the topo overlay; switching back to a global Outdoors card removes it
 - [ ] Country-specific topo sources render correctly as raster tile layers for all 6 supported countries
-- [ ] Mapbox Outdoors is used as default (global Outdoors cards set topoSource: null)
+- [ ] Satellite Summer is used as the default basemap for both Mapbox and MapTiler
 - [ ] Basemap cards atomically set baseLayer + season + topoSource in one action
 - [ ] Map attribution updates dynamically to reflect the active topo source
-- [ ] IGN tiles are proxied through the backend (API key not exposed to client)
+- [ ] IGN tiles load directly from the public key-less `PLANIGNV2` endpoint (no backend proxy, no API key)
 - [ ] User can select Summer or Winter satellite view; seasonal Sentinel-2 imagery loads as raster tiles
 - [ ] Sentinel-2 tiles are proxied through backend (Instance ID not exposed)
 - [ ] Selecting a winter basemap card switches satellite variant, swisstopo variant (CH), and seasonal overlays atomically
@@ -421,7 +420,14 @@ apps/web/src/map/
 - Add capability gating for incomplete MapTiler features (show `Coming soon`)
 - Both providers boot cleanly from the provider gate
 
-**M3 — Provider-Specific Features (deferred to after Phase 4)**
+**M3 — Mapbox Standard Migration (before Phase 4)**
+- Migrate the Mapbox runtime from `outdoors-v12` to Mapbox Standard (Outdoors / Outdoors Winter themes) for a true seasonal pair matching MapTiler
+- Make Mapbox style resolution season-aware
+- Rework `AppMapAdapter` + `rasterOverlays.ts` for slot-based layer insertion (Standard) without regressing the MapTiler adapter
+- Sequenced before Phase 4 so trip-route layers build on a settled adapter contract
+- Full detail in [Phase3_5.md](Phase3_5.md#m3--mapbox-standard-migration)
+
+**M4 — Provider-Specific Features (deferred to after Phase 4)**
 - Geocoder for each provider
 - Weather integration per provider
 - Directions / route planning per provider

@@ -35,8 +35,7 @@ export function createMapboxAdapter(map: mapboxgl.Map): AppMapAdapter {
     addSource: (id, source) => map.addSource(id, source as mapboxgl.SourceSpecification),
     removeSource: (id) => map.removeSource(id),
     getLayer: (id) => map.getLayer(id),
-    addLayer: (layer, beforeId) =>
-      map.addLayer(layer as mapboxgl.LayerSpecification, beforeId),
+    addLayer: (layer, beforeId) => map.addLayer(layer as mapboxgl.LayerSpecification, beforeId),
     removeLayer: (id) => map.removeLayer(id),
     getBounds: () => {
       const b = map.getBounds()!
