@@ -6,7 +6,7 @@ An outdoor adventure platform for logging, finding, and sharing extreme outdoor 
 
 | Layer | Technology | Version |
 |-------|-----------|---------|
-| Backend | Go (modular monolith), chi router, pgx/v5 | Go 1.24 |
+| Backend | Go (modular monolith), chi router, pgx/v5 | Go 1.26 |
 | Frontend | React + TypeScript + Vite | React 19, Vite 8 (Rolldown) |
 | Styling | Tailwind CSS (v4, Vite plugin) | 4.2 |
 | State | Zustand | 5 |
@@ -38,9 +38,9 @@ mtamta/
 
 ## Requirements
 
-- **Go** 1.24+
-- **Node.js** 22+
-- **pnpm** 9+ (via corepack: `corepack enable && corepack prepare pnpm@9.15.0 --activate`)
+- **Go** 1.26+
+- **Node.js** 24+ (LTS; see `.nvmrc`)
+- **pnpm** 11+ (via corepack: `corepack enable && corepack prepare pnpm@11.1.2 --activate`)
 - **Docker** (for PostgreSQL + Redis)
 - **air** (optional, for `make dev` hot reload): `go install github.com/air-verse/air@latest`
 - **psql** (optional, for `make seed`): install `postgresql-client` for your OS
@@ -69,10 +69,10 @@ Edit both files with your values. See [Environment Variables](#environment-varia
 ### 3. Start infrastructure
 
 ```bash
-docker compose up -d
+docker compose up -d --wait
 ```
 
-This starts PostgreSQL (TimescaleDB) on port 5432 and Redis on port 6379.
+This starts PostgreSQL (TimescaleDB) on port 5432 and Redis on port 6379. The `--wait` flag blocks until Postgres reports healthy — without it, starting the API in the next step can panic with `connection refused` before Postgres is ready to accept connections.
 
 ### 4. Run the API
 

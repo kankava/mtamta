@@ -4,9 +4,10 @@
 export
 
 dev: ## Start docker services + API (air) + Vite dev server
-	docker compose up -d
+	docker compose up -d --wait
 	@command -v air >/dev/null 2>&1 || { echo "Error: 'air' not found. Install: go install github.com/air-verse/air@latest"; exit 1; }
-	cd apps/api && air &
+	@trap 'kill 0' INT TERM EXIT; \
+	(cd apps/api && air) & \
 	pnpm dev --filter=@mtamta/web
 
 test: ## Run all tests (unit + integration; requires docker services running)
