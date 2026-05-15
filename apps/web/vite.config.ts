@@ -15,16 +15,23 @@ export default defineConfig({
     chunkSizeWarningLimit: 1700,
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          if (id.includes('node_modules/mapbox-gl')) {
-            return 'mapbox-gl'
-          }
-          if (
-            id.includes('node_modules/@maptiler/sdk') ||
-            id.includes('node_modules/maplibre-gl')
-          ) {
-            return 'maptiler-sdk'
-          }
+        // Split each provider SDK into its own chunk so an app-code change
+        // doesn't bust the (large, rarely-changing) SDK cache. Uses Rolldown's
+        // advancedChunks rather than manualChunks: the latter folds Vite's
+        // preload-helper into the first vendor chunk, which then loads eagerly.
+        advancedChunks: {
+          groups: [
+            // Highest priority: pull Vite's preload runtime into its own chunk
+            // so it isn't parked inside a vendor SDK chunk (which the eager
+            // entry would then have to import, dragging the SDK in with it).
+            {
+              name: 'vite-preload',
+              priority: 100,
+              test: /vite[\\/](preload-helper|modulepreload-polyfill)/,
+            },
+            { name: 'mapbox-gl', test: /node_modules[\\/]mapbox-gl[\\/]/ },
+            { name: 'maptiler-sdk', test: /node_modules[\\/](@maptiler[\\/]sdk|maplibre-gl)[\\/]/ },
+          ],
         },
       },
     },
