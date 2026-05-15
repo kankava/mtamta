@@ -202,9 +202,9 @@ mtamta/
 
 1. **Map core package** (`packages/map-core/`)
    - Mapbox access token configuration
-   - Base style: Mapbox Outdoors v12 (`mapbox://styles/mapbox/outdoors-v12`)
-   - Satellite style: Mapbox Satellite Streets v12 (`mapbox://styles/mapbox/satellite-streets-v12`)
-   - Winter/summer toggle mechanism (on Mapbox both seasons still resolve to Outdoors v12; a true seasonal pair awaits migrating the Mapbox runtime to Mapbox Standard's Outdoors / Outdoors Winter themes — see MapProviders.md)
+   - Base style: Mapbox Standard — Outdoors / Outdoors Winter (custom styles built on Mapbox Standard)
+   - Satellite style: Mapbox Standard Satellite (`mapbox://styles/mapbox/standard-satellite`)
+   - Winter/summer toggle: season-aware style resolution selects Outdoors vs Outdoors Winter on Mapbox, `outdoor-v2` vs `winter-v2` on MapTiler — see MapProviders.md
    - Layer registry: metadata for each toggleable layer (see Architecture.md Layer Catalog)
    - 3D terrain source: `mapbox.mapbox-terrain-dem-v1` (Terrain-DEM v1, 512px tiles, max z14, default exaggeration 1.5)
 
@@ -263,7 +263,7 @@ apps/web/src/
 
 - [ ] Map renders full-screen on page load at a default location
 - [ ] User can switch between topographic and satellite base layers
-- [ ] User can toggle winter/summer mode and the map style updates (on Mapbox both still resolve to Outdoors v12; MapTiler switches to winter-v2 natively — Mapbox seasonal parity awaits a Mapbox Standard migration, see MapProviders.md)
+- [ ] User can toggle winter/summer mode and the map style updates (Mapbox: Outdoors ↔ Outdoors Winter; MapTiler: outdoor-v2 ↔ winter-v2)
 - [ ] 3D terrain can be enabled; tilting the map shows terrain relief
 - [ ] Map state (center, zoom, layers) persists across style switches
 - [ ] Layer panel shows all available layers with toggle controls
@@ -420,11 +420,11 @@ apps/web/src/map/
 - Add capability gating for incomplete MapTiler features (show `Coming soon`)
 - Both providers boot cleanly from the provider gate
 
-**M3 — Mapbox Standard Migration (before Phase 4)**
-- Migrate the Mapbox runtime from `outdoors-v12` to Mapbox Standard (Outdoors / Outdoors Winter themes) for a true seasonal pair matching MapTiler
-- Make Mapbox style resolution season-aware
-- Rework `AppMapAdapter` + `rasterOverlays.ts` for slot-based layer insertion (Standard) without regressing the MapTiler adapter
-- Sequenced before Phase 4 so trip-route layers build on a settled adapter contract
+**M3 — Mapbox Standard Migration ✅**
+- Migrated the Mapbox runtime from `outdoors-v12` to Mapbox Standard — Outdoors / Outdoors Winter custom styles give a true seasonal pair matching MapTiler
+- Mapbox style resolution is season-aware (`resolveStyleUrl`)
+- `AppMapAdapter` + `rasterOverlays.ts` use slot-based layer insertion on Mapbox; the MapTiler adapter derives an equivalent `beforeId`
+- Settled the adapter layer-insertion contract ahead of Phase 4 trip-route layers
 - Full detail in [Phase3_5.md](Phase3_5.md#m3--mapbox-standard-migration)
 
 **M4 — Provider-Specific Features (deferred to after Phase 4)**

@@ -7,13 +7,7 @@ export {
   MAX_ZOOM,
   DEFAULT_VIEWPORT,
 } from './config'
-export {
-  STYLE_URLS,
-  resolveStyleUrl,
-  MAPTILER_STYLE_IDS,
-  resolveMaptilerStyle,
-  resolveStyleForProvider,
-} from './styles'
+export { STYLE_URLS, resolveStyleUrl, MAPTILER_STYLE_IDS, resolveMaptilerStyle } from './styles'
 export type { BaseLayer, Season } from './styles'
 export {
   TERRAIN_SOURCE_ID,
@@ -22,8 +16,6 @@ export {
   MIN_TERRAIN_EXAGGERATION,
   MAX_TERRAIN_EXAGGERATION,
   TERRAIN_EXAGGERATION_STEP,
-  SKY_LAYER_ID,
-  SKY_LAYER,
 } from './terrain'
 export type { TerrainConfig } from './terrain'
 export { getTerrainConfig } from './terrain'

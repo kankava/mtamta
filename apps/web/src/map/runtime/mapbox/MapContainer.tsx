@@ -6,8 +6,6 @@ import {
   TERRAIN_SOURCE_ID,
   TERRAIN_SOURCE,
   DEFAULT_TERRAIN_EXAGGERATION,
-  SKY_LAYER_ID,
-  SKY_LAYER,
   MIN_ZOOM,
   MAX_ZOOM,
 } from '@mtamta/map-core'
@@ -26,16 +24,17 @@ export function createMapboxAdapter(map: mapboxgl.Map): AppMapAdapter {
 
   return {
     isStyleLoaded: () => map.isStyleLoaded(),
-    getStyleLayers: () => {
-      const layers = map.getStyle()?.layers
-      if (!layers) return []
-      return layers.map((l) => ({ id: l.id, type: l.type }))
-    },
     getSource: (id) => map.getSource(id),
     addSource: (id, source) => map.addSource(id, source as mapboxgl.SourceSpecification),
     removeSource: (id) => map.removeSource(id),
     getLayer: (id) => map.getLayer(id),
-    addLayer: (layer, beforeId) => map.addLayer(layer as mapboxgl.LayerSpecification, beforeId),
+    // Mapbox Standard places custom layers via the `slot` property on the spec.
+    addLayer: (layer, opts) =>
+      map.addLayer(
+        (opts?.slot
+          ? { ...(layer as object), slot: opts.slot }
+          : layer) as mapboxgl.LayerSpecification,
+      ),
     removeLayer: (id) => map.removeLayer(id),
     getBounds: () => {
       const b = map.getBounds()!
@@ -75,8 +74,8 @@ export function createMapboxAdapter(map: mapboxgl.Map): AppMapAdapter {
 }
 
 /**
- * Re-add terrain source, terrain exaggeration, sky layer,
- * and all raster overlays after a style swap.
+ * Re-add the terrain source and terrain exaggeration after a style swap.
+ * Mapbox Standard provides its own atmosphere — no custom sky layer needed.
  */
 function applyPostStyleLoad(map: mapboxgl.Map) {
   addTerrainSource(map)
@@ -87,9 +86,6 @@ function applyPostStyleLoad(map: mapboxgl.Map) {
       ? state.terrainExaggeration
       : DEFAULT_TERRAIN_EXAGGERATION
     map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration })
-    if (!map.getLayer(SKY_LAYER_ID)) {
-      map.addLayer(SKY_LAYER as mapboxgl.LayerSpecification)
-    }
   }
 
   // Raster overlays are handled by useRasterOverlays' own style.load listener.

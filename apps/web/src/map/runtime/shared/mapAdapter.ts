@@ -7,12 +7,16 @@
  */
 export interface AppMapAdapter {
   isStyleLoaded(): boolean
-  getStyleLayers(): Array<{ id: string; type: string }>
   getSource(id: string): unknown
   addSource(id: string, source: unknown): void
   removeSource(id: string): void
   getLayer(id: string): unknown
-  addLayer(layer: unknown, beforeId?: string): void
+  /**
+   * Add a layer. `opts.slot` requests placement below map labels: the Mapbox
+   * adapter maps it to a Mapbox Standard slot; the MapTiler adapter derives an
+   * equivalent `beforeId` (first symbol layer).
+   */
+  addLayer(layer: unknown, opts?: { slot?: string }): void
   removeLayer(id: string): void
   getBounds(): [number, number, number, number]
   getZoom(): number

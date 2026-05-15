@@ -18,10 +18,8 @@ function overlayLayerId(id: string) {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080'
 
-/** Find the first symbol layer to insert raster layers below labels */
-function findFirstSymbolLayer(adapter: AppMapAdapter): string | undefined {
-  return adapter.getStyleLayers().find((l) => l.type === 'symbol')?.id
-}
+/** Slot for raster overlays — above roads, below labels (Mapbox Standard). */
+const RASTER_SLOT = 'middle'
 
 /** Remove a source+layer pair safely */
 function removeSourceAndLayer(adapter: AppMapAdapter, layerId: string, sourceId: string) {
@@ -43,8 +41,6 @@ function addRasterLayer(
     bounds?: [number, number, number, number]
   },
 ) {
-  const beforeLayer = findFirstSymbolLayer(adapter)
-
   if (!adapter.getSource(sourceId)) {
     adapter.addSource(sourceId, {
       type: 'raster',
@@ -64,7 +60,7 @@ function addRasterLayer(
         source: sourceId,
         paint: { 'raster-opacity': opts.opacity },
       },
-      beforeLayer,
+      { slot: RASTER_SLOT },
     )
   }
 }

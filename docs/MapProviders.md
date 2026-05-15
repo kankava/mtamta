@@ -2,7 +2,7 @@
 
 > **Status: ACCEPTED**
 >
-> Finalized implementation reference for dual-provider web map rendering. Provider selection persisted in localStorage from day one. MapTiler SDK (MapLibre-based) as the alternative provider. M1+M2 complete; M3 (Mapbox Standard migration) scheduled before Phase 4; M4 (provider-specific features) deferred to after Phase 4.
+> Finalized implementation reference for dual-provider web map rendering. Provider selection persisted in localStorage from day one. MapTiler SDK (MapLibre-based) as the alternative provider. M1+M2+M3 complete; M4 (provider-specific features) deferred to after Phase 4.
 
 ---
 
@@ -103,19 +103,15 @@ The two providers take different approaches to winter/seasonal map styles:
 
 **MapTiler** — Native seasonal styles. The SDK provides `outdoor-v2` (summer) and `winter-v2` (winter) as a designed pair. `winter-v2` includes ski pistes, lifts, cross-country trails, snow parks, avalanche zones, and a winter color palette. Style resolution is season-aware: `resolveMaptilerStyle(baseLayer, season)`.
 
-**Mapbox** — The `outdoors-v12` core style has no winter variant. Both seasons currently resolve to `outdoors-v12` (`resolveStyleUrl` ignores the season argument), so winter features come only from raster overlays (OpenSnowMap pistes, swisstopo ski touring/snowshoe routes) — the base map keeps its summer appearance.
+**Mapbox** — Migrated to **Mapbox Standard** (M3). The Outdoors and Outdoors Winter styles are custom styles built on Mapbox Standard, hosted in the project's Mapbox Studio account; `resolveStyleUrl(baseLayer, season)` selects between them by season, mirroring MapTiler's `resolveMaptilerStyle`. Satellite uses Mapbox Standard Satellite.
 
-As of the December 2025 release, **Mapbox Standard** ships official **Outdoors** and **Outdoors Winter** themes. The Outdoors Winter theme adds colour-coded ski runs, contours, mountain peaks, and terrain hillshading on a winter palette. This is now the recommended route to summer/winter parity with MapTiler — it supersedes the earlier idea of hand-building custom Mapbox Studio styles.
+> **Standard architecture note**: Mapbox Standard is a 3D vector style — custom layers go into named **slots** (`bottom`/`middle`/`top`) instead of `addLayer(layer, beforeId)`. `rasterOverlays.ts` inserts topo rasters into the `middle` slot (above roads, below labels); the MapTiler/MapLibre adapter derives an equivalent `beforeId`. Standard provides built-in atmosphere, so the custom sky layer was removed.
 
-**Planned**: Migrate the Mapbox runtime from the `outdoors-v12` core style to **Mapbox Standard**, then make `resolveStyleUrl` season-aware by selecting the Outdoors vs Outdoors Winter theme (same season-aware pattern as MapTiler's `resolveMaptilerStyle`).
-
-> **Migration note**: Mapbox Standard is _not_ a drop-in swap for `outdoors-v12`. It is a 3D vector style with a different architecture — themes/config are set via `setConfigProperty`, and custom layers go into named **slots** (`bottom`/`middle`/`top`) instead of `addLayer(layer, beforeId)`. `rasterOverlays.ts` currently inserts topo rasters below labels via `findFirstSymbolLayer()` + `beforeId`; under Standard that must move to the `slot` property. Treat this as a runtime change, not a style-URL swap.
-
-| Card | Mapbox (current) | Mapbox (planned) | MapTiler |
-|---|---|---|---|
-| Global Summer | `outdoors-v12` | Mapbox Standard — Outdoors theme | `outdoor-v2` |
-| Global Winter | `outdoors-v12` + raster overlays | Mapbox Standard — Outdoors Winter theme | `winter-v2` (native) |
-| Satellite | `satellite-streets-v12` | Mapbox Standard Satellite (or `satellite-streets-v12`) | `satellite` |
+| Card | Mapbox | MapTiler |
+|---|---|---|
+| Global Summer | Mapbox Standard — Outdoors | `outdoor-v2` |
+| Global Winter | Mapbox Standard — Outdoors Winter | `winter-v2` (native) |
+| Satellite | Mapbox Standard Satellite | `hybrid` |
 
 **Future option**: MapTiler also offers `topo-v2` (operational/SAR-focused) which could be added as a "Map Style" preference in Settings, orthogonal to the seasonal axis.
 
@@ -304,18 +300,18 @@ Verification:
 - [ ] Features marked `coming_soon` show disabled with "Coming soon" label
 - [ ] Globe projection works in MapTiler runtime
 
-### M3 — Mapbox Standard Migration (before Phase 4)
+### M3 — Mapbox Standard Migration ✅
 
-**Goal**: Give the Mapbox runtime a true seasonal style pair by migrating from the `outdoors-v12` core style to **Mapbox Standard** with the official **Outdoors** and **Outdoors Winter** themes — matching MapTiler's native `outdoor-v2` / `winter-v2` pair.
+**Goal (met)**: Gave the Mapbox runtime a true seasonal style pair by migrating from `outdoors-v12` to **Mapbox Standard** — Outdoors / Outdoors Winter — matching MapTiler's `outdoor-v2` / `winter-v2` pair.
 
-**Why before Phase 4**: Phase 4 (Trip System) adds trip-route layers via `AppMapAdapter`. Mapbox Standard changes how custom layers are inserted (named **slots** instead of `addLayer(..., beforeId)`), so the adapter's layer-insertion contract must be settled before trip layers build on it. Step-by-step plan: [Phase3_5.md → M3](Phase3_5.md#m3--mapbox-standard-migration).
+**Why before Phase 4**: Phase 4 (Trip System) adds trip-route layers via `AppMapAdapter`. Mapbox Standard changes how custom layers are inserted (named **slots** instead of `addLayer(..., beforeId)`); settling the adapter's layer-insertion contract first avoids reworking Phase 4 code.
 
-- [ ] Spike: confirm the Standard Outdoors / Outdoors Winter theme API and token availability
-- [ ] Make Mapbox style resolution season-aware (Outdoors ↔ Outdoors Winter)
-- [ ] Boot Mapbox Standard; switch season via config update, not full `setStyle`
-- [ ] Extend `AppMapAdapter` + `rasterOverlays.ts` for slot-based layer insertion (keep `beforeId` for the MapLibre/MapTiler adapter)
-- [ ] Verify terrain, sky/atmosphere, globe, and all raster overlays under Standard
-- [ ] Zero regression in the MapTiler runtime
+- [x] Spike — the Outdoors / Outdoors Winter "themes" are distinct custom style URLs (Studio account), not a config property; Standard is free-tier
+- [x] Mapbox style resolution is season-aware (`resolveStyleUrl`)
+- [x] Season switching stays a `setStyle()` reload (distinct URLs — config-update optimisation N/A)
+- [x] `AppMapAdapter` + `rasterOverlays.ts` use slot-based insertion on Mapbox; the MapTiler adapter derives `beforeId`
+- [x] Custom sky layer removed — Standard has built-in atmosphere
+- [ ] Manual verification: terrain, globe, overlays under Standard; zero MapTiler regression
 
 Verification:
 

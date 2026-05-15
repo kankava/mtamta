@@ -23,17 +23,18 @@ export function createMaptilerAdapter(map: MaptilerMap): AppMapAdapter {
 
   return {
     isStyleLoaded: () => !!map.isStyleLoaded(),
-    getStyleLayers: () => {
-      const layers = map.getStyle()?.layers
-      if (!layers) return []
-      return layers.map((l) => ({ id: l.id, type: l.type }))
-    },
     getSource: (id) => map.getSource(id),
     addSource: (id, source) => map.addSource(id, source as Parameters<typeof map.addSource>[1]),
     removeSource: (id) => map.removeSource(id),
     getLayer: (id) => map.getLayer(id),
-    addLayer: (layer, beforeId) =>
-      map.addLayer(layer as Parameters<typeof map.addLayer>[0], beforeId),
+    // MapTiler styles have no Standard slots — translate a slot request into
+    // a beforeId of the first symbol layer, keeping rasters below labels.
+    addLayer: (layer, opts) => {
+      const beforeId = opts?.slot
+        ? map.getStyle()?.layers?.find((l) => l.type === 'symbol')?.id
+        : undefined
+      map.addLayer(layer as Parameters<typeof map.addLayer>[0], beforeId)
+    },
     removeLayer: (id) => map.removeLayer(id),
     getBounds: () => {
       const b = map.getBounds()

@@ -1,11 +1,5 @@
 import mapboxgl from 'mapbox-gl'
-import {
-  TERRAIN_SOURCE_ID,
-  TERRAIN_SOURCE,
-  SKY_LAYER_ID,
-  SKY_LAYER,
-  DEFAULT_TERRAIN_EXAGGERATION,
-} from '@mtamta/map-core'
+import { TERRAIN_SOURCE_ID, TERRAIN_SOURCE, DEFAULT_TERRAIN_EXAGGERATION } from '@mtamta/map-core'
 import { useMapStore } from '../../../stores/mapStore'
 
 /**
@@ -67,19 +61,12 @@ export class TerrainControl implements mapboxgl.IControl {
 
       this.map.setTerrain({ source: TERRAIN_SOURCE_ID, exaggeration })
 
-      if (!this.map.getLayer(SKY_LAYER_ID)) {
-        this.map.addLayer(SKY_LAYER as mapboxgl.LayerSpecification)
-      }
-
       // Tilt the map for a 3D perspective
       if (this.map.getPitch() < 30) {
         this.map.easeTo({ pitch: 60, duration: 500 })
       }
     } else {
       this.map.setTerrain(null)
-      if (this.map.getLayer(SKY_LAYER_ID)) {
-        this.map.removeLayer(SKY_LAYER_ID)
-      }
       // Reset pitch to flat
       this.map.easeTo({ pitch: 0, duration: 500 })
     }

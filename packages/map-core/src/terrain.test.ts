@@ -6,7 +6,6 @@ import {
   MIN_TERRAIN_EXAGGERATION,
   MAX_TERRAIN_EXAGGERATION,
   TERRAIN_EXAGGERATION_STEP,
-  SKY_LAYER,
 } from './terrain'
 
 describe('terrain config', () => {
@@ -29,9 +28,5 @@ describe('terrain config', () => {
     const range = MAX_TERRAIN_EXAGGERATION - MIN_TERRAIN_EXAGGERATION
     const steps = Math.round(range / TERRAIN_EXAGGERATION_STEP)
     expect(steps * TERRAIN_EXAGGERATION_STEP).toBeCloseTo(range)
-  })
-
-  it('SKY_LAYER has type "sky"', () => {
-    expect(SKY_LAYER.type).toBe('sky')
   })
 })

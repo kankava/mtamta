@@ -22,19 +22,6 @@ export const MIN_TERRAIN_EXAGGERATION = 1.0
 export const MAX_TERRAIN_EXAGGERATION = 3.0
 export const TERRAIN_EXAGGERATION_STEP = 0.1
 
-// Sky layer for atmospheric rendering in 3D mode.
-export const SKY_LAYER_ID = 'sky-layer'
-
-export const SKY_LAYER = {
-  id: SKY_LAYER_ID,
-  type: 'sky' as const,
-  paint: {
-    'sky-type': 'atmosphere' as const,
-    'sky-atmosphere-sun': [0, 0] as [number, number],
-    'sky-atmosphere-sun-intensity': 15,
-  },
-}
-
 // --- Provider-keyed terrain config ---
 
 export interface TerrainConfig {

@@ -1,8 +1,8 @@
 # Phase 3.5: Multi-Provider Support — Detailed Implementation Plan
 
-> **Status: M1 + M2 COMPLETE** (manual testing remaining) — **M3 (Mapbox Standard migration) PLANNED, scheduled before Phase 4.**
+> **Status: M1 + M2 + M3 COMPLETE** (manual testing remaining). **M4 (provider-specific features) deferred to after Phase 4.**
 >
-> Dual-provider web map support (Mapbox GL JS + MapTiler SDK). Introduces provider state, runtime boundary, AppMapAdapter interface, and lazy-loaded runtimes. Milestones: M1 + M2 (complete), M3 — Mapbox Standard migration (before Phase 4), M4 — provider-specific features like geocoder/weather (deferred to after Phase 4).
+> Dual-provider web map support (Mapbox GL JS + MapTiler SDK). Introduces provider state, runtime boundary, AppMapAdapter interface, and lazy-loaded runtimes. Milestones: M1 + M2 + M3 (complete), M4 — provider-specific features like geocoder/weather (deferred to after Phase 4).
 >
 > **Spec**: [`MapProviders.md`](MapProviders.md) is the finalized product spec. This plan is the step-by-step implementation guide.
 
@@ -219,9 +219,11 @@ Key API differences from Mapbox:
 
 ## M3 — Mapbox Standard Migration
 
-> **Status: PLANNED** — scheduled before Phase 4.
+> **Status: COMPLETE.**
 >
-> Migrate the Mapbox runtime from the `outdoors-v12` core style to **Mapbox Standard** so it gains a true seasonal pair: the official **Outdoors** and **Outdoors Winter** themes (Mapbox Dec 2025 release), matching MapTiler's native `outdoor-v2` / `winter-v2`. Sequenced before Phase 4 because Standard changes the custom-layer insertion model (named slots vs `addLayer(..., beforeId)`), and Phase 4 trip-route layers build on `AppMapAdapter` — settling the adapter contract first avoids reworking Phase 4 code.
+> Migrated the Mapbox runtime from the `outdoors-v12` core style to **Mapbox Standard**, giving it a true seasonal pair matching MapTiler's native `outdoor-v2` / `winter-v2`.
+>
+> **Outcome / spike result**: The Outdoors and Outdoors Winter "themes" are distinct custom styles built on Mapbox Standard, hosted in the project's Mapbox Studio account (`mapbox://styles/kankava/…`) — not a `setConfigProperty` value. Season switching therefore stays a `setStyle()` reload (the step-2 config-update optimisation does not apply). Raster overlays insert into the `middle` slot; the MapTiler/MapLibre adapter derives an equivalent `beforeId`. The custom `sky-layer` was removed — Standard has built-in atmosphere. Satellite uses `mapbox://styles/mapbox/standard-satellite`. The step lists below are kept as the historical plan.
 
 ### 0. Spike — confirm the Standard themes API
 

@@ -1,32 +1,39 @@
 // Style URLs and IDs for both map providers.
 // Mapbox uses hosted style URLs; MapTiler uses string style IDs.
 
-import type { MapProvider } from './providers'
-
 export type BaseLayer = 'outdoors' | 'satellite'
 export type Season = 'summer' | 'winter'
 
 // --- Mapbox ---
+// Outdoors / Outdoors Winter are custom styles built on Mapbox Standard,
+// hosted in the project's Mapbox Studio account — season selects a distinct
+// style URL. Satellite uses Mapbox Standard Satellite (same for both seasons).
 
-export const STYLE_URLS: Record<BaseLayer, string> = {
-  outdoors: 'mapbox://styles/mapbox/outdoors-v12',
-  satellite: 'mapbox://styles/mapbox/satellite-streets-v12',
+export const STYLE_URLS: Record<BaseLayer, Record<Season, string>> = {
+  outdoors: {
+    summer: 'mapbox://styles/kankava/cmp6x7gqn000o01skbescgqr3',
+    winter: 'mapbox://styles/kankava/cmp6xadna002e01s81n7c055u',
+  },
+  satellite: {
+    summer: 'mapbox://styles/mapbox/standard-satellite',
+    winter: 'mapbox://styles/mapbox/standard-satellite',
+  },
 }
 
 /**
  * Resolve the Mapbox style URL for a given base layer and season.
- * Season does not currently affect the Mapbox style URL — topo winter
- * variants are handled by tile URL switching in resolveTopoTileUrl.
  */
-export function resolveStyleUrl(baseLayer: BaseLayer, _season: Season): string {
-  return STYLE_URLS[baseLayer]
+export function resolveStyleUrl(baseLayer: BaseLayer, season: Season): string {
+  return STYLE_URLS[baseLayer][season]
 }
 
 // --- MapTiler ---
 
 export const MAPTILER_STYLE_IDS: Record<BaseLayer, Record<Season, string>> = {
   outdoors: { summer: 'outdoor-v2', winter: 'winter-v2' },
-  satellite: { summer: 'satellite', winter: 'satellite' },
+  // 'hybrid' = satellite imagery + roads/labels/borders, matching Mapbox's
+  // satellite-streets style. Plain 'satellite' is imagery only.
+  satellite: { summer: 'hybrid', winter: 'hybrid' },
 }
 
 /**
@@ -34,21 +41,4 @@ export const MAPTILER_STYLE_IDS: Record<BaseLayer, Record<Season, string>> = {
  */
 export function resolveMaptilerStyle(baseLayer: BaseLayer, season: Season): string {
   return MAPTILER_STYLE_IDS[baseLayer]?.[season] ?? 'outdoor-v2'
-}
-
-// --- Provider-keyed resolution ---
-
-/**
- * Resolve style identifier for any provider.
- * Returns a Mapbox style URL or a MapTiler style ID string.
- */
-export function resolveStyleForProvider(
-  provider: MapProvider,
-  baseLayer: BaseLayer,
-  season: Season,
-): string {
-  if (provider === 'maptiler') {
-    return resolveMaptilerStyle(baseLayer, season)
-  }
-  return STYLE_URLS[baseLayer]
 }

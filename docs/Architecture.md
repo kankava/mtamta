@@ -608,8 +608,8 @@ Layers are toggled via the UI and managed through the shared `map-core` package.
 | **Base** | Satellite — Summer | Raster (WMS) | Sentinel-2 via Copernicus Sentinel Hub (Jun–Aug composite, 10m, MAXCC=20); proxied through backend |
 | **Base** | Satellite — Winter | Raster (WMS) | Sentinel-2 via Copernicus Sentinel Hub (Dec–Feb composite, 10m, MAXCC=30); proxied through backend |
 | **Base** | 3D Terrain | DEM | Provider DEM (Mapbox Terrain-DEM v1 / MapTiler Terrain RGB v2) |
-| **Mode** | Winter style | Style switch | MapTiler `winter-v2` (native); Mapbox uses `outdoors-v12` for both seasons until the runtime migrates to Mapbox Standard's Outdoors Winter theme |
-| **Mode** | Summer style | Style switch | MapTiler `outdoor-v2`; Mapbox `outdoors-v12` (planned: Mapbox Standard Outdoors theme) |
+| **Mode** | Winter style | Style switch | MapTiler `winter-v2` (native); Mapbox — Outdoors Winter (custom style on Mapbox Standard) |
+| **Mode** | Summer style | Style switch | MapTiler `outdoor-v2`; Mapbox — Outdoors (custom style on Mapbox Standard) |
 | **Overlay** | Slope angle | Raster tiles | Copernicus GLO-30 DEM (pre-generated) + Mapbox Terrain RGB (client-side fallback) |
 | **Overlay** | Sun/shade exposure | Raster tiles | Copernicus GLO-30 DEM (pre-generated) |
 | **Overlay** | Steep/flat terrain | Raster tiles | Copernicus GLO-30 DEM (pre-generated) |
