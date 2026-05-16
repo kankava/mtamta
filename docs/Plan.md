@@ -384,6 +384,8 @@ apps/web/src/map/
 
 ## Phase 3.5: Multi-Provider Support
 
+> **Status: M1–M3 complete & verified (2026-05-16).** M4 deferred to after Phase 4. Full detail in [Phase3_5.md](Phase3_5.md).
+
 **Goal**: Dual-provider map rendering (Mapbox + MapTiler) with a shared overlay system and runtime-selected provider loading.
 
 ### Dependencies

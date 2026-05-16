@@ -691,12 +691,10 @@ See [`MapProviders.md`](MapProviders.md) for the full implementation reference: 
 
 | Style | URL | Usage |
 |---|---|---|
-| Outdoors v12 (Mapbox) | `mapbox://styles/mapbox/outdoors-v12` | Default — trails, contours, hillshade, peaks |
-| Outdoor v2 (MapTiler) | `https://api.maptiler.com/maps/outdoor-v2/style.json` | MapTiler equivalent — contours, hillshade, trails |
-| Satellite Streets v12 (Mapbox) | `mapbox://styles/mapbox/satellite-streets-v12` | Satellite with road/label overlays |
-| Satellite (MapTiler) | `https://api.maptiler.com/maps/satellite/style.json` | MapTiler satellite with labels |
-| Mapbox Standard — Outdoors Winter | Mapbox Standard style + Outdoors Winter theme | Planned — official winter theme (Dec 2025): ski runs, contours, peaks, hillshade, winter palette. Requires migrating the Mapbox runtime off `outdoors-v12` |
-| Mapbox Standard — Outdoors | Mapbox Standard style + Outdoors theme | Planned — official outdoor theme to pair with Outdoors Winter |
+| Mapbox — Outdoors / Outdoors Winter | `mapbox://styles/kankava/…` — custom styles on Mapbox Standard | Default topo base; season-aware pair (Phase 3.5 M3) |
+| Mapbox — Satellite | `mapbox://styles/mapbox/standard-satellite` | Mapbox Standard Satellite |
+| MapTiler — Outdoor / Winter | `outdoor-v2` / `winter-v2` | MapTiler topo base; season-aware pair |
+| MapTiler — Satellite | `hybrid` | MapTiler satellite with roads + labels |
 | OpenTopoMap | `https://tile.opentopomap.org/{z}/{x}/{y}.png` | Outdoor-focused manually-selectable topo source (raster XYZ, max z17, CC-BY-SA) |
 | Sentinel-2 Summer | Copernicus Sentinel Hub WMS (proxied) | Seasonal satellite composite: Jun–Aug, 10m, MAXCC ≤20% |
 | Sentinel-2 Winter | Copernicus Sentinel Hub WMS (proxied) | Seasonal satellite composite: Dec–Feb, 10m, MAXCC ≤30% |
@@ -828,8 +826,8 @@ https://sh.dataspace.copernicus.eu/ogc/wms/{INSTANCE_ID}?
 
 | Layer | Source | Notes |
 |---|---|---|
-| Winter mode | Season-aware base style (coupled seasonal switch) | MapTiler `winter-v2` gives ski-focused POIs and a winter palette natively; Mapbox keeps `outdoors-v12` until it migrates to Mapbox Standard's Outdoors Winter theme. Auto-activates: swisstopo winter base map (CH), Sentinel-2 winter satellite, swisstopo ski touring/snowshoe overlays (CH), OpenSnowMap pistes overlay. User can override individual layers |
-| Summer mode | Season-aware base style (coupled seasonal switch) | MapTiler `outdoor-v2`; Mapbox `outdoors-v12`. Auto-activates: standard swisstopo (CH), Sentinel-2 summer satellite. User can override individual layers |
+| Winter mode | Season-aware base style (coupled seasonal switch) | Mapbox — Outdoors Winter custom Standard style; MapTiler — `winter-v2` (ski-focused POIs, winter palette). Auto-activates: swisstopo winter base map (CH), Sentinel-2 winter satellite, swisstopo ski touring/snowshoe overlays (CH), OpenSnowMap pistes overlay. User can override individual layers |
+| Summer mode | Season-aware base style (coupled seasonal switch) | Mapbox — Outdoors custom Standard style; MapTiler — `outdoor-v2`. Auto-activates: standard swisstopo (CH), Sentinel-2 summer satellite. User can override individual layers |
 
 #### Terrain Overlays (toggleable, with opacity slider)
 

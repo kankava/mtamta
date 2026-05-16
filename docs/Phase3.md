@@ -1,6 +1,6 @@
 # Phase 3: Map Sources & Overlays — Detailed Implementation Plan ✅
 
-> **Status: COMPLETE** — All 27 implementation items + 3d UI redesign verified. Manual testing remaining.
+> **Status: COMPLETE & VERIFIED** — All 27 implementation items + 3d UI redesign delivered; manual verification done 2026-05-16 (all topo sources + overlays exercised on both the Mapbox and MapTiler runtimes).
 >
 > Country-specific topographic maps, seasonal satellite imagery, and ski-focused overlays. Split into 4 sub-milestones (3a → 3b → 3c → 3d). Complete tasks top-to-bottom within each sub-milestone.
 >
@@ -305,16 +305,16 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
 - [x] `cd apps/api && go build ./...` — compiles
 - [x] `cd apps/api && go test ./internal/tiles/...` — unit tests pass
 - [x] `cd apps/web && pnpm build` — web app builds
-- [ ] Manual: open map → Satellite Summer basemap on startup, no topo overlay
+- [x] Manual: first visit opens at the default view; return visits restore the last view (Phase 3.5 persistence)
 - [x] Manual: select "swisstopo" card → swisstopo tiles render
 - [x] Manual: switch to satellite → topo overlay hidden
-- [ ] Manual: select "swisstopo Winter" card → swisstopo switches to winter variant, pistes overlay appears
+- [x] Manual: select "swisstopo Winter" card → swisstopo switches to winter variant, pistes overlay appears
 - [x] Manual: switch back to a global base → topo overlay removed
 - [x] Manual: proxy tiles load through `/api/v1/tiles/...` with Redis caching
 - [x] `cd apps/web && pnpm lint` — no TypeScript or ESLint errors (3d)
 - [x] `cd apps/web && pnpm test` — 14/14 tests pass (3d)
 - [x] Manual: sidebar opens/collapses, map fills full width when collapsed (3d)
-- [ ] Manual: click each basemap card — map style and topo overlay change correctly (3d)
+- [x] Manual: click each basemap card — all topo sources verified on both runtimes (3d)
 
 ---
 

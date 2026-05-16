@@ -2,7 +2,7 @@
 
 ## Before Phase 4
 
-### Manual verification (requires `make dev` for proxied providers)
+### Manual verification — ✅ complete 2026-05-16 (proxied providers need `make dev`)
 
 > Verify terrain/3D in **Chrome** — Mapbox GL v3 terrain does not render in Firefox on this machine (WebGL limitation, not an app bug).
 
