@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import {
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
@@ -132,52 +133,81 @@ interface MapState {
   setSidebarTab: (tab: SidebarTab) => void
 }
 
-export const useMapStore = create<MapState>((set) => ({
-  center: DEFAULT_CENTER,
-  zoom: DEFAULT_ZOOM,
-  pitch: DEFAULT_PITCH,
-  bearing: DEFAULT_BEARING,
+export const useMapStore = create<MapState>()(
+  persist(
+    (set) => ({
+      center: DEFAULT_CENTER,
+      zoom: DEFAULT_ZOOM,
+      pitch: DEFAULT_PITCH,
+      bearing: DEFAULT_BEARING,
 
-  baseLayer: 'satellite',
-  season: 'summer',
-  terrainEnabled: false,
-  terrainExaggeration: DEFAULT_TERRAIN_EXAGGERATION,
-  customExaggeration: false,
-  projection: 'mercator',
+      baseLayer: 'satellite',
+      season: 'summer',
+      terrainEnabled: false,
+      terrainExaggeration: DEFAULT_TERRAIN_EXAGGERATION,
+      customExaggeration: false,
+      projection: 'mercator',
 
-  topoSource: null,
+      topoSource: null,
 
-  overlayPistes: false,
-  overlaySkiTouring: false,
-  overlaySnowshoe: false,
+      overlayPistes: false,
+      overlaySkiTouring: false,
+      overlaySnowshoe: false,
 
-  sentinelYear: new Date().getFullYear(),
+      sentinelYear: new Date().getFullYear(),
 
-  sidebarOpen: true,
-  sidebarTab: 'basemaps',
+      sidebarOpen: true,
+      sidebarTab: 'basemaps',
 
-  mapProvider: readStoredProvider(),
+      mapProvider: readStoredProvider(),
 
-  isMapReady: false,
+      isMapReady: false,
 
-  setMapProvider: (mapProvider) => {
-    persistProvider(mapProvider)
-    set({ mapProvider })
-  },
-  setViewport: (viewport) => set(viewport),
-  selectBasemap: (preset) => set(BASEMAP_PRESETS[preset]),
-  setTerrainEnabled: (terrainEnabled) => set({ terrainEnabled }),
-  setTerrainExaggeration: (terrainExaggeration) => set({ terrainExaggeration }),
-  setCustomExaggeration: (customExaggeration) => set({ customExaggeration }),
-  setProjection: (projection) => set({ projection }),
-  setMapReady: (isMapReady) => set({ isMapReady }),
-  setTopoSource: (topoSource) => set({ topoSource }),
-  // Functional toggles — derive the next value from live store state so
-  // rapid clicks can't desync against a stale React-render snapshot.
-  toggleOverlayPistes: () => set((s) => ({ overlayPistes: !s.overlayPistes })),
-  toggleOverlaySkiTouring: () => set((s) => ({ overlaySkiTouring: !s.overlaySkiTouring })),
-  toggleOverlaySnowshoe: () => set((s) => ({ overlaySnowshoe: !s.overlaySnowshoe })),
-  setSentinelYear: (sentinelYear) => set({ sentinelYear }),
-  setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
-  setSidebarTab: (sidebarTab) => set({ sidebarTab }),
-}))
+      setMapProvider: (mapProvider) => {
+        persistProvider(mapProvider)
+        set({ mapProvider })
+      },
+      setViewport: (viewport) => set(viewport),
+      selectBasemap: (preset) => set(BASEMAP_PRESETS[preset]),
+      setTerrainEnabled: (terrainEnabled) => set({ terrainEnabled }),
+      setTerrainExaggeration: (terrainExaggeration) => set({ terrainExaggeration }),
+      setCustomExaggeration: (customExaggeration) => set({ customExaggeration }),
+      setProjection: (projection) => set({ projection }),
+      setMapReady: (isMapReady) => set({ isMapReady }),
+      setTopoSource: (topoSource) => set({ topoSource }),
+      // Functional toggles — derive the next value from live store state so
+      // rapid clicks can't desync against a stale React-render snapshot.
+      toggleOverlayPistes: () => set((s) => ({ overlayPistes: !s.overlayPistes })),
+      toggleOverlaySkiTouring: () => set((s) => ({ overlaySkiTouring: !s.overlaySkiTouring })),
+      toggleOverlaySnowshoe: () => set((s) => ({ overlaySnowshoe: !s.overlaySnowshoe })),
+      setSentinelYear: (sentinelYear) => set({ sentinelYear }),
+      setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
+      setSidebarTab: (sidebarTab) => set({ sidebarTab }),
+    }),
+    {
+      name: 'mtamta:map',
+      version: 1,
+      // Persist user choices only — not transient flags (isMapReady) or
+      // mapProvider (which keeps its own dedicated localStorage key).
+      partialize: (s) => ({
+        center: s.center,
+        zoom: s.zoom,
+        pitch: s.pitch,
+        bearing: s.bearing,
+        baseLayer: s.baseLayer,
+        season: s.season,
+        terrainEnabled: s.terrainEnabled,
+        terrainExaggeration: s.terrainExaggeration,
+        customExaggeration: s.customExaggeration,
+        projection: s.projection,
+        topoSource: s.topoSource,
+        overlayPistes: s.overlayPistes,
+        overlaySkiTouring: s.overlaySkiTouring,
+        overlaySnowshoe: s.overlaySnowshoe,
+        sentinelYear: s.sentinelYear,
+        sidebarOpen: s.sidebarOpen,
+        sidebarTab: s.sidebarTab,
+      }),
+    },
+  ),
+)
