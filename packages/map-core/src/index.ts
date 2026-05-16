@@ -10,15 +10,11 @@ export {
 export { STYLE_URLS, resolveStyleUrl, MAPTILER_STYLE_IDS, resolveMaptilerStyle } from './styles'
 export type { BaseLayer, Season } from './styles'
 export {
-  TERRAIN_SOURCE_ID,
-  TERRAIN_SOURCE,
   DEFAULT_TERRAIN_EXAGGERATION,
   MIN_TERRAIN_EXAGGERATION,
   MAX_TERRAIN_EXAGGERATION,
   TERRAIN_EXAGGERATION_STEP,
 } from './terrain'
-export type { TerrainConfig } from './terrain'
-export { getTerrainConfig } from './terrain'
 export { LAYER_REGISTRY, getAvailableLayers, getLayersByCategory } from './layers'
 export type { LayerCategory, LayerDefinition } from './layers'
 export { TOPO_SOURCES, OVERLAY_SOURCES, getTopoSource, resolveTopoTileUrl } from './topo'
