@@ -9,16 +9,17 @@
 - [x] Sidebar UI — open/close, all three tabs render, map fills width when collapsed
 - [x] "Global Summer" → Mapbox Outdoors base (Standard), no topo overlay
 - [x] "Switzerland" → swisstopo topo overlay loads over the base (proxied; labels stay above the raster)
-- [ ] "Switzerland Winter" → grayscale swisstopo loads, ski touring/snowshoe toggles appear in Overlays tab
-- [ ] "France" → IGN topo overlay loads (direct — no API key; Géoplateforme is open access)
-- [ ] "Austria" → basemap.at topo overlay loads (direct)
+- [x] "Switzerland Winter" → grayscale swisstopo loads
+- [x] "France" → IGN topo overlay loads (direct — no API key; Géoplateforme is open access)
+- [x] "Austria" → basemap.at topo overlay loads (direct)
 - [x] "Germany" → BKG TopPlusOpen topo overlay loads (direct)
-- [ ] "Norway" → Kartverket topo overlay loads (direct)
-- [ ] "United States" → USGS topo overlay loads (direct)
+- [x] "Norway" → Kartverket topo overlay loads (direct)
+- [x] "United States" → USGS topo overlay loads (direct)
+- [x] All topo sources verified on both the Mapbox and MapTiler runtimes (2026-05-16)
 - [x] Switch from country topo back to a global base → topo overlay removed
 - [x] "Satellite Summer" → satellite base layer loads
 - [x] "Global Winter" is a real winter style (Outdoors Winter); winter cards are enabled, not "Coming soon" (changed in M3)
-- [ ] Toggle each overlay on/off (pistes, ski touring, snowshoe) — layers appear/disappear on map
+- [x] Toggle each overlay on/off — pistes (global, winter); ski touring + snowshoe (swisstopo + winter only)
 - [x] 2D/3D control — Mapbox: toggles camera pitch (terrain always on via Standard); MapTiler: enables/disables terrain
 - [x] Custom exaggeration slider (Settings) — adjusts terrain in real time for both providers
 - [x] Flat/globe projection in Settings
