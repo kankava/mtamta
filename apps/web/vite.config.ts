@@ -17,9 +17,9 @@ export default defineConfig({
       output: {
         // Split each provider SDK into its own chunk so an app-code change
         // doesn't bust the (large, rarely-changing) SDK cache. Uses Rolldown's
-        // advancedChunks rather than manualChunks: the latter folds Vite's
+        // codeSplitting groups rather than manualChunks: the latter folds Vite's
         // preload-helper into the first vendor chunk, which then loads eagerly.
-        advancedChunks: {
+        codeSplitting: {
           groups: [
             // Highest priority: pull Vite's preload runtime into its own chunk
             // so it isn't parked inside a vendor SDK chunk (which the eager

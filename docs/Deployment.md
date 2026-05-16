@@ -120,7 +120,7 @@ Auto-build is **disabled** — web deploys are handled by the CI `deploy-web` jo
 | `VITE_GOOGLE_CLIENT_ID` | `<from Google Cloud Console>` |
 | `VITE_MAPBOX_ACCESS_TOKEN` | `<Mapbox public token (pk.*)>` |
 | `VITE_MAPTILER_API_KEY` | `<MapTiler API key>` |
-| `NODE_VERSION` | `22` |
+| `NODE_VERSION` | `24` (must match `.nvmrc`) |
 
 These are also set as GitHub Actions **variables** (not secrets) so CI can build the web app with the correct values. Keep both in sync.
 
