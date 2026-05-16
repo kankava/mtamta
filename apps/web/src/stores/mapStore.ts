@@ -124,9 +124,9 @@ interface MapState {
   setMapProvider: (provider: MapProvider | null) => void
   setMapReady: (ready: boolean) => void
   setTopoSource: (source: TopoSourceId | null) => void
-  setOverlayPistes: (enabled: boolean) => void
-  setOverlaySkiTouring: (enabled: boolean) => void
-  setOverlaySnowshoe: (enabled: boolean) => void
+  toggleOverlayPistes: () => void
+  toggleOverlaySkiTouring: () => void
+  toggleOverlaySnowshoe: () => void
   setSentinelYear: (year: number) => void
   setSidebarOpen: (open: boolean) => void
   setSidebarTab: (tab: SidebarTab) => void
@@ -172,9 +172,11 @@ export const useMapStore = create<MapState>((set) => ({
   setProjection: (projection) => set({ projection }),
   setMapReady: (isMapReady) => set({ isMapReady }),
   setTopoSource: (topoSource) => set({ topoSource }),
-  setOverlayPistes: (overlayPistes) => set({ overlayPistes }),
-  setOverlaySkiTouring: (overlaySkiTouring) => set({ overlaySkiTouring }),
-  setOverlaySnowshoe: (overlaySnowshoe) => set({ overlaySnowshoe }),
+  // Functional toggles — derive the next value from live store state so
+  // rapid clicks can't desync against a stale React-render snapshot.
+  toggleOverlayPistes: () => set((s) => ({ overlayPistes: !s.overlayPistes })),
+  toggleOverlaySkiTouring: () => set((s) => ({ overlaySkiTouring: !s.overlaySkiTouring })),
+  toggleOverlaySnowshoe: () => set((s) => ({ overlaySnowshoe: !s.overlaySnowshoe })),
   setSentinelYear: (sentinelYear) => set({ sentinelYear }),
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
   setSidebarTab: (sidebarTab) => set({ sidebarTab }),

@@ -6,11 +6,11 @@ export default function OverlaysTab() {
     season,
     topoSource,
     overlayPistes,
-    setOverlayPistes,
+    toggleOverlayPistes,
     overlaySkiTouring,
-    setOverlaySkiTouring,
+    toggleOverlaySkiTouring,
     overlaySnowshoe,
-    setOverlaySnowshoe,
+    toggleOverlaySnowshoe,
   } = useMapStore()
 
   const isSwisstopo = topoSource === 'swisstopo'
@@ -21,7 +21,7 @@ export default function OverlaysTab() {
         <Toggle
           label="Ski Pistes"
           checked={overlayPistes}
-          onChange={setOverlayPistes}
+          onChange={toggleOverlayPistes}
           hint={season !== 'winter' ? 'Visible in winter mode' : undefined}
         />
         {isSwisstopo && (
@@ -29,13 +29,13 @@ export default function OverlaysTab() {
             <Toggle
               label="Ski Touring"
               checked={overlaySkiTouring}
-              onChange={setOverlaySkiTouring}
+              onChange={toggleOverlaySkiTouring}
               hint={season !== 'winter' ? 'Visible in winter mode' : undefined}
             />
             <Toggle
               label="Snowshoe Trails"
               checked={overlaySnowshoe}
-              onChange={setOverlaySnowshoe}
+              onChange={toggleOverlaySnowshoe}
               hint={season !== 'winter' ? 'Visible in winter mode' : undefined}
             />
           </>

@@ -143,6 +143,24 @@ export function applyAllRasterOverlays(adapter: AppMapAdapter): void {
 }
 
 /**
+ * Run a raster-overlay apply, swallowing the transient error mapbox-gl throws
+ * if a source/layer op runs mid style-swap (a setStyle in flight) — that case
+ * is recovered by the style.load handler in useRasterOverlays.
+ *
+ * `isStyleLoaded()` is deliberately NOT used as a guard: it returns false
+ * whenever ANY source still has tiles loading (including right after an
+ * overlay is added), so guarding on it would wrongly defer a following toggle
+ * to a style.load that never comes.
+ */
+function safeApply(apply: () => void): void {
+  try {
+    apply()
+  } catch {
+    // Style mid-swap — the style.load handler re-applies once it settles.
+  }
+}
+
+/**
  * Hook that manages all raster overlay sources/layers on the map.
  * Reacts to store state changes and re-applies layers as needed.
  * Takes an AppMapAdapter instead of a vendor-specific map instance.
@@ -156,36 +174,21 @@ export function useRasterOverlays(adapter: AppMapAdapter | null): void {
   const overlaySnowshoe = useMapStore((s) => s.overlaySnowshoe)
   const sentinelYear = useMapStore((s) => s.sentinelYear)
 
+  // Basemap / season changes — rebuild the topo raster and the overlays.
+  useEffect(() => {
+    if (adapter) safeApply(() => applyAllRasterOverlays(adapter))
+  }, [adapter, topoSource, baseLayer, season, sentinelYear])
+
+  // Overlay toggles — re-apply only the overlay layers. The topo raster is
+  // left untouched, so toggling an overlay doesn't re-fetch the basemap.
+  useEffect(() => {
+    if (adapter) safeApply(() => applyOverlays(adapter))
+  }, [adapter, overlayPistes, overlaySkiTouring, overlaySnowshoe])
+
+  // Re-apply everything after a style swap — recovers anything a mid-swap
+  // apply above had to skip.
   useEffect(() => {
     if (!adapter) return
-    if (adapter.isStyleLoaded()) {
-      applyAllRasterOverlays(adapter)
-      return
-    }
-    // Style is mid-load (e.g. a basemap switch is still applying its
-    // setStyle). Defer this apply to the next style.load so a topo/overlay
-    // selection changed during the load isn't silently dropped.
-    const handler = () => {
-      adapter.offStyleLoad(handler)
-      applyAllRasterOverlays(adapter)
-    }
-    adapter.onStyleLoad(handler)
-    return () => adapter.offStyleLoad(handler)
-  }, [
-    adapter,
-    topoSource,
-    baseLayer,
-    season,
-    overlayPistes,
-    overlaySkiTouring,
-    overlaySnowshoe,
-    sentinelYear,
-  ])
-
-  // Re-apply on style.load (after style swap)
-  useEffect(() => {
-    if (!adapter) return
-
     const handler = () => applyAllRasterOverlays(adapter)
     adapter.onStyleLoad(handler)
     return () => {
