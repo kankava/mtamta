@@ -3,6 +3,7 @@ package tiles
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -114,6 +115,14 @@ func (h *Handler) ServeTile(w http.ResponseWriter, r *http.Request) {
 	}
 	data, contentType, err := h.fetchUpstream(ctx, upstreamURL, provider.Headers)
 	if err != nil {
+		// The browser aborts in-flight tile requests as the map pans/zooms,
+		// which cancels the request context. That is expected, not an error:
+		// don't log it, and return 499 (client closed request) so it stays
+		// out of the error log, which only escalates status >= 500.
+		if errors.Is(err, context.Canceled) {
+			w.WriteHeader(499)
+			return
+		}
 		slog.Error("tile fetch failed", "provider", providerID, "error", err)
 		http.Error(w, "upstream fetch failed", http.StatusBadGateway)
 		return
