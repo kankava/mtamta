@@ -4,7 +4,9 @@
 >
 > GPX upload & parsing, trip CRUD, trip routes on map with bbox query, photo upload with geotagging, map search bar, Radix UI, and climbing trip segments. Split into 4 sub-milestones (4a → 4b → 4c → 4d). Complete tasks top-to-bottom within each sub-milestone.
 
-> **Multi-provider context**: Phase 4 depends on Phase 3.5 (multi-provider support). Trip route code (`useTripRoutes`) targets `AppMapAdapter` and lives in `apps/web/src/map/runtime/shared/`. Map search (`MapSearch.tsx`) is Mapbox-specific and lives in `apps/web/src/map/runtime/mapbox/`; it is gated by the capability matrix (`coming_soon` for MapTiler). File paths below that reference the old `apps/web/src/map/MapContainer.tsx` should be read as the provider-specific runtime equivalents (`runtime/mapbox/MapContainer.tsx`, `runtime/maptiler/MapContainer.tsx`). See [`MapProviders.md`](MapProviders.md) for the runtime file structure.
+> **Multi-provider context**: Phase 4 builds on Phase 3.5 (multi-provider support — **M1 + M2 + M3 complete & verified**). Trip route code (`useTripRoutes`) targets `AppMapAdapter` and lives in `apps/web/src/map/runtime/shared/`. Map search (`MapSearch.tsx`) is Mapbox-specific and lives in `apps/web/src/map/runtime/mapbox/`; it is gated by the capability matrix (`coming_soon` for MapTiler). File paths below that reference the old `apps/web/src/map/MapContainer.tsx` should be read as the provider-specific runtime equivalents (`runtime/mapbox/MapContainer.tsx`, `runtime/maptiler/MapContainer.tsx`). See [`MapProviders.md`](MapProviders.md) for the runtime file structure.
+>
+> **Layer-insertion contract (settled in M3)**: the Mapbox runtime runs on **Mapbox Standard**, where custom layers go into named **slots** (`bottom`/`middle`/`top`) — not `beforeId`. `AppMapAdapter.addLayer(layer, opts?)` takes an optional `opts.slot`: the Mapbox adapter applies it as a Standard slot, the MapTiler/MapLibre adapter derives an equivalent `beforeId`. Trip-route layers **must pass a slot** (see §2). The adapter has no `getStyleLayers()`. Note also: Mapbox terrain is owned by the Standard style (always on); the 2D/3D button is a camera-pitch toggle — Phase 4 map code should not call `setTerrain()`.
 
 ---
 
@@ -361,7 +363,7 @@ interface TripState {
 
 Responsibilities:
 - On `moveend` (via `adapter.onMoveEnd`, debounced 500ms), get viewport bounds via `adapter.getBounds()` and zoom via `adapter.getZoom()`, call `tripStore.fetchMapTrips(bbox, zoom)`
-- Add GeoJSON source + `line` layer (color by activity type) + `circle` layer (start points) via `adapter.addSource`/`adapter.addLayer`
+- Add GeoJSON source + `line` layer (color by activity type) + `circle` layer (start points) via `adapter.addSource`/`adapter.addLayer`, passing `{ slot: 'top' }` to `addLayer` so routes draw above the basemap and topo rasters (M3 slot contract — the MapTiler adapter maps the slot to a `beforeId`)
 - Click handler on line layer via `adapter.onClick`: extract trip_id, call `tripStore.fetchTrip(id)`, open detail panel
 - Re-add source/layer on style reload via `adapter.onStyleLoad`
 
@@ -595,7 +597,7 @@ func interpolatePosition(t time.Time, points []Trackpoint) (lat, lon float64, ok
   - On result select, calls `map.flyTo({center, zoom})`
   - Uses existing `VITE_MAPBOX_ACCESS_TOKEN`
   - No backend changes — Mapbox Search Box API called directly from client
-  - **Provider gating**: wrapped in capability check; MapTiler provider shows `Coming soon` (MapTiler geocoder ships in M3)
+  - **Provider gating**: wrapped in capability check; MapTiler provider shows `Coming soon` (MapTiler geocoder ships in M4 — provider-specific features, deferred to after Phase 4)
   - Update capability matrix: set Mapbox geocoder to `available` when this ships
 
 Frontend dependency: `@mapbox/search-js-react`
