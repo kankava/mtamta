@@ -306,14 +306,14 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
 - [x] `cd apps/api && go test ./internal/tiles/...` — unit tests pass
 - [x] `cd apps/web && pnpm build` — web app builds
 - [ ] Manual: open map → Satellite Summer basemap on startup, no topo overlay
-- [ ] Manual: select "swisstopo" card → swisstopo tiles render
-- [ ] Manual: switch to satellite → topo overlay hidden
+- [x] Manual: select "swisstopo" card → swisstopo tiles render
+- [x] Manual: switch to satellite → topo overlay hidden
 - [ ] Manual: select "swisstopo Winter" card → swisstopo switches to winter variant, pistes overlay appears
-- [ ] Manual: switch back to "Outdoors Summer" → topo overlay removed, Mapbox Outdoors base style only
-- [ ] Manual: proxy tiles load through `/api/v1/tiles/opentopomap/...` with Redis caching
+- [x] Manual: switch back to a global base → topo overlay removed
+- [x] Manual: proxy tiles load through `/api/v1/tiles/...` with Redis caching
 - [x] `cd apps/web && pnpm lint` — no TypeScript or ESLint errors (3d)
 - [x] `cd apps/web && pnpm test` — 14/14 tests pass (3d)
-- [ ] Manual: sidebar opens/collapses, map fills full width when collapsed (3d)
+- [x] Manual: sidebar opens/collapses, map fills full width when collapsed (3d)
 - [ ] Manual: click each basemap card — map style and topo overlay change correctly (3d)
 
 ---

@@ -4,22 +4,24 @@
 
 ### Manual verification (requires `make dev` for proxied providers)
 
+> Verify terrain/3D in **Chrome** — Mapbox GL v3 terrain does not render in Firefox on this machine (WebGL limitation, not an app bug).
+
 - [x] Sidebar UI — open/close, all three tabs render, map fills width when collapsed
-- [ ] "Global Summer" → Mapbox outdoors base, no topo overlay
-- [ ] "Switzerland" → swisstopo topo overlay loads over outdoors base (proxied, blank tiles → transparent PNG)
+- [x] "Global Summer" → Mapbox Outdoors base (Standard), no topo overlay
+- [x] "Switzerland" → swisstopo topo overlay loads over the base (proxied; labels stay above the raster)
 - [ ] "Switzerland Winter" → grayscale swisstopo loads, ski touring/snowshoe toggles appear in Overlays tab
-- [ ] "France" → IGN topo overlay loads (proxied, needs IGN_API_KEY)
+- [ ] "France" → IGN topo overlay loads (direct — no API key; Géoplateforme is open access)
 - [ ] "Austria" → basemap.at topo overlay loads (direct)
-- [ ] "Germany" → BKG TopPlusOpen topo overlay loads (direct)
+- [x] "Germany" → BKG TopPlusOpen topo overlay loads (direct)
 - [ ] "Norway" → Kartverket topo overlay loads (direct)
 - [ ] "United States" → USGS topo overlay loads (direct)
-- [ ] Switch from country topo back to "Global Summer" → topo overlay removed
-- [ ] "Satellite Summer" → satellite base layer loads
-- [ ] "Global Winter" / "Satellite Winter" cards render as disabled with "Coming soon"
-- [ ] Toggle overlays on/off — layers appear/disappear on map
-- [ ] 2D/3D map control — terrain enables with pitch tilt, disables back to flat
-- [ ] Custom exaggeration in Settings → slider appears, adjusts terrain exaggeration in real-time
-- [ ] Flat/globe projection in Settings (Firefox private browsing disables terrain due to Canvas2D fingerprinting protection)
+- [x] Switch from country topo back to a global base → topo overlay removed
+- [x] "Satellite Summer" → satellite base layer loads
+- [x] "Global Winter" is a real winter style (Outdoors Winter); winter cards are enabled, not "Coming soon" (changed in M3)
+- [ ] Toggle each overlay on/off (pistes, ski touring, snowshoe) — layers appear/disappear on map
+- [x] 2D/3D control — Mapbox: toggles camera pitch (terrain always on via Standard); MapTiler: enables/disables terrain
+- [ ] Custom exaggeration slider (Settings) — adjusts MapTiler terrain in real time; no-op for Mapbox after the M3 refactor (see Soon)
+- [x] Flat/globe projection in Settings
 
 ### Automated
 
@@ -35,10 +37,13 @@
 
 - [x] Web bundle size — split mapbox-gl into separate chunk (MapPage: 1,685KB → 20KB)
 - [ ] Add tile-proxy observability (cache hit ratio, upstream error rate, per-provider request volume)
+- [ ] Tile request logging is too noisy — `middleware/logger.go` logs every request at INFO, so one map view floods hundreds of `/api/v1/tiles/...` lines. Skip or DEBUG-level tile paths.
+- [ ] Client-cancelled tile fetches log as ERROR — when the browser aborts a tile during pan/zoom the upstream fetch returns `context canceled`; `tiles/handler.go` logs `level=ERROR` + returns 502. Detect `context.Canceled`, skip the error log, return a non-5xx status.
+- [ ] Exaggeration slider (Settings) is a no-op for the Mapbox provider after the M3 terrain refactor (Standard owns terrain). Hide/disable it when the provider is Mapbox.
 - [ ] Sentry for error tracking (free tier)
 - [ ] Mapbox token URL restrictions (lock pk.* token to production domain)
 - [ ] Logger middleware drops optional http.ResponseWriter interfaces (Flush, Hijack, Push) — fix before adding SSE/WebSocket/streaming features
 - [ ] Add integration test for duplicate-email 409 path (requires real Postgres)
 - [ ] Capability-aware basemap cards (hide IGN/Sentinel when backend env vars not configured)
 - [ ] BKG TopPlusOpen serves global tiles (tested: Madrid, Rome, London, Moscow, New York all return data) — consider expanding bbox or offering it as a global topo alternative
-- [ ] Create custom Mapbox Studio winter style for Global Winter + Satellite Winter basemap cards (muted/cool tones, desaturated greens, blue-gray terrain)
+- [x] Create custom Mapbox Studio winter style — done in Phase 3.5 M3 (Outdoors Winter, a custom style built on Mapbox Standard)

@@ -153,17 +153,17 @@ The `setTimeout(0)` trick works because Strict Mode's unmount→mount cycle is s
 - [x] `pnpm --filter @mtamta/web build` — clean build
 - [x] `pnpm --filter @mtamta/web test` — all tests pass (19)
 - [x] `pnpm --filter @mtamta/map-core test` — all tests pass (35)
-- [ ] Manual: auth flow → gate → Mapbox → styles → terrain → overlays → settings change → gate again
+- [x] Manual: auth flow → gate → Mapbox → styles → terrain → overlays → settings change → gate again
 
 ### M1 Verification Checklist
 
-- [ ] Auth → gate → select Mapbox → map loads with zero regression
-- [ ] localStorage persists provider, gate skipped on reload
-- [ ] Settings shows "Change" button, returns to gate
-- [ ] All overlays work (topo, pistes, ski touring, snowshoe)
-- [ ] Terrain and sky layer work
-- [ ] Style switching preserves overlays and terrain
-- [ ] Build produces clean chunks, no warnings
+- [x] Auth → gate → select Mapbox → map loads with zero regression
+- [x] localStorage persists provider, gate skipped on reload
+- [x] Settings shows "Change" button, returns to gate
+- [ ] All overlays work — topo verified; pistes / ski touring / snowshoe toggles not yet each verified
+- [x] Terrain works (verified in Chrome); custom sky layer removed — Standard provides atmosphere
+- [x] Style switching preserves overlays and terrain
+- [x] Build produces clean chunks, no warnings
 
 ---
 
@@ -207,13 +207,13 @@ Key API differences from Mapbox:
 
 ### M2 Verification Checklist
 
-- [ ] Select MapTiler from gate → map renders Satellite Summer by default and can switch to outdoors
-- [ ] 3D terrain works in MapTiler
-- [ ] Shared overlays render in MapTiler via AppMapAdapter
-- [ ] Globe projection works in both providers
-- [ ] Winter cards enabled for both providers; MapTiler switches to winter-v2 style
-- [ ] Only selected provider's SDK chunk is loaded
-- [ ] Switching providers via Settings works cleanly
+- [x] Select MapTiler from gate → map renders and can switch base layers
+- [x] 3D terrain works in MapTiler
+- [ ] Shared overlays render in MapTiler via AppMapAdapter — not yet explicitly verified
+- [x] Globe projection works in both providers
+- [ ] Winter cards enabled for both providers; MapTiler switches to winter-v2 style — MapTiler winter not yet verified
+- [x] Only selected provider's SDK chunk is loaded
+- [x] Switching providers via Settings works cleanly
 
 ---
 
