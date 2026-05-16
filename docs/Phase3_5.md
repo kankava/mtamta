@@ -275,7 +275,7 @@ Key API differences from Mapbox:
 
 **Verification outcomes:**
 
-- **Terrain model** — the classic DEM-source + `setTerrain()` approach no-ops on Mapbox Standard (Standard owns terrain via the style). The dead code was removed; the Mapbox 2D/3D button now toggles camera pitch only. Commit: `fix(web): drive Mapbox 3D terrain via camera pitch on Standard`.
+- **Terrain model** — the Mapbox 2D/3D button toggles camera pitch; terrain itself is applied via `setTerrain()` against an app-owned DEM source (`app-terrain-dem`), which keeps the Settings exaggeration slider working. An earlier reading that `setTerrain` "no-ops on Standard" was a Firefox terrain-rendering artifact — it works in Chrome. Commits: `fix(web): drive Mapbox 3D terrain via camera pitch on Standard`, `fix(web): restore terrain exaggeration for the Mapbox runtime`.
 - **SDK chunking** — fixed a bug where Vite's preload helper was folded into the `mapbox-gl` vendor chunk, eagerly loading the 1.7 MB SDK for every user. Commit: `fix(web): keep provider SDKs out of the eager entry chunk`.
 - **Firefox** — Mapbox GL JS v3 terrain does not render in Firefox on some Linux/GPU setups (a WebGL limitation, not an app bug). Verify maps in Chrome.
 

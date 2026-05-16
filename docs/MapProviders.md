@@ -312,7 +312,7 @@ Verification:
 - [x] `AppMapAdapter` + `rasterOverlays.ts` use slot-based insertion on Mapbox; the MapTiler adapter derives `beforeId`
 - [x] Custom sky layer removed — Standard has built-in atmosphere
 - [x] Manual verification complete (2026-05-16, in Chrome) — terrain, globe, atmosphere, overlays under Standard; zero MapTiler regression
-- [x] Standard owns terrain via the style; the classic DEM + `setTerrain()` model no-ops on Standard and was removed — the Mapbox 2D/3D button now toggles camera pitch only
+- [x] Mapbox terrain: the 2D/3D button toggles camera pitch; terrain is applied via `setTerrain()` against an app-owned DEM source (`app-terrain-dem`) so the Settings exaggeration slider can drive it. (`setTerrain` does work on Standard — an earlier "no-ops" reading was a Firefox terrain-rendering artifact.)
 
 Verification:
 

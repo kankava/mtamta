@@ -37,9 +37,8 @@
 
 - [x] Web bundle size — split mapbox-gl into separate chunk (MapPage: 1,685KB → 20KB)
 - [ ] Add tile-proxy observability (cache hit ratio, upstream error rate, per-provider request volume)
-- [ ] Tile request logging is too noisy — `middleware/logger.go` logs every request at INFO, so one map view floods hundreds of `/api/v1/tiles/...` lines. Skip or DEBUG-level tile paths.
-- [ ] Client-cancelled tile fetches log as ERROR — when the browser aborts a tile during pan/zoom the upstream fetch returns `context canceled`; `tiles/handler.go` logs `level=ERROR` + returns 502. Detect `context.Canceled`, skip the error log, return a non-5xx status.
-- [ ] Exaggeration slider (Settings) is a no-op for the Mapbox provider after the M3 terrain refactor (Standard owns terrain). Hide/disable it when the provider is Mapbox.
+- [x] Client-cancelled tile fetches no longer log as ERROR — handler returns 499 for `context.Canceled` (commit fc54703)
+- [x] Restore terrain exaggeration for the Mapbox provider — the Settings slider re-applies terrain via `setTerrain` against an app-owned DEM source
 - [ ] Sentry for error tracking (free tier)
 - [ ] Mapbox token URL restrictions (lock pk.* token to production domain)
 - [ ] Logger middleware drops optional http.ResponseWriter interfaces (Flush, Hijack, Push) — fix before adding SSE/WebSocket/streaming features

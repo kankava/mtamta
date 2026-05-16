@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
-import { resolveStyleUrl, MIN_ZOOM, MAX_ZOOM } from '@mtamta/map-core'
+import { resolveStyleUrl, MIN_ZOOM, MAX_ZOOM, DEFAULT_TERRAIN_EXAGGERATION } from '@mtamta/map-core'
 import { useMapStore } from '../../../stores/mapStore'
 import MapControls from './MapControls'
 import { useRasterOverlays } from '../shared/rasterOverlays'
@@ -66,6 +66,29 @@ export function createMapboxAdapter(map: mapboxgl.Map): AppMapAdapter {
   }
 }
 
+// Mapbox Standard ships terrain via the style, but its exaggeration is a fixed
+// expression. To let the Settings slider drive exaggeration we re-assert
+// terrain against our own root-level DEM source — referencing Standard's
+// import-scoped `mapbox-dem` from the root logs a "terrain source not found"
+// warning on every setTerrain call.
+const TERRAIN_DEM_SOURCE_ID = 'app-terrain-dem'
+const TERRAIN_DEM_SOURCE = {
+  type: 'raster-dem' as const,
+  url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+  tileSize: 512,
+  maxzoom: 14,
+}
+
+/** Ensure the DEM source exists, then apply terrain at the store's exaggeration. */
+function applyTerrain(map: mapboxgl.Map) {
+  const { terrainExaggeration, customExaggeration } = useMapStore.getState()
+  const exaggeration = customExaggeration ? terrainExaggeration : DEFAULT_TERRAIN_EXAGGERATION
+  if (!map.getSource(TERRAIN_DEM_SOURCE_ID)) {
+    map.addSource(TERRAIN_DEM_SOURCE_ID, TERRAIN_DEM_SOURCE)
+  }
+  map.setTerrain({ source: TERRAIN_DEM_SOURCE_ID, exaggeration })
+}
+
 export default function MapContainer() {
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -77,8 +100,19 @@ export default function MapContainer() {
   // Adapter for shared overlay code
   const [adapter, setAdapter] = useState<AppMapAdapter | null>(null)
 
-  const { center, zoom, pitch, bearing, baseLayer, season, projection, setViewport, setMapReady } =
-    useMapStore()
+  const {
+    center,
+    zoom,
+    pitch,
+    bearing,
+    baseLayer,
+    season,
+    projection,
+    terrainExaggeration,
+    customExaggeration,
+    setViewport,
+    setMapReady,
+  } = useMapStore()
 
   // Track whether the initial style has loaded (to skip redundant setStyle on mount)
   const initialStyleRef = useRef(true)
@@ -129,7 +163,13 @@ export default function MapContainer() {
 
     mapRef.current = map
 
+    // Dev-only: expose the map for console debugging (e.g. __map.getTerrain()).
+    if (import.meta.env.DEV) {
+      ;(window as unknown as { __map: mapboxgl.Map }).__map = map
+    }
+
     map.on('load', () => {
+      applyTerrain(map)
       setMapReady(true)
       setMapInstance(map)
       setAdapter(createMapboxAdapter(map))
@@ -184,9 +224,17 @@ export default function MapContainer() {
     prevStyleRef.current = newStyle
 
     map.setStyle(newStyle, { diff: false } as Parameters<typeof map.setStyle>[1])
-    // Standard owns terrain; raster overlays re-add themselves via
-    // useRasterOverlays' own style.load listener.
+    // setStyle wipes sources/terrain — re-assert terrain once the new style
+    // loads. Raster overlays re-add themselves via useRasterOverlays' listener.
+    map.once('style.load', () => applyTerrain(map))
   }, [baseLayer, season])
+
+  // --- Terrain exaggeration (Settings slider) ---
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !map.isStyleLoaded()) return
+    applyTerrain(map)
+  }, [terrainExaggeration, customExaggeration])
 
   // --- Projection toggle ---
   useEffect(() => {
