@@ -20,7 +20,7 @@
 - [x] "Global Winter" is a real winter style (Outdoors Winter); winter cards are enabled, not "Coming soon" (changed in M3)
 - [ ] Toggle each overlay on/off (pistes, ski touring, snowshoe) — layers appear/disappear on map
 - [x] 2D/3D control — Mapbox: toggles camera pitch (terrain always on via Standard); MapTiler: enables/disables terrain
-- [ ] Custom exaggeration slider (Settings) — adjusts MapTiler terrain in real time; no-op for Mapbox after the M3 refactor (see Soon)
+- [x] Custom exaggeration slider (Settings) — adjusts terrain in real time for both providers
 - [x] Flat/globe projection in Settings
 
 ### Automated
@@ -46,3 +46,6 @@
 - [ ] Capability-aware basemap cards (hide IGN/Sentinel when backend env vars not configured)
 - [ ] BKG TopPlusOpen serves global tiles (tested: Madrid, Rome, London, Moscow, New York all return data) — consider expanding bbox or offering it as a global topo alternative
 - [x] Create custom Mapbox Studio winter style — done in Phase 3.5 M3 (Outdoors Winter, a custom style built on Mapbox Standard)
+- [ ] Imported Studio styles (Outdoors / Outdoors Winter) — two benign console warnings, investigated and accepted; both fixable only in the style JSON, not app code:
+  - Contour layer uses a `line-progress` expression but its source lacks `lineMetrics: true` → `line-progress … requires 'lineMetrics'` warning; contour lines don't draw with progress styling. (Contour tiles also 404 at low zoom — normal, contour data starts higher.) Fix: set `lineMetrics: true` on the contour source.
+  - `Couldn't find terrain source "mapbox-dem"` — transient load-time noise. The style declares `terrain: {source: mapbox-dem}`, briefly processed before the app overrides terrain with its own `app-terrain-dem` source (which is what renders — `getTerrain()` confirms). Terrain works; `mapbox-dem` itself registers fine (its odd `tileSize: 514` is harmless). Do not re-investigate.
