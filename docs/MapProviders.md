@@ -311,14 +311,17 @@ Verification:
 - [x] Season switching stays a `setStyle()` reload (distinct URLs — config-update optimisation N/A)
 - [x] `AppMapAdapter` + `rasterOverlays.ts` use slot-based insertion on Mapbox; the MapTiler adapter derives `beforeId`
 - [x] Custom sky layer removed — Standard has built-in atmosphere
-- [ ] Manual verification: terrain, globe, overlays under Standard; zero MapTiler regression
+- [x] Manual verification complete (2026-05-16, in Chrome) — terrain, globe, atmosphere, overlays under Standard; zero MapTiler regression
+- [x] Standard owns terrain via the style; the classic DEM + `setTerrain()` model no-ops on Standard and was removed — the Mapbox 2D/3D button now toggles camera pitch only
 
 Verification:
 
-- [ ] Mapbox: Global Summer and Global Winter render visibly different base styles
-- [ ] Topo / pistes / swisstopo / OpenTopoMap overlays still render below labels in the Mapbox runtime
-- [ ] 3D terrain + globe still work in the Mapbox runtime
-- [ ] MapTiler runtime unchanged (regression check)
+- [x] Mapbox: Global Summer and Global Winter render visibly different base styles
+- [x] Topo / pistes / swisstopo / OpenTopoMap overlays still render below labels in the Mapbox runtime
+- [x] 3D terrain + globe still work in the Mapbox runtime
+- [x] MapTiler runtime unchanged (regression check)
+
+> **Verify map terrain in Chrome.** Mapbox GL JS v3's terrain pipeline does not render in Firefox on some Linux/GPU setups — a WebGL limitation, not an app bug. MapTiler/MapLibre terrain is unaffected.
 
 ### M4 — Provider-Specific Features (deferred to after Phase 4)
 
@@ -331,6 +334,7 @@ Note: Mapbox SearchBox geocoder is implemented in Phase 4 (inside `runtime/mapbo
 - [ ] Directions for Mapbox stack (Mapbox Directions API) — if not already shipped in Phase 4
 - [ ] Directions for MapTiler stack (or mark as `Coming soon`)
 - [ ] Update capability matrix as each feature lands
+- [ ] Provider parity polish (found in M3 verification): raise MapTiler max pitch toward Mapbox's (~85° vs MapLibre's 60° cap); add a sky/atmosphere layer to the MapTiler styles (`setSky()`); reconcile the terrain UX (Mapbox Standard terrain is always-on + pitch toggle, MapTiler is an explicit enable/disable)
 
 Verification:
 

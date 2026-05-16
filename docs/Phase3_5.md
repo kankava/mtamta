@@ -264,14 +264,20 @@ Key API differences from Mapbox:
 - [ ] Confirm Mapbox `season_winter` is genuinely `available` post-migration (already in the matrix, but it was previously cosmetic-only)
 - [ ] Remove now-dead code (custom sky layer, `outdoors-v12` references)
 
-### M3 Verification Checklist
+### M3 Verification Checklist — ✅ complete (2026-05-16, verified in Chrome)
 
-- [ ] `pnpm --filter @mtamta/web build` / `test` and `map-core test` — clean
-- [ ] Mapbox: Global Summer and Global Winter render visibly different base styles
-- [ ] All overlays (topo, pistes, ski touring, snowshoe, OpenTopoMap) insert correctly via slots, below labels
-- [ ] 3D terrain, sky/atmosphere, and globe work on Mapbox Standard
-- [ ] MapTiler runtime has zero regression (full pass)
-- [ ] Only the selected provider's SDK chunk loads; build is clean
+- [x] `pnpm --filter @mtamta/web build` / `test` and `map-core test` — clean
+- [x] Mapbox: Global Summer and Global Winter render visibly different base styles
+- [x] All overlays (topo, pistes, ski touring, snowshoe, OpenTopoMap) insert correctly via slots, below labels
+- [x] 3D terrain, sky/atmosphere, and globe work on Mapbox Standard
+- [x] MapTiler runtime has zero regression (full pass)
+- [x] Only the selected provider's SDK chunk loads; build is clean
+
+**Verification outcomes:**
+
+- **Terrain model** — the classic DEM-source + `setTerrain()` approach no-ops on Mapbox Standard (Standard owns terrain via the style). The dead code was removed; the Mapbox 2D/3D button now toggles camera pitch only. Commit: `fix(web): drive Mapbox 3D terrain via camera pitch on Standard`.
+- **SDK chunking** — fixed a bug where Vite's preload helper was folded into the `mapbox-gl` vendor chunk, eagerly loading the 1.7 MB SDK for every user. Commit: `fix(web): keep provider SDKs out of the eager entry chunk`.
+- **Firefox** — Mapbox GL JS v3 terrain does not render in Firefox on some Linux/GPU setups (a WebGL limitation, not an app bug). Verify maps in Chrome.
 
 ### Risks / Open Questions
 
