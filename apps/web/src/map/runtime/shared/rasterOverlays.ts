@@ -157,8 +157,20 @@ export function useRasterOverlays(adapter: AppMapAdapter | null): void {
   const sentinelYear = useMapStore((s) => s.sentinelYear)
 
   useEffect(() => {
-    if (!adapter || !adapter.isStyleLoaded()) return
-    applyAllRasterOverlays(adapter)
+    if (!adapter) return
+    if (adapter.isStyleLoaded()) {
+      applyAllRasterOverlays(adapter)
+      return
+    }
+    // Style is mid-load (e.g. a basemap switch is still applying its
+    // setStyle). Defer this apply to the next style.load so a topo/overlay
+    // selection changed during the load isn't silently dropped.
+    const handler = () => {
+      adapter.offStyleLoad(handler)
+      applyAllRasterOverlays(adapter)
+    }
+    adapter.onStyleLoad(handler)
+    return () => adapter.offStyleLoad(handler)
   }, [
     adapter,
     topoSource,
