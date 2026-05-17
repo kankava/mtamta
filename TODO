@@ -48,6 +48,9 @@
 - [ ] Capability-aware basemap cards (hide IGN/Sentinel when backend env vars not configured)
 - [ ] BKG TopPlusOpen serves global tiles (tested: Madrid, Rome, London, Moscow, New York all return data) — consider expanding bbox or offering it as a global topo alternative
 - [ ] Richer Swiss winter mode — add swisstopo winter overlays `ch.swisstopo.bahnen-winter` (cableways/skilifts) and `ch.swisstopo.unterkuenfte-winter` (winter huts) as `OVERLAY_SOURCES`, alongside the existing ski-touring / snowshoe
+- [ ] Overlay catalog expansion (Phase 3 follow-on — the `OVERLAY_SOURCES` + Overlays-tab pattern already surfaces a toggle per source by filter):
+  - Global hiking trails — add Waymarked Trails (`https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png`): global OSM-derived hiking routes, transparent raster, the hiking analog of the OpenSnowMap pistes overlay. No `topoSourceFilter`, available on any base/provider. Community service — consider proxying (User-Agent + caching) like OpenTopoMap. Waymarked Trails also offers cycling / MTB / winter-slope layers for later.
+  - Swiss shooting ranges / live-fire zones — safety overlay; swisstopo/GeoAdmin WMTS (army firing-notice layer), `topoSourceFilter: 'swisstopo'`, same pattern as ski-touring/snowshoe. Switzerland-only — no meaningful global equivalent.
 - [ ] When the swisstopo-winter layer swap (`pixelkarte-grau` → `pixelkarte-farbe-winter`) deploys, clear the stale tile cache: `redis-cli --scan --pattern 'tile:swisstopo-w:*' | xargs -r redis-cli del` — otherwise old grayscale tiles serve until the 24h TTL expires
 - [x] Create custom Mapbox Studio winter style — done in Phase 3.5 M3 (Outdoors Winter, a custom style built on Mapbox Standard)
 - [ ] Imported Studio styles (Outdoors / Outdoors Winter) — two benign console warnings, investigated and accepted; both fixable only in the style JSON, not app code:
