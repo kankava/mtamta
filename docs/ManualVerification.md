@@ -50,19 +50,19 @@
 
 ### Winter/seasonal
 
-- [ ] Selecting a winter basemap card switches satellite variant, swisstopo variant, and seasonal overlays atomically
-- [ ] swisstopo winter card loads winter base map variant (`pixelkarte-grau`)
-- [ ] swisstopo ski touring and snowshoe route overlays available with swisstopo winter card
+- [ ] Selecting a winter basemap card sets the base layer, season, and topo source atomically (overlays are toggled separately in the Overlays tab)
+- [ ] swisstopo winter card loads winter base map variant (`pixelkarte-farbe-winter`)
+- [ ] swisstopo ski touring and snowshoe route overlays available to toggle with swisstopo winter card
 - [ ] OpenSnowMap pistes layer renders as a toggleable overlay
-- [ ] User can select Summer or Winter satellite view; seasonal Sentinel-2 imagery loads
+- [ ] _(Deferred)_ Seasonal Sentinel-2 satellite view — backend proxy exists; frontend card disabled, not yet enabled
 
 ### Tile proxy and caching (requires API running)
 
 - [ ] OpenTopoMap tiles proxied through `/api/v1/tiles/opentopomap/...`
 - [ ] IGN tiles load directly from `data.geopf.fr` (public PLANIGNV2 endpoint, no backend proxy)
-- [ ] Sentinel-2 tiles proxied through backend (Instance ID not exposed)
+- [ ] _(Deferred)_ Sentinel-2 tiles proxied through backend (Instance ID not exposed)
 - [ ] Country topo tiles cached in Redis with 24-hour TTL
-- [ ] Sentinel-2 tiles cached in Redis with 7-day TTL
+- [ ] _(Deferred)_ Sentinel-2 tiles cached in Redis with 7-day TTL
 
 ### UI
 
@@ -129,7 +129,7 @@ Select **Mapbox** from the gate.
 - [ ] Click each basemap card → style and topo overlay change atomically
 - [ ] Select "swisstopo" → tiles render, attribution updates
 - [ ] Switch to satellite → topo overlay hidden
-- [ ] Select "swisstopo Winter" → pixelkarte-grau + pistes + ski touring/snowshoe overlays
+- [ ] Select "swisstopo Winter" → pixelkarte-farbe-winter base; pistes + ski touring/snowshoe overlays available to toggle in the Overlays tab
 - [ ] Switch to "Outdoors Summer" → topo removed, Mapbox Outdoors only
 - [ ] Test all 6 country topo sources (CH, FR, AT, DE, NO, US)
 - [ ] Enable terrain → 3D terrain and sky layer work

@@ -68,6 +68,8 @@ export interface AppMapAdapter {
 }
 ```
 
+> The interface evolved during M3: `getStyleLayers` was removed and `addLayer` now takes `opts?: { slot?: string }` instead of a `beforeId`. See `mapAdapter.ts` / [`MapProviders.md`](MapProviders.md#shared-map-adapter) for the current shape.
+
 ### 5. Extract Mapbox files into `runtime/mapbox/`
 
 Pure file move with import path fixes. NO logic changes **except** the cleanup fix below.

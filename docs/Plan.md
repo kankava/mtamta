@@ -211,7 +211,7 @@ mtamta/
 2. **Map component** (`apps/web/src/map/`)
    - `MapContainer.tsx` — Mapbox GL JS initialization, lifecycle management
    - `MapControls.tsx` — zoom, compass, pitch, geolocate
-   - `sidebar/Sidebar.tsx` — collapsible left sidebar with basemap/overlay/settings tabs
+   - `sidebar/Sidebar.tsx` — collapsible right sidebar with basemap/overlay/settings tabs
    - Basemap cards atomically set base layer + season + topo source
    - 3D terrain toggle with exaggeration slider
    - Sky layer for atmospheric rendering in 3D mode
@@ -282,7 +282,7 @@ apps/web/src/
 ### Features
 
 - Country-specific topographic base layers (swisstopo, IGN, basemap.at, BKG, Kartverket, USGS) with explicit country topo selection via sidebar cards; Satellite Summer remains the app default basemap
-- Seasonal satellite imagery (summer/winter) via Copernicus Sentinel-2, proxied through backend
+- Seasonal satellite imagery (summer/winter) via Copernicus Sentinel-2, proxied through backend — _deferred: backend proxy built, frontend card disabled_
 - Atomic basemap presets that set baseLayer + season + topoSource in one action (no separate winter/summer toggle)
 - swisstopo winter base map variant with ski touring and snowshoe route overlays
 - OpenSnowMap pistes overlay (global ski piste + lift layer)
@@ -292,7 +292,7 @@ apps/web/src/
 - **3a — Country topo providers**: Source catalog, bounding boxes, attribution (tasks 1, 2, 3)
 - **3b — Backend proxy & caching**: Tile proxy for OpenTopoMap/Sentinel-2, Redis caching (tasks 4, 5, 6)
 - **3c — Seasonal & overlays**: Sentinel-2 satellite imagery, swisstopo winter variant, OpenSnowMap pistes
-- **3d — UI Redesign**: Collapsible left sidebar replacing LayerPanel + StyleSwitcher, Tailwind CSS v4 migration, basemap cards that atomically set baseLayer + season + topoSource (no separate winter/summer toggle), NavBar moved into sidebar header, topoOpacity slider removed (full opacity always)
+- **3d — UI Redesign**: Collapsible right sidebar replacing LayerPanel + StyleSwitcher, Tailwind CSS v4 migration, basemap cards that atomically set baseLayer + season + topoSource (no separate winter/summer toggle), NavBar moved into sidebar header, topoOpacity slider removed (full opacity always)
 
 ### Technical Tasks
 
@@ -302,7 +302,7 @@ apps/web/src/
    - OpenTopoMap configuration as a manually-selectable global topo source
    - Dynamic attribution strings per topo source
    - Sentinel-2 seasonal satellite configuration: WMS URL template, season date ranges, MAXCC values
-   - swisstopo winter variant: `ch.swisstopo.pixelkarte-grau` layer ID and tile URL
+   - swisstopo winter variant: `ch.swisstopo.pixelkarte-farbe-winter` layer ID and tile URL
    - swisstopo winter sport overlay configs: ski touring routes, snowshoe routes
    - OpenSnowMap pistes tile source configuration
 
@@ -324,7 +324,7 @@ apps/web/src/
    - IGN Géoplateforme: configure the public `GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2` WMTS tile URL template (key-less `data.geopf.fr` endpoint)
    - Overlap handling for border regions: smallest bbox wins (most specific/detailed source)
    - Attribution manager: swap attribution text when active topo source changes
-   - swisstopo, IGN, basemap.at, BKG, Kartverket, and USGS tiles loaded directly from source (no proxy needed — no API keys, generous rate limits)
+   - IGN, basemap.at, BKG, Kartverket, and USGS tiles loaded directly from source (no proxy needed — no API keys, generous rate limits); swisstopo (summer + winter) is proxied so the backend can drop blank border tiles
    - Proxy endpoint for OpenTopoMap tiles: `GET /api/v1/tiles/opentopomap/{z}/{x}/{y}` — proxy with Redis cache (`tile:opentopomap:{z}:{x}:{y}`, 24h TTL) to stay within OpenTopoMap's ~2 req/sec fair-use limit
    - swisstopo winter variant: swap tile URL when season mode = winter and viewport is in Switzerland
    - swisstopo winter sport overlays: ski touring + snowshoe route layers, enabled in winter mode
@@ -354,7 +354,7 @@ packages/map-core/src/
 
 apps/web/src/map/
 ├── sidebar/
-│   ├── Sidebar.tsx           # Collapsible left panel with tabs
+│   ├── Sidebar.tsx           # Collapsible right panel with tabs
 │   ├── BasemapsTab.tsx       # Basemap card grid (global + country topo)
 │   ├── OverlaysTab.tsx       # Overlay toggles + sentinel year selector
 │   └── SettingsTab.tsx       # 3D terrain toggle + exaggeration
@@ -369,14 +369,14 @@ apps/web/src/map/
 - [ ] Basemap cards atomically set baseLayer + season + topoSource in one action
 - [ ] Map attribution updates dynamically to reflect the active topo source
 - [ ] IGN tiles load directly from the public key-less `PLANIGNV2` endpoint (no backend proxy, no API key)
-- [ ] User can select Summer or Winter satellite view; seasonal Sentinel-2 imagery loads as raster tiles
-- [ ] Sentinel-2 tiles are proxied through backend (Instance ID not exposed)
-- [ ] Selecting a winter basemap card switches satellite variant, swisstopo variant (CH), and seasonal overlays atomically
-- [ ] swisstopo winter card loads winter base map variant (`pixelkarte-grau`)
+- [ ] _(Deferred)_ Seasonal Sentinel-2 satellite imagery loads as raster tiles
+- [ ] _(Deferred)_ Sentinel-2 tiles are proxied through backend (Instance ID not exposed)
+- [ ] Selecting a winter basemap card sets base layer, season, and swisstopo variant (CH) atomically; overlays are toggled separately in the Overlays tab
+- [ ] swisstopo winter card loads winter base map variant (`pixelkarte-farbe-winter`)
 - [ ] swisstopo ski touring and snowshoe route overlays are available when swisstopo winter card is active
 - [ ] OpenSnowMap pistes layer renders as a toggleable overlay
 - [ ] User can manually override any individually coupled layer
-- [ ] Sentinel-2 tiles are cached in Redis with 7-day TTL
+- [ ] _(Deferred)_ Sentinel-2 tiles are cached in Redis with 7-day TTL
 - [ ] Country topo tiles (where proxied) are cached in Redis with 24-hour TTL
 - [ ] OpenTopoMap tiles are proxied through the backend with 24h Redis cache
 

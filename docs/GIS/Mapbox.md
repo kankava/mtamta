@@ -1,207 +1,162 @@
 # Mapbox GL JS — Layer & Style API Reference
 
-> Quick reference for layer manipulation, style control, and rendering APIs relevant to our use cases. Based on Mapbox GL JS v2/v3.
+> Quick reference for the Mapbox GL JS APIs this app uses. Targets **Mapbox GL JS v3** with **Mapbox Standard** styles.
 >
-> **Primary use case**: Controlling base map layer visibility when country topo overlays are active.
+> **What we run**: the web Mapbox runtime (`apps/web/src/map/runtime/mapbox/`) uses Mapbox GL JS v3 with custom **Mapbox Standard** styles. Standard changes how custom layers are placed (slots, not `beforeId`) and how terrain/lighting work — see the callouts below.
+
+---
+
+## Mapbox Standard — what's different
+
+Mapbox Standard is a *fragment* style: its layers, sources, and `composite` data live inside an **import**, not in the root style. Consequences for our code:
+
+- `map.getStyle().layers` does **not** list Standard's internal layers (roads, labels, etc.). You cannot filter them by `source === 'composite'` or hide them individually.
+- Custom layers are positioned with **slots**, not a `beforeId`. Standard exposes three slots:
+  - `bottom` — below everything (just above the base map background)
+  - `middle` — above lines/roads, below labels and POI symbols
+  - `top` — above everything
+- Terrain and atmosphere (sky, fog, light) are part of the Standard style — see the Terrain and Lighting sections.
+
+Our overlay code targets the `AppMapAdapter` interface, not the raw SDK — `addLayer(layer, { slot })`. The raster topo overlay uses `slot: 'middle'` (above roads, under labels).
 
 ---
 
 ## Layer Manipulation
 
-### Inspecting Layers
+### Adding layers (with a slot)
 
 ```js
-// Get all layers in the current style
-map.getStyle().layers
-// → [{ id: 'background', type: 'background', ... }, { id: 'landuse', type: 'fill', ... }, ...]
-
-// Get a single layer spec
-map.getLayer('road-primary')
-// → { id: 'road-primary', type: 'line', source: 'composite', ... } | undefined
-```
-
-### Adding / Removing / Moving Layers
-
-```js
-// Add a layer (optionally before another layer)
-map.addLayer(layerSpec, beforeId?)
+// Mapbox Standard: place a custom layer via the `slot` property on the spec
+map.addLayer({
+  id: 'topo-raster-layer',
+  type: 'raster',
+  source: 'topo-raster-source',
+  slot: 'middle',                 // above roads, below labels
+  paint: { 'raster-opacity': 1 },
+})
 
 // Remove a layer
-map.removeLayer('my-layer')
-
-// Move a layer in the stack
-map.moveLayer('my-layer', 'before-this-layer')
-// Moves 'my-layer' directly below 'before-this-layer'
-// If beforeId is omitted, moves to top of stack
+map.removeLayer('topo-raster-layer')
 ```
 
-### Visibility
+> `beforeId` and `moveLayer()` still exist, but on Standard you cannot reference its internal layer IDs — use a slot instead. `moveLayer` only helps reorder *your own* layers.
+
+### Inspecting your own layers
 
 ```js
-// Hide a layer (keeps it in the style, just not rendered)
-map.setLayoutProperty('road-primary', 'visibility', 'none')
-
-// Show a layer
-map.setLayoutProperty('road-primary', 'visibility', 'visible')
-
-// Check current visibility
-map.getLayoutProperty('road-primary', 'visibility')
-// → 'visible' | 'none'
+map.getLayer('topo-raster-layer')   // → spec | undefined  (layers you added)
+map.getStyle().layers               // → only YOUR layers + slots; not Standard's internals
 ```
 
-### Paint Properties
+### Visibility / Paint / Layout / Filters
+
+These work on layers **you** added (raster overlays, trip routes):
 
 ```js
-// Change fill opacity
-map.setPaintProperty('landuse-park', 'fill-opacity', 0.3)
+map.setLayoutProperty('topo-raster-layer', 'visibility', 'none' /* | 'visible' */)
+map.setPaintProperty('topo-raster-layer', 'raster-opacity', 0.5)
+map.setFilter('trip-routes', ['==', 'difficulty', 'hard'])
+map.setLayerZoomRange('trip-routes', 10, 22)
 
-// Change line color
-map.setPaintProperty('road-primary', 'line-color', '#ff0000')
-
-// Change line opacity
-map.setPaintProperty('road-primary', 'line-opacity', 0.5)
-
-// Read current paint property
-map.getPaintProperty('road-primary', 'line-color')
-```
-
-### Layout Properties
-
-```js
-// Change text size
-map.setLayoutProperty('place-city', 'text-size', 14)
-
-// Change icon image
-map.setLayoutProperty('poi-label', 'icon-image', 'marker')
-
-// Any layout property from the style spec can be set
-map.setLayoutProperty(layerId, property, value)
+// Read back
 map.getLayoutProperty(layerId, property)
+map.getPaintProperty(layerId, property)
+map.getFilter(layerId)
 ```
 
-### Filters
-
-```js
-// Set a filter on a layer (only render features matching the filter)
-map.setFilter('road-primary', ['==', 'class', 'motorway'])
-
-// Remove filter (show all features)
-map.setFilter('road-primary', null)
-
-// Get current filter
-map.getFilter('road-primary')
-```
-
-### Zoom Range
-
-```js
-// Restrict layer to zoom levels 10–16
-map.setLayerZoomRange('my-layer', 10, 16)
-```
+To restyle Standard's *own* basemap, use **config properties** instead (see Lighting).
 
 ---
 
 ## Sources
 
 ```js
-// Add a raster source
-map.addSource('my-topo', {
+map.addSource('topo-raster-source', {
   type: 'raster',
-  tiles: ['https://example.com/tiles/{z}/{x}/{y}.png'],
+  tiles: ['https://.../{z}/{x}/{y}.png'],
   tileSize: 256,
-  bounds: [west, south, east, north], // limits tile requests to bbox
+  bounds: [west, south, east, north],   // limits tile requests to a bbox
   maxzoom: 18,
   attribution: '...',
 })
 
-// Check if source exists
-map.getSource('my-topo') // → source object | undefined
-
-// Remove source (must remove all layers using it first)
-map.removeSource('my-topo')
+map.getSource('topo-raster-source')     // → source | undefined
+map.removeSource('topo-raster-source')  // remove dependent layers first
 ```
 
 ---
 
 ## Terrain & 3D
 
+Mapbox Standard **ships terrain in the style — it is always on.** Two app-specific notes:
+
 ```js
-// Enable terrain
-map.setTerrain({ source: 'mapbox-dem', exaggeration: 1.5 })
-
-// Disable terrain
-map.setTerrain(null)
-
-// Terrain DEM source
-map.addSource('mapbox-dem', {
+// We re-assert terrain against our OWN dem source so the Settings slider can
+// drive exaggeration (Standard's built-in exaggeration is a fixed expression).
+map.addSource('app-terrain-dem', {
   type: 'raster-dem',
   url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
   tileSize: 512,
   maxzoom: 14,
 })
+map.setTerrain({ source: 'app-terrain-dem', exaggeration: 1.5 })
 ```
 
-### Sky / Fog / Light
+> Referencing Standard's import-scoped `mapbox-dem` from the root logs a "terrain source not found" warning — hence the app-owned `app-terrain-dem` source.
+
+**2D/3D button** = a camera-pitch toggle, **not** terrain on/off. `runtime/mapbox/terrain.ts` eases pitch between `0` (2D, top-down) and `60` (3D); terrain stays on throughout.
+
+`setTerrain(null)` disables terrain, but the app never does this on Standard.
+
+---
+
+## Lighting & Atmosphere (Standard config)
+
+Standard renders sky, fog, and light itself — **no custom `sky` layer is needed** (the app's old `sky-layer` was removed in Phase 3.5). Adjust the basemap via config properties on the `basemap` import:
 
 ```js
-// Sky layer (for 3D terrain)
-map.addLayer({
-  id: 'sky',
-  type: 'sky',
-  paint: {
-    'sky-type': 'atmosphere',
-    'sky-atmosphere-sun': [0, 0],
-    'sky-atmosphere-sun-intensity': 15,
-  },
-})
+// Time-of-day lighting preset: 'dawn' | 'day' | 'dusk' | 'night'
+map.setConfigProperty('basemap', 'lightPreset', 'day')
 
-// Fog (depth-based atmosphere)
-map.setFog({
-  range: [0.5, 10],
-  color: 'white',
-  'high-color': '#add8e6',
-  'horizon-blend': 0.1,
-  'space-color': '#d8f2ff',
-  'star-intensity': 0.0,
-})
-
-// Light
-map.setLight({
-  anchor: 'viewport',
-  color: 'white',
-  intensity: 0.4,
-})
+// Other Standard config knobs
+map.setConfigProperty('basemap', 'show3dObjects', true)
+map.setConfigProperty('basemap', 'showPointOfInterestLabels', false)
+// also: showPlaceLabels, showRoadLabels, showTransitLabels, theme, font
 ```
+
+> Classic `map.setFog()` / `map.setLight()` still exist for non-Standard styles, but Standard manages atmosphere through its own config — prefer `setConfigProperty`.
 
 ---
 
 ## Projection
 
 ```js
-// Globe view
-map.setProjection('globe')
-
-// Standard flat map
-map.setProjection('mercator')
-
-// Other options: 'albers', 'equalEarth', 'equirectangular',
-//   'lambertConformalConic', 'naturalEarth', 'winkelTripel'
+map.setProjection('globe')      // globe view (Settings toggle)
+map.setProjection('mercator')   // flat map
 ```
+
+The app toggles between `globe` and `mercator` from the Settings tab.
 
 ---
 
 ## Style Switching
 
+The app keeps a season-aware pair of Standard styles; switching season or base layer is a full `setStyle()`:
+
 ```js
-// Full style swap
-map.setStyle('mapbox://styles/mapbox/outdoors-v12')
+// Our style URLs — packages/map-core/src/styles.ts
+const STYLES = {
+  outdoorsSummer: 'mapbox://styles/kankava/cmp6x7gqn000o01skbescgqr3',
+  outdoorsWinter: 'mapbox://styles/kankava/cmp6xadna002e01s81n7c055u',
+  satellite:      'mapbox://styles/mapbox/standard-satellite',
+}
 
-// With options
-map.setStyle(styleUrl, { diff: false }) // force full reload (no diffing)
+map.setStyle(STYLES.outdoorsWinter, { diff: false }) // force full reload
 
-// Events
-map.on('style.load', () => {
-  // Re-apply terrain, overlays, custom layers after style swap
+// setStyle wipes sources/terrain — re-apply on style.load
+map.once('style.load', () => {
+  applyTerrain(map)   // re-assert app-terrain-dem
+  // raster overlays re-add themselves via their own style.load listener
 })
 ```
 
@@ -210,95 +165,46 @@ map.on('style.load', () => {
 ## Events
 
 ```js
-map.on('load', handler)        // initial load complete
-map.on('style.load', handler)  // style loaded (fires on setStyle too)
-map.on('moveend', handler)     // viewport change complete
-map.on('click', handler)       // map click
-map.on('click', layerId, handler) // click on specific layer features
+map.on('load', handler)           // initial load complete
+map.on('style.load', handler)     // style loaded (fires on setStyle too)
+map.on('moveend', handler)        // viewport change complete → app syncs to mapStore
+map.on('pitchend', handler)       // used by the 2D/3D control to track camera tilt
+map.on('click', layerId, handler) // click on a specific layer's features
 
-map.once('load', handler)      // fire once then auto-remove
-map.off('click', handler)      // remove handler
+map.once('load', handler)         // fire once then auto-remove
+map.off('moveend', handler)       // remove handler
 ```
 
 ---
 
-## Useful for Topo Overlay Work
+## Raster Topo Overlays — how the app does it
 
-### Problem: Base Map Layers Bleeding Through Topo Overlay
-
-When a raster topo overlay is inserted before the first symbol layer, some base map features (road casings, trail lines) may still render above the overlay because they're interleaved with symbol layers.
-
-### Option 1: Hide Base Map Layers Under Topo
+Country topo maps (swisstopo, IGN, …) are raster tiles overlaid on the Standard basemap. Mapbox Standard makes this clean — **no base-layer hiding needed**:
 
 ```js
-// Find all fill and line layers from the base style
-const baseLayers = map.getStyle().layers.filter(l =>
-  (l.type === 'fill' || l.type === 'line') &&
-  l.source === 'composite' // Mapbox's default source name
-)
+// 1. Add the raster source
+map.addSource('topo-raster-source', { type: 'raster', tiles: [/* ... */], tileSize: 256 })
 
-// Hide them when topo overlay is active
-for (const layer of baseLayers) {
-  map.setLayoutProperty(layer.id, 'visibility', 'none')
-}
-
-// Restore when topo overlay is removed
-for (const layer of baseLayers) {
-  map.setLayoutProperty(layer.id, 'visibility', 'visible')
-}
+// 2. Add the raster layer into the `middle` slot — above roads, below labels.
+//    Standard's labels and POIs stay on top automatically.
+map.addLayer({
+  id: 'topo-raster-layer',
+  type: 'raster',
+  source: 'topo-raster-source',
+  slot: 'middle',
+  paint: { 'raster-opacity': 1 },
+})
 ```
 
-### Option 2: Move Topo Overlay Higher in Stack
+The `middle` slot is the whole trick: the topo raster covers the basemap's roads and landuse while Standard's labels stay readable above it. The pre-Standard workarounds — enumerating `composite` layers to hide them, moving layers above the last symbol layer, dimming line opacity — are **obsolete** and were removed; Standard's internal layers aren't reachable that way anyway.
 
-```js
-// Insert topo raster above ALL base layers (fills + lines + symbols)
-// Only keep labels we explicitly want above the overlay
-const lastSymbolLayer = map.getStyle().layers
-  .filter(l => l.type === 'symbol')
-  .pop()
-
-map.moveLayer('topo-raster', lastSymbolLayer?.id)
-```
-
-### Option 3: Reduce Opacity of Conflicting Layers
-
-```js
-// Make base map lines semi-transparent when topo is active
-const lineLayerIds = map.getStyle().layers
-  .filter(l => l.type === 'line' && l.source === 'composite')
-  .map(l => l.id)
-
-for (const id of lineLayerIds) {
-  map.setPaintProperty(id, 'line-opacity', 0.2)
-}
-```
-
-### Option 4: Filter Base Layers by Zoom
-
-```js
-// Only show base map roads at high zoom where topo tiles may be missing detail
-map.setLayerZoomRange('road-primary', 16, 22)
-```
-
-### Diagnostic: Inspect Layer Stack in Console
-
-```js
-// Run in browser console to see the full layer stack with types
-map.getStyle().layers.map(l => `${l.type.padEnd(10)} ${l.id}`).join('\n')
-
-// Find where a specific layer sits
-map.getStyle().layers.findIndex(l => l.id === 'my-topo-layer')
-
-// Count layers by type
-const counts = {}
-map.getStyle().layers.forEach(l => counts[l.type] = (counts[l.type] || 0) + 1)
-console.table(counts)
-```
+> **Diagnostic** — in the browser console (`__map` is exposed in dev builds): `__map.getStyle().layers` lists your slots + custom layers (not Standard's internals); `__map.getTerrain()` confirms the active terrain source.
 
 ---
 
 ## References
 
 - [Mapbox GL JS API Reference](https://docs.mapbox.com/mapbox-gl-js/api/)
+- [Mapbox Standard & slots guide](https://docs.mapbox.com/map-styles/standard/guides/)
 - [Mapbox Style Specification](https://docs.mapbox.com/style-spec/)
 - [Mapbox GL JS Examples](https://docs.mapbox.com/mapbox-gl-js/example/)

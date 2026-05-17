@@ -82,15 +82,15 @@ This matrix is the product contract. It determines which controls render as acti
 
 | Feature | Mapbox | MapTiler | Notes |
 |---|---|---|---|
-| Base outdoors map | `available` | `available` | Mapbox Outdoors v12 / MapTiler Outdoor v2 |
-| Base satellite map | `available` | `available` | Mapbox Satellite Streets v12 / MapTiler Satellite |
+| Base outdoors map | `available` | `available` | Mapbox Standard "Outdoors" custom style / MapTiler Outdoor v2 |
+| Base satellite map | `available` | `available` | Mapbox Standard Satellite / MapTiler Satellite |
 | 3D terrain | `available` | `available` | Mapbox Terrain-DEM v1 / MapTiler Terrain RGB v2 |
 | Country topo raster overlays | `available` | `available` | XYZ tiles are renderer-neutral |
 | Raster overlays (seasonal satellite) | `available` | `available` | XYZ/WMS tiles are renderer-neutral |
 | Globe projection | `available` | `available` | Both SDKs support globe; MapTiler SDK is built on MapLibre v4+ which added globe support |
-| Summer mode | `available` | `available` | Mapbox Outdoors v12 / MapTiler Outdoor v2 |
-| Winter mode | `available` | `available` | Mapbox Outdoors v12 + raster overlays / MapTiler Winter v2 (native pistes, lifts, avalanche zones) |
-| Trip route layers | `available` | `available` | Shared via `AppMapAdapter` |
+| Summer mode | `available` | `available` | Mapbox Standard "Outdoors" / MapTiler Outdoor v2 |
+| Winter mode | `available` | `available` | Mapbox Standard "Outdoors Winter" custom style / MapTiler Winter v2 (ski-focused POIs, winter palette) |
+| Trip route layers | `coming_soon` | `coming_soon` | Shared via `AppMapAdapter`; built in Phase 4 (matrix flips to `available` then) |
 | Geocoder | `coming_soon` | `coming_soon` | Mapbox SearchBox ships in Phase 4 inside `runtime/mapbox/` (matrix updated to `available` when it lands); MapTiler Geocoding in M4 |
 | Weather | `coming_soon` | `coming_soon` | MapTiler weather API available; Mapbox-side TBD |
 | Directions / route planner | `coming_soon` | `coming_soon` | Mapbox Directions API; MapTiler equivalent TBD |
@@ -159,17 +159,16 @@ A **type-narrowing interface** (not a wrapper class) that shared app-owned layer
 
 ```ts
 export interface AppMapAdapter {
-  // Style inspection (needed for layer ordering — insert raster below first symbol layer)
   isStyleLoaded(): boolean
-  getStyleLayers(): Array<{ id: string; type: string }>
 
   // Source/layer lifecycle
   getSource(id: string): unknown
   addSource(id: string, source: unknown): void
   removeSource(id: string): void
-
   getLayer(id: string): unknown
-  addLayer(layer: unknown, beforeId?: string): void
+  // `opts.slot` requests placement below map labels: the Mapbox adapter maps it
+  // to a Mapbox Standard slot; the MapTiler adapter derives a `beforeId`.
+  addLayer(layer: unknown, opts?: { slot?: string }): void
   removeLayer(id: string): void
 
   // Viewport reads (needed for bbox queries, zoom-dependent simplification)
@@ -189,12 +188,12 @@ export interface AppMapAdapter {
 }
 ```
 
-**Why these methods**: `getStyleLayers()` is required by `useRasterOverlays.ts` to find the first symbol layer for correct layer ordering (raster below labels). `getBounds()`/`getZoom()`/`onMoveEnd()` are required by viewport-driven trip route fetching. `onClick()` is required for trip route click-to-open-detail. `flyTo()` is required for search result navigation.
+**Why these methods**: `addLayer`'s `opts.slot` handles layer ordering (raster below labels) — the Mapbox adapter resolves it to a Mapbox Standard slot, the MapTiler adapter to a `beforeId` (first symbol layer). `getBounds()`/`getZoom()`/`onMoveEnd()` are required by viewport-driven trip route fetching. `onClick()` is required for trip route click-to-open-detail. `flyTo()` is required for search result navigation.
 
 Each provider runtime wraps its map instance to satisfy this interface. The goal is **not** to abstract the entire vendor SDK — only to support shared app-owned behavior:
 
 - Source/layer lifecycle (add, remove, check existence)
-- Style inspection (layer ordering)
+- Layer ordering (via `addLayer`'s `slot` option)
 - Style reload handling (re-apply overlays after style change)
 - Viewport reads and events (data fetching, interaction)
 

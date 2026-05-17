@@ -57,7 +57,7 @@ Exports:
 Providers:
 | ID | Country | Direct/Proxy | Winter variant |
 |----|---------|-------------|----------------|
-| swisstopo | CH | Direct | Yes (pixelkarte-grau) |
+| swisstopo | CH | Proxy (blank-tile filtering) | Yes (pixelkarte-farbe-winter) |
 | ign | FR | Direct (public PLANIGNV2, no key) | No |
 | basemap-at | AT | Direct | No |
 | bkg | DE | Direct | No |
@@ -202,6 +202,8 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
 
 ## Sub-milestone 3c — Seasonal Satellite & Overlays
 
+> **Sentinel-2 status**: the backend handler, route, OAuth2, and tests below were all built. The *frontend* feature is deferred — no Sentinel Hub Instance ID is configured, the `satellite-winter` basemap card is disabled, and `applySentinel` is a no-op stub. The swisstopo winter variant and the OpenSnowMap / swisstopo overlays did ship.
+
 ### 1. Sentinel route registration — `apps/api/cmd/server/main.go`
 
 - [x] Conditionally register sentinel route (if `SentinelHubInstanceID` set):
@@ -230,7 +232,7 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
 ### 4. Raster overlay hook — `apps/web/src/map/useRasterOverlays.ts`
 
 - [x] Handles overlay sources with season/topo filters
-- [x] Handles sentinel seasonal satellite (when satellite base layer active)
+- [x] `applySentinel` wired into the hook — _deferred: it is a no-op stub (always removes the layer); the `satellite-winter` basemap card is disabled, so seasonal satellite is not user-reachable_
 
 ### 5. Store — `apps/web/src/stores/mapStore.ts`
 
@@ -265,7 +267,7 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
 
 ### 3. Sidebar components — `apps/web/src/map/sidebar/`
 
-- [x] `Sidebar.tsx` — collapsible left panel (320px, slide in/out), tab buttons, header with user info + sign out
+- [x] `Sidebar.tsx` — collapsible right panel (320px, slide in/out), tab buttons, header with user info + sign out
 - [x] `BasemapsTab.tsx` — card grid: 4 global cards (Outdoors/Satellite × Summer/Winter) + 7 country topo cards (swisstopo summer/winter, IGN, basemap.at, BKG, Kartverket, USGS). Active card determined by matching current state
 - [x] `OverlaysTab.tsx` — toggle switches for pistes, ski touring (swisstopo only), snowshoe (swisstopo only), sentinel year selector (satellite only)
 - [x] `SettingsTab.tsx` — custom exaggeration toggle + slider, flat/globe projection toggle (3D terrain toggle moved to map control)

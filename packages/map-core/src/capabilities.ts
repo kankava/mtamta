@@ -9,7 +9,7 @@ const MAPBOX_CAPABILITIES: ProviderCapabilities = {
   globe_projection: 'available',
   season_summer: 'available',
   season_winter: 'available',
-  trip_routes: 'available',
+  trip_routes: 'coming_soon', // flips to 'available' when Phase 4 tripLayers ships
   geocoder: 'coming_soon',
   weather: 'coming_soon',
   directions: 'coming_soon',
@@ -24,7 +24,7 @@ const MAPTILER_CAPABILITIES: ProviderCapabilities = {
   globe_projection: 'available',
   season_summer: 'available',
   season_winter: 'available',
-  trip_routes: 'available',
+  trip_routes: 'coming_soon', // flips to 'available' when Phase 4 tripLayers ships
   geocoder: 'coming_soon',
   weather: 'coming_soon',
   directions: 'coming_soon',
