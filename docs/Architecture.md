@@ -703,6 +703,16 @@ See [`MapProviders.md`](MapProviders.md) for the full implementation reference: 
 
 **Access token**: Stored in environment variables, loaded via `packages/map-core`.
 
+### Tile Formats — Raster vs Vector
+
+| Layer | Format | Rationale |
+|---|---|---|
+| Provider base styles (Mapbox Standard, MapTiler) | Vector | Crisp at any zoom, smooth, restyleable — and it is what the providers ship |
+| Country topo overlays (swisstopo, IGN, BKG, Kartverket, USGS, OpenTopoMap) | Raster | Each card's value is the *official national map* of that country; the agencies' classic topo products (e.g. swisstopo's Landeskarte) are raster. Raster reproduces that cartography exactly and overlays trivially (image + opacity, slot ordering) |
+| App-owned data (trip routes, markers — Phase 4+) | Vector | GeoJSON sources + vector layers — interactive and restyleable |
+
+**Decision — country topo stays raster.** The national agencies do publish vector tiles (e.g. swisstopo's newer "Base Map" line), but those are a separate, more streamlined product — *not* a vector rendering of the classic national map. Switching would change *which* map is shown, not just the format, and the "official national map" identity is the whole point of the country cards. Vector is used where it genuinely pays off: the provider base style and app-owned data.
+
 ### 3D Terrain Configuration
 
 Both providers support 3D terrain with different DEM sources:
