@@ -1,8 +1,8 @@
 # Mapbox vs MapTiler for mtamta
 
-> **Status: research notes**
+> **Status: research notes — revised 2026-05-16**
 >
-> Public-source comparison completed on **March 16, 2026**. This document evaluates feature parity against mtamta's roadmap, not a generic vendor comparison.
+> Public-source comparison originally completed **March 16, 2026**. Revised after Phase 3.5 (dual-provider runtime) and M3 (Mapbox Standard migration) shipped — the basemap parity rows and the Mapbox style-readiness section now reflect the *implemented* state, not the pre-implementation plan. The strategic split (shared overlays vs provider-specific search / weather / directions) and the Phase 8 / 11 reasoning still stand.
 
 ---
 
@@ -75,12 +75,12 @@ The biggest differences between Mapbox and MapTiler matter in:
 
 | Capability | Mapbox | MapTiler | Best read for mtamta |
 |---|---|---|---|
-| Outdoor basemap | Yes: `outdoors-v12` | Yes: `Outdoor` | Both work |
-| Outdoor style maintenance | Outdoor is in legacy/classic style bucket | Outdoor is a current flagship outdoor style | Advantage MapTiler |
-| Satellite basemap | Yes | Yes | Parity |
-| Hybrid satellite basemap | Yes: `Satellite Streets`, `Standard Satellite` | Yes: `Satellite Hybrid` | Parity |
-| Winter / snow basemap | No official ready-made winter outdoor basemap found | Yes: ready-made `Winter` style | Advantage MapTiler |
-| Ski / winter cartography | Partial via Outdoors/custom style | Strong in Winter style | Advantage MapTiler |
+| Outdoor basemap | Custom Outdoors style on **Mapbox Standard** | `outdoor-v2` | Parity — both shipped (M3) |
+| Outdoor style maintenance | Mapbox Standard — current, actively-developed flagship | `outdoor-v2` — current flagship outdoor style | Parity (both on current styles) |
+| Satellite basemap | `standard-satellite` | `satellite` / `hybrid` | Parity |
+| Hybrid satellite basemap | `standard-satellite` | `hybrid` | Parity |
+| Winter / snow basemap | Custom Outdoors Winter on Mapbox Standard (built in M3) | Built-in `winter-v2` | Both shipped — MapTiler's is turnkey, Mapbox's needed custom Studio work |
+| Ski / winter cartography | Custom Outdoors Winter + swisstopo ski/snowshoe overlays | Native ski runs / lifts in `winter-v2` | Advantage MapTiler (purpose-built winter cartography) |
 | 3D terrain | Yes | Yes | Parity |
 | Globe projection | Yes | Yes | Parity |
 | Custom GeoJSON layers | Yes | Yes | Parity |
@@ -107,29 +107,28 @@ MapTiler is clearly more opinionated for outdoor products:
 
 This is valuable because it reduces the amount of style work you need to do before the map feels product-specific.
 
-### Mapbox
+### Mapbox (as implemented — Phase 3.5 M3)
 
-Mapbox definitely covers the basics:
+The Mapbox runtime was migrated off the legacy `outdoors-v12` onto **Mapbox
+Standard**, with a custom seasonal pair in the project's Studio account:
 
-- `mapbox://styles/mapbox/outdoors-v12`
-- `mapbox://styles/mapbox/satellite-streets-v12`
-- `Mapbox Standard Satellite`
+- `mapbox://styles/kankava/…` — custom **Outdoors** (summer) on Mapbox Standard
+- `mapbox://styles/kankava/…` — custom **Outdoors Winter** on Mapbox Standard
+- `mapbox://styles/mapbox/standard-satellite` — satellite
 
-But there are two caveats:
-
-- Mapbox's classic styles page says **Outdoors v12 is no longer actively maintained**
-- I did **not** find a current official ready-made winter outdoor style comparable to MapTiler Winter
-
-For mtamta, that means:
-
-- Mapbox can absolutely support the product
-- but your current plan to create **custom Summer/Winter styles** is the right one
-- MapTiler reduces that styling burden immediately
+This resolves the original caveats (legacy Outdoors v12, no ready-made winter
+style): Mapbox now runs the current flagship style and has a true Summer /
+Winter pair matching MapTiler's `outdoor-v2` / `winter-v2`. The cost was the
+custom Studio styling work (done in M3) — MapTiler still gets equivalent
+styles for free, built in.
 
 ### Practical conclusion
 
-- If your priority is **get a strong outdoor/winter visual identity fast**, MapTiler is ahead
-- If your priority is **full app platform capability**, Mapbox is ahead
+- Both providers now ship a polished seasonal outdoor pair.
+- MapTiler keeps the lower styling burden (built-in styles); Mapbox needed
+  custom Studio work but is now on a current, maintained style.
+- For **full app-platform capability** (search, directions, mobile/offline),
+  Mapbox remains ahead.
 
 ---
 
@@ -313,7 +312,7 @@ Both providers support:
 - DEM-backed terrain rendering
 - outdoor-appropriate basemaps
 
-So your Phase 3.5 terrain parity goal is realistic.
+Phase 3.5's terrain-parity goal was met — both runtimes render 3D terrain (Mapbox verified in Chrome; see [Phase3_5.md](Phase3_5.md)).
 
 ### Elevation tools
 
@@ -382,9 +381,9 @@ If offline/mobile becomes a major differentiator, Mapbox retains a structural ad
 
 ## What This Means by Roadmap Phase
 
-### Phase 3.5
+### Phase 3.5 — complete & verified
 
-Both providers are good enough for:
+Both providers handle:
 
 - topographic basemap
 - satellite / hybrid basemap
