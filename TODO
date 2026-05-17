@@ -38,6 +38,7 @@
 
 - [x] Web bundle size — split mapbox-gl into separate chunk (MapPage: 1,685KB → 20KB)
 - [ ] Add tile-proxy observability (cache hit ratio, upstream error rate, per-provider request volume)
+- [ ] Versioned tile URLs for cache invalidation (before launch) — tile URLs (`/api/v1/tiles/{provider}/{z}/{x}/{y}`) have no version, so a content/source change can't be invalidated in the browser or CDN caches (only Redis, via manual flush — a dev-only hack). Add a per-provider cache version: include it in the URL (`/api/v1/tiles/v2/{provider}/…`) and in the Redis key. Bumping it invalidates all three cache layers at once; old entries age out on TTL. Keep `max-age=86400`.
 - [x] Client-cancelled tile fetches no longer log as ERROR — handler returns 499 for `context.Canceled` (commit fc54703)
 - [x] Restore terrain exaggeration for the Mapbox provider — the Settings slider re-applies terrain via `setTerrain` against an app-owned DEM source
 - [ ] Sentry for error tracking (free tier)
