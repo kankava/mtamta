@@ -38,8 +38,9 @@ export const TOPO_SOURCES: TopoSourceDef[] = [
     tileBounds: [5.3, 45.3, 11.4, 48.3], // actual tile coverage (larger than political borders)
     tileUrl:
       'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg',
+    // Official "winter representation" national map, not the plain grayscale map.
     winterTileUrl:
-      'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-grau/default/current/3857/{z}/{x}/{y}.jpeg',
+      'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe-winter/default/current/3857/{z}/{x}/{y}.jpeg',
     attribution: '&copy; <a href="https://www.swisstopo.admin.ch">swisstopo</a>',
     maxZoom: 22,
     tileSize: 256,

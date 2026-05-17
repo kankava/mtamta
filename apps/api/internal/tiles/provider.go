@@ -49,10 +49,11 @@ func BuildProviders(cfg *config.Config) map[string]*Provider {
 		RateLimit:      2000,
 	}
 
-	// swisstopo winter (grayscale variant) — same blank tile characteristics
+	// swisstopo winter — the official "winter representation" national map
+	// (ch.swisstopo.pixelkarte-farbe-winter), not the plain grayscale map.
 	providers["swisstopo-winter"] = &Provider{
 		ID:             "swisstopo-winter",
-		UpstreamURL:    "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-grau/default/current/3857/%d/%d/%d.jpeg",
+		UpstreamURL:    "https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe-winter/default/current/3857/%d/%d/%d.jpeg",
 		FormatOrder:    "zxy",
 		CacheTTL:       24 * time.Hour,
 		CachePrefix:    "tile:swisstopo-w",

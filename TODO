@@ -46,6 +46,8 @@
 - [ ] Add integration test for duplicate-email 409 path (requires real Postgres)
 - [ ] Capability-aware basemap cards (hide IGN/Sentinel when backend env vars not configured)
 - [ ] BKG TopPlusOpen serves global tiles (tested: Madrid, Rome, London, Moscow, New York all return data) — consider expanding bbox or offering it as a global topo alternative
+- [ ] Richer Swiss winter mode — add swisstopo winter overlays `ch.swisstopo.bahnen-winter` (cableways/skilifts) and `ch.swisstopo.unterkuenfte-winter` (winter huts) as `OVERLAY_SOURCES`, alongside the existing ski-touring / snowshoe
+- [ ] When the swisstopo-winter layer swap (`pixelkarte-grau` → `pixelkarte-farbe-winter`) deploys, clear the stale tile cache: `redis-cli --scan --pattern 'tile:swisstopo-w:*' | xargs -r redis-cli del` — otherwise old grayscale tiles serve until the 24h TTL expires
 - [x] Create custom Mapbox Studio winter style — done in Phase 3.5 M3 (Outdoors Winter, a custom style built on Mapbox Standard)
 - [ ] Imported Studio styles (Outdoors / Outdoors Winter) — two benign console warnings, investigated and accepted; both fixable only in the style JSON, not app code:
   - Contour layer uses a `line-progress` expression but its source lacks `lineMetrics: true` → `line-progress … requires 'lineMetrics'` warning; contour lines don't draw with progress styling. (Contour tiles also 404 at low zoom — normal, contour data starts higher.) Fix: set `lineMetrics: true` on the contour source.
