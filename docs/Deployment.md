@@ -136,8 +136,14 @@ Repo → Settings → Secrets and variables → Actions:
 |--------|--------|
 | `CLOUDFLARE_API_TOKEN` | Cloudflare > My Profile > API Tokens (Cloudflare Pages Edit permission) |
 | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare dashboard > Pages project sidebar |
+| `BACKUP_DATABASE_URL` | Railway Postgres **public** connection URL (Postgres service → Connect → Public Network). Used by the Database Backup workflow — keep in sync if the DB ever moves |
+| `R2_ACCESS_KEY`, `R2_SECRET_KEY` | Cloudflare R2 → Manage R2 API Tokens (Object Read & Write) |
+| `R2_BUCKET` | R2 bucket name for database backups |
+| `R2_ACCOUNT_ID` | Cloudflare account ID |
 
 No `RAILWAY_TOKEN` needed — Railway auto-deploys via GitHub connection.
+
+The `BACKUP_*` / `R2_*` secrets feed the **Database Backup** workflow (`.github/workflows/backup.yml`) — weekly `pg_dump` to R2. Run it manually once (Actions → Database Backup → Run workflow) to confirm all six secrets are set correctly.
 
 ### Variables
 
@@ -191,6 +197,60 @@ curl https://mtamta-production.up.railway.app/api/v1/health
 
 - Open https://mtamta.pages.dev — map should load
 - Test Google OAuth login flow end-to-end
+
+---
+
+## Operations Runbook
+
+### Database migrations
+
+The API runs `migrate.Up()` on **every startup** (`apps/api/cmd/server/main.go`), so a normal deploy auto-applies any new migrations — you do not run migrations by hand in normal operation. golang-migrate applies `apps/api/migrations/*.up.sql` in numeric order and records progress in a `schema_migrations` table inside the database itself.
+
+**Run migrations manually** (`cmd/migrate`) only in these cases:
+
+- **A fresh / empty database** (new environment, a region move, a wiped volume): after pointing the API at it, the simplest fix is to **redeploy the API** so startup migration runs. To apply directly instead:
+
+  ```bash
+  cd apps/api
+  DATABASE_URL="<Postgres public URL>" go run ./cmd/migrate up
+  ```
+
+- **The API won't boot with a migration error** ("Dirty database version N"): a migration half-applied. Inspect `SELECT * FROM schema_migrations;`. Recover by finishing/reverting the failed SQL by hand and clearing `dirty`, or — on an otherwise-empty DB — `DROP TABLE schema_migrations` and re-apply from scratch. Then redeploy.
+- **Rolling back**: `go run ./cmd/migrate down` reverses the last migration (uses the `*.down.sql` files).
+
+**You do NOT need to migrate after restoring from a backup** — a `pg_dump` restore already includes the schema *and* the `schema_migrations` table at the version the dump was taken. The restored DB is already at that version; the next deploy of newer code applies anything newer.
+
+> The startup log distinguishes `migrations applied` (something changed) from `migrations: already up to date`, and includes the version — so a no-op against a database you believed was fresh is visible, not silent.
+
+### Moving a Railway service to another region
+
+**Stateless services (the API)** — changing region is safe: Railway redeploys the container and startup migration re-runs. No data to lose.
+
+**Stateful services (Postgres, Redis)** — ⚠️ **Railway volumes are region-locked. Changing a database service's region in place does NOT move the data — you get a fresh empty volume.** (This caused the May 2026 sign-in outage.)
+
+Correct procedure to move Postgres to a new region:
+
+1. Take a fresh backup (run the **Database Backup** workflow manually, or `pg_dump`).
+2. Provision a **new** Postgres service in the target region — do not toggle the region on the existing one.
+3. Restore the dump into the new database (see *Restoring* below).
+4. Update the API's `DATABASE_URL` to reference the new Postgres service.
+5. **Redeploy the API last** — only after the new DB is up and restored — so its startup migration runs against the final database.
+6. Verify (`/api/v1/health`, sign-in), then delete the old Postgres.
+
+Redis holds only cache + sessions — it can simply be recreated empty in the new region; repoint `REDIS_URL` and redeploy the API (users re-sign-in).
+
+> **Order is critical:** settle the data services *first*, redeploy the API *last*. If the API restarts while the database is mid-swap, its startup migration runs against the *old* DB (logging a misleading success) and the new empty DB never gets the schema.
+
+### Restoring the database from a backup
+
+Backups live in R2 under `db-backups/` (see `.github/workflows/backup.yml`).
+
+```bash
+# download the chosen backup-YYYYMMDD-HHMMSS.sql.gz from R2, then:
+gunzip -c backup-YYYYMMDD-HHMMSS.sql.gz | psql "<target Postgres URL>"
+```
+
+This recreates all tables, data, and `schema_migrations`. Afterwards, deploy the current API — it migrates any newer versions automatically. (No hypertables yet, so a plain `pg_dump`/`psql` restore is sufficient; revisit if TimescaleDB hypertables are enabled later.)
 
 ---
 

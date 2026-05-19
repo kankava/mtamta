@@ -2,28 +2,59 @@ name: Database Backup
 
 on:
   schedule:
-    - cron: '0 2 * * 0'  # Sundays at 02:00 UTC
-  workflow_dispatch:
+    - cron: '0 2 * * 0'  # Sundays 02:00 UTC
+  workflow_dispatch:        # manual trigger — use this to test the workflow
 
 jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      # The runner's default postgresql-client is older than the PG 17 server,
+      # and pg_dump refuses to dump a newer server — install the matching major.
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo tee /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc >/dev/null
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
 
       - name: Dump database
         run: |
-          pg_dump "$DATABASE_URL" | gzip > backup-$(date +%Y%m%d).sql.gz
+          set -euo pipefail   # without pipefail a pg_dump failure is masked by gzip
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "::error::BACKUP_DATABASE_URL secret is empty — set it to the Railway Postgres PUBLIC connection URL"
+            exit 1
+          fi
+          file="backup-$(date -u +%Y%m%d-%H%M%S).sql.gz"
+          pg_dump --no-owner --no-privileges "$DATABASE_URL" | gzip > "$file"
+          size=$(stat -c%s "$file")
+          echo "wrote $file ($size bytes)"
+          if [ "$size" -lt 1000 ]; then
+            echo "::error::backup file suspiciously small ($size bytes) — dump likely failed"
+            exit 1
+          fi
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # Must be the Railway Postgres PUBLIC URL (…proxy.rlwy.net) — the runner
+          # is on GitHub infra and cannot reach Railway's private network.
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
 
       - name: Upload to R2
         run: |
-          aws s3 cp backup-*.sql.gz s3://$R2_BUCKET/ \
-            --endpoint-url https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com
+          set -euo pipefail
+          aws s3 cp backup-*.sql.gz "s3://${R2_BUCKET}/db-backups/" \
+            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_KEY }}
+          AWS_DEFAULT_REGION: auto
+          # Modern aws-cli adds checksums that R2 can reject — request only when required.
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+
+# Retention: set an R2 lifecycle rule on the bucket to expire objects under
+# db-backups/ after e.g. 90 days, rather than scripting cleanup here.

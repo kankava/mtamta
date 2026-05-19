@@ -59,18 +59,27 @@ func main() {
 	redisClient := cache.New(cfg.RedisURL)
 	defer func() { _ = redisClient.Close() }()
 
-	// Migrations
+	// Migrations — run on every startup. golang-migrate applies migrations/*.up.sql
+	// in order, tracking progress in the schema_migrations table.
 	m, err := migrate.New("file://migrations", db.MigrateURL(cfg.DatabaseURL))
 	if err != nil {
 		slog.Error("failed to create migrator", "error", err)
 		os.Exit(1) //nolint:gocritic // startup failure, defers not critical
 	}
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		slog.Error("migration failed", "error", err)
+	migErr := m.Up()
+	if migErr != nil && migErr != migrate.ErrNoChange {
+		slog.Error("migration failed", "error", migErr)
 		os.Exit(1) //nolint:gocritic // startup failure, defers not critical
 	}
+	version, dirty, _ := m.Version()
 	m.Close() //nolint:errcheck // best-effort cleanup after successful migration
-	slog.Info("migrations applied")
+	// Log the version explicitly, and distinguish "applied something" from
+	// "nothing to do" — so a no-op against a supposedly-fresh DB is visible.
+	if migErr == migrate.ErrNoChange {
+		slog.Info("migrations: already up to date", "version", version, "dirty", dirty)
+	} else {
+		slog.Info("migrations applied", "version", version, "dirty", dirty)
+	}
 
 	// Repositories, services, handlers
 	userRepo := user.NewRepository(pool)

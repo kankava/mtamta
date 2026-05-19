@@ -19,6 +19,11 @@ var ErrSignUpDisabled = errors.New("sign-up is restricted")
 // create a user but the email is already taken by another account.
 var ErrEmailAlreadyExists = errors.New("email already associated with another account")
 
+// ErrInvalidToken is returned when an OAuth ID token is missing, malformed,
+// expired, or fails verification. Maps to HTTP 401. Any other sign-in error
+// (DB, Redis, token signing) is an infrastructure failure and maps to HTTP 500.
+var ErrInvalidToken = errors.New("invalid ID token")
+
 type Service struct {
 	repo           *Repository
 	userRepo       *user.Repository
@@ -54,7 +59,7 @@ type AuthResult struct {
 func (s *Service) SignInWithGoogle(ctx context.Context, idToken string) (*AuthResult, error) {
 	claims, err := s.googleVerifier.Verify(ctx, idToken)
 	if err != nil {
-		return nil, fmt.Errorf("invalid Google ID token: %w", err)
+		return nil, fmt.Errorf("%w: google: %v", ErrInvalidToken, err)
 	}
 	return s.signInOrCreate(ctx, "google", claims.Sub, claims.Email, claims.Name)
 }
@@ -62,7 +67,7 @@ func (s *Service) SignInWithGoogle(ctx context.Context, idToken string) (*AuthRe
 func (s *Service) SignInWithApple(ctx context.Context, idToken string) (*AuthResult, error) {
 	claims, err := s.appleVerifier.Verify(ctx, idToken)
 	if err != nil {
-		return nil, fmt.Errorf("invalid Apple ID token: %w", err)
+		return nil, fmt.Errorf("%w: apple: %v", ErrInvalidToken, err)
 	}
 	return s.signInOrCreate(ctx, "apple", claims.Sub, claims.Email, "Apple User")
 }
