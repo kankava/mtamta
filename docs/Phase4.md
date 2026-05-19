@@ -625,7 +625,7 @@ func interpolatePosition(t time.Time, points []Trackpoint) (lat, lon float64, ok
 ### 7. Map search bar — `apps/web/src/map/runtime/mapbox/MapSearch.tsx`
 
 - [ ] `@mapbox/search-js-react` SearchBox component (Mapbox-specific — lives inside `runtime/mapbox/`)
-  - **Scope**: map geocoder only ("fly to place"). Full app-level search (activities, users, areas) is Phase 10.
+  - **Scope**: map geocoder only ("fly to place"). Full app-level search (activities, users, areas) is Phase 11.
   - Positioned top-left of map
   - On result select, calls `map.flyTo({center, zoom})`
   - Uses existing `VITE_MAPBOX_ACCESS_TOKEN`

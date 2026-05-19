@@ -167,13 +167,13 @@ mtamta/
 │   │   ├── tsconfig.json
 │   │   └── package.json
 │   │
-│   # apps/mobile/ — Phase 9 (React Native)
+│   # apps/mobile/ — Phase 7 (React Native)
 │   │
 │   └── api/                  # Go backend
 │       ├── cmd/
 │       │   ├── server/
 │       │   │   └── main.go   # Entry point
-│       │   # cmd/tilegen/ — Phase 7 (terrain analysis CLI)
+│       │   # cmd/tilegen/ — Phase 8 (terrain analysis CLI)
 │       ├── internal/
 │       │   ├── auth/         # Authentication (OAuth, JWT)
 │       │   ├── user/         # User management
@@ -212,7 +212,7 @@ mtamta/
 │   │   │   └── config.ts     # Map defaults, viewport config
 │   │   └── package.json
 │   │
-│   # packages/ui/ — created when shared component logic emerges between web and mobile (Phase 9+)
+│   # packages/ui/ — created when shared component logic emerges between web and mobile (Phase 7+)
 │
 ├── .github/
 │   └── workflows/
@@ -435,7 +435,7 @@ Machine-readable codes: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ER
 - **Component tests**: React Testing Library for key interactive components (GpxUploader, Sidebar, SearchBar)
 - **No snapshot tests**: They add noise, break on every UI change, and catch nothing meaningful
 
-**E2E Tests** (Phase 12):
+**E2E Tests** (Phase 13):
 
 - Playwright for critical user flows: sign in → create activity (GPX upload) → view on map → like → search → find activity
 - Run against staging environment
@@ -649,9 +649,9 @@ Layers are toggled via the UI and managed through the shared `map-core` package.
 |---|---|---|
 | `packages/shared` | TypeScript types, API client, validation | Web + Mobile |
 | `packages/map-core` | Map styles, layer configs, provider types, capability matrix | Web + Mobile |
-| `packages/ui` | Platform-agnostic component logic (Phase 9+) | Web + Mobile |
+| `packages/ui` | Platform-agnostic component logic (Phase 7+) | Web + Mobile |
 
-### Offline Capabilities (Phase 11)
+### Offline Capabilities (Phase 7)
 
 - Download map tile regions for offline use via Mapbox offline API
 - Cache activity data locally (SQLite or AsyncStorage)
@@ -1641,7 +1641,7 @@ All user-uploaded files are stored in S3-compatible storage (AWS S3, MinIO, Clou
 
 ### Routes
 
-> Planned itineraries (the `routes` table). These endpoints are designed here but built in the route-planning phase — see Plan.md Phase 11.
+> Planned itineraries (the `routes` table). These endpoints are designed here but built in the route-planning phase — see Plan.md Phase 6.
 
 | Method | Path | Description |
 |---|---|---|
@@ -1860,7 +1860,7 @@ volumes:
   pgdata:
 ```
 
-> **Future services** (added when their phases are implemented): MinIO/S3 (Phase 4 — file storage), Meilisearch (Phase 10 — search).
+> **Future services** (added when their phases are implemented): MinIO/S3 (Phase 4 — file storage), Meilisearch (Phase 11 — search).
 
 The Go API and Vite dev server run on the host (not containerized) during development for fast iteration and hot reload. `turbo dev` starts both.
 
@@ -2195,7 +2195,7 @@ The ingest pipeline (weather, avalanche, lifts, device sync) runs as background 
 
 #### Health Check Endpoint
 
-The `GET /api/v1/health` endpoint checks all configured dependencies. Services are included only when their URL is set (e.g., Meilisearch appears after Phase 10):
+The `GET /api/v1/health` endpoint checks all configured dependencies. Services are included only when their URL is set (e.g., Meilisearch appears after Phase 11):
 
 ```json
 {

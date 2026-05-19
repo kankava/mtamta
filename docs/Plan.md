@@ -12,13 +12,14 @@
 4. [Phase 3.5: Multi-Provider Support](#phase-35-multi-provider-support)
 5. [Phase 4: Activity System](#phase-4-activity-system)
 6. [Phase 5: Device Integrations](#phase-5-device-integrations)
-7. [Phase 6: User & Social](#phase-6-user--social)
-8. [Phase 7: Terrain Analysis Layers](#phase-7-terrain-analysis-layers)
-9. [Phase 8: Live Data Integrations](#phase-8-live-data-integrations)
-10. [Phase 9: Mobile App](#phase-9-mobile-app)
-11. [Phase 10: Search & Discovery](#phase-10-search--discovery)
-12. [Phase 11: Advanced Features](#phase-11-advanced-features)
-13. [Phase 12: Polish & Launch](#phase-12-polish--launch)
+7. [Phase 6: Route & Planning](#phase-6-route--planning)
+8. [Phase 7: Mobile App + Offline](#phase-7-mobile-app--offline)
+9. [Phase 8: Terrain Analysis Layers](#phase-8-terrain-analysis-layers)
+10. [Phase 9: User & Social](#phase-9-user--social)
+11. [Phase 10: Live Data Integrations](#phase-10-live-data-integrations)
+12. [Phase 11: Search & Discovery](#phase-11-search--discovery)
+13. [Phase 12: Advanced Features](#phase-12-advanced-features)
+14. [Phase 13: Polish & Launch](#phase-13-polish--launch)
 
 ---
 
@@ -60,7 +61,7 @@ None — this is the starting point.
    - Configuration loading from environment variables
 
 3. **Database setup**
-   - Docker Compose file with PostgreSQL + PostGIS + TimescaleDB (`timescale/timescaledb-ha:pg17`), Redis (sessions, refresh tokens). Time-series tables use regular PostgreSQL initially; hypertables enabled when data volume justifies it. MinIO/local-fs in Phase 4, Meilisearch in Phase 10
+   - Docker Compose file with PostgreSQL + PostGIS + TimescaleDB (`timescale/timescaledb-ha:pg17`), Redis (sessions, refresh tokens). Time-series tables use regular PostgreSQL initially; hypertables enabled when data volume justifies it. MinIO/local-fs in Phase 4, Meilisearch in Phase 11
    - Migration tooling (golang-migrate or goose)
    - Initial migration: enable extensions (`CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS timescaledb`), `users` table, `auth_providers` table
    - Database connection pool in Go
@@ -92,7 +93,7 @@ None — this is the starting point.
 
 8. **Docker & deployment setup**
    - `apps/api/Dockerfile` — multi-stage Go build (golang:1.26-alpine builder → alpine:3.20 runtime)
-   - `docker-compose.yml` — local dev services (TimescaleDB+PostGIS, Redis). MinIO added in Phase 4, Meilisearch in Phase 10
+   - `docker-compose.yml` — local dev services (TimescaleDB+PostGIS, Redis). MinIO added in Phase 4, Meilisearch in Phase 11
    - `railway.toml` — deploy config with health check path
    - Railway project setup: api service (Docker), Postgres via TimescaleDB+PostGIS template (Docker), managed Redis
 
@@ -112,7 +113,7 @@ None — this is the starting point.
 11. **Developer experience**
     - `Makefile` with `dev`/`test`/`seed`/`db-migrate`/`db-reset` targets
     - `.env.example` with all required env vars and safe local defaults
-    - `data/seed/` with sample SQL (users, trips placeholder)
+    - `data/seed/` with sample SQL (users, activities placeholder)
 
 ### Key Files
 
@@ -225,7 +226,7 @@ mtamta/
 
 4. **Layout integration**
    - Map fills the viewport
-   - Side panel overlay for future trip details
+   - Side panel overlay for future activity details
    - Layer panel as floating UI element
    - Responsive: panel collapses on small screens
 
@@ -333,7 +334,7 @@ apps/web/src/
    - OpenSnowMap pistes overlay source integration
 
 5. **Basic tile proxy handler** (`apps/api/internal/geo/tileproxy.go`)
-   - Implement basic tile proxy handler for OpenTopoMap and Sentinel-2 tiles. The full terrain tile generation pipeline is in Phase 7; this phase only adds HTTP proxy + Redis caching for external tile sources
+   - Implement basic tile proxy handler for OpenTopoMap and Sentinel-2 tiles. The full terrain tile generation pipeline is in Phase 8; this phase only adds HTTP proxy + Redis caching for external tile sources
    - Redis caching for country topo tiles (where proxied): `tile:{z}:{x}:{y}:{layer}`, 24-hour TTL
 
 6. **Tile proxy tests**
@@ -518,7 +519,7 @@ packages/map-core/src/
 3. **Photo upload + geotagging** — S3 pre-signed uploads (server-generated keys), EXIF GPS extraction, timestamp interpolation fallback
 4. **Map activity display** — activity tracks as GeoJSON on map, color by activity type, click to open detail panel; `useActivityTracks` uses `AppMapAdapter`, placed in `runtime/shared/`
 5. **Activity UI** — unified create page (form + optional GPX), detail page, card component, Radix UI primitives (Dialog, DropdownMenu, Toast)
-6. **Map search bar** — Mapbox SearchBox geocoder (fly-to-place only; full app search is Phase 10); Mapbox SearchBox is Mapbox-specific, wrap in capability check, mark `coming_soon` for MapTiler
+6. **Map search bar** — Mapbox SearchBox geocoder (fly-to-place only; full app search is Phase 11); Mapbox SearchBox is Mapbox-specific, wrap in capability check, mark `coming_soon` for MapTiler
 7. **Climbing activity segments** — approach/climb/descent segments, per-pitch JSONB metadata, `@openbeta/sandbag` grade display, vertical profile
 
 > **Detailed implementation plan**: See [`docs/Phase4.md`](Phase4.md) for sub-milestones (4a–4d), file manifests, SQL schemas, endpoint contracts, and verification checklists.
@@ -591,7 +592,7 @@ packages/map-core/src/
    - Failed syncs: `sync_status='failed'` + error_message, retried next cycle
    - Initial sync on connect: last 30 days of activities
 
-> **Architecture note**: Background goroutines within the API process are sufficient for Phase 5's single-provider sync. Before Phase 8 (multiple concurrent ingest pipelines), extract schedulers into a dedicated worker binary (`cmd/worker/`) to avoid overloading the web API process and enable independent scaling.
+> **Architecture note**: Background goroutines within the API process are sufficient for Phase 5's single-provider sync. Before Phase 10 (multiple concurrent ingest pipelines), extract schedulers into a dedicated worker binary (`cmd/worker/`) to avoid overloading the web API process and enable independent scaling.
 
 5. **API endpoints**
    - `GET /api/v1/integrations/providers` — list available providers + connection status
@@ -678,111 +679,210 @@ packages/shared/src/types/
 
 ---
 
-## Phase 6: User & Social
+## Phase 6: Route & Planning
 
-**Goal**: User profiles, social interactions (follow, like, save, comment), an activity feed, and in-app notifications.
+**Goal**: Users can plan routes — place waypoints, snap them to trails, see an elevation profile, and save, share, and export routes. Builds the `route` entity designed in `Architecture.md` (planned itineraries, distinct from recorded activities).
 
 ### Dependencies
 
-- Phase 1 (auth, users)
-- Phase 4 (trips exist to like/save/comment on)
-- Phase 5 (device-synced trips also appear in social feeds)
+- Phase 2 (map rendering, layer system)
+- Phase 3.5 (multi-provider adapter — the route layer targets `AppMapAdapter`)
+- Phase 4 (activities — a completed activity can link the route it followed via `activities.route_id`)
 
 ### Features
 
-- Public user profile pages (avatar, bio, trip list, stats)
-- Follow / unfollow users
-- Like / unlike trips
-- Save / unsave (bookmark) trips
-- Comments on trips
-- Activity feed (trips from followed users)
-- Follower/following counts and lists
-- In-app notifications (follow, like, comment triggers)
+- Route planner: click-to-place waypoints, draggable, with undo/redo
+- Trail snapping via the Mapbox Directions API (walking profile), proxied + cached
+- Elevation profile for the planned route (distance vs elevation, total ascent/descent)
+- The `routes` entity — planned itineraries with `path` geometry + `waypoints` JSONB
+- Route CRUD, save, and share; routes shown on the user profile
+- GPX import (build a route from an uploaded GPX) and GPX export (download a route)
+- Per-route visibility (private / followers / public), mirroring activities
+- Push a route to a Garmin device as a course (via the Phase 5 course-push endpoint)
 
 ### Technical Tasks
 
-1. **Social API** (`apps/api/internal/social/`)
-   - `handler.go` — follow, like, save, comment endpoints
-   - `service.go` — social logic, feed generation
-   - `repository.go` — follows, likes, saves, comments table operations
-   - Database migrations for social tables
+1. **Routes migration** — `routes` table + `activities.route_id` FK
+   - `CREATE TABLE routes` per the Architecture.md schema (`path` GEOGRAPHY(LineString), `waypoints` JSONB, `activity_type`, distance/elevation, `visibility`)
+   - `ALTER TABLE activities ADD CONSTRAINT ... FOREIGN KEY (route_id) REFERENCES routes(id) ON DELETE SET NULL` — adds the deferred FK; the `route_id` column already exists (NULL-able, FK-less) from Phase 4's migration 003
+   - Migration number: next available at implementation time (Phase 5 device-sync migrations land first)
 
-2. **Activity feed**
-   - `GET /api/v1/feed` — returns trips from followed users, sorted by recency
-   - Pagination (cursor-based)
-   - Include trip previews with like/save counts
+2. **Route domain, repository, service, handler** (`apps/api/internal/route/`)
+   - `route.go`, `repository.go`, `service.go`, `handler.go` — follow the `activity` package patterns (SQL const, COALESCE updates, pgx scanning, sentinel errors)
+   - Bbox GeoJSON query for `GET /api/v1/map/routes` (zoom-dependent `ST_Simplify`, `visibility='public'`)
 
-3. **User profile enhancements**
-   - `PATCH /api/v1/users/me` — update avatar, bio, display name
-   - Fix nullable field clearing: PATCH currently uses COALESCE so clients can't set bio/avatar_url to null. Use a three-state patch type (unset / null / value) or explicit clear flags
-   - Avatar upload via S3 pre-signed URL
-   - Trip count, follower/following counts on profile
+3. **Directions proxy** (`apps/api/internal/geo/directions.go`)
+   - `POST /api/v1/routes/directions` — accepts waypoints, calls the Mapbox Directions API (walking profile), returns a snapped GeoJSON LineString + distance_m + duration_s
+   - Redis cache `directions:{sha256(waypoints)}`, 1-hour TTL; rate limit 10 req/min per user
+   - Fallback: straight-line segments if the Directions API errors
 
-4. **Auth improvements**
-   - Multi-provider account linking: sign-in with a second provider for the same email should attach the provider to the existing user, not fail with 409. Implement "find by normalized email and attach provider" in one transaction
-   - Refresh token rotation: implement one-time-use refresh tokens. Once rotation is in place, also fix the StrictMode double-restore in App.tsx (dev-only mount effect fires twice, issuing duplicate /auth/refresh requests)
+4. **Route CRUD API**
+   - `POST/GET/PATCH/DELETE /api/v1/routes` — create, read, update, delete (owner-only mutations)
+   - `GET /api/v1/routes` — the caller's own routes; `GET /api/v1/map/routes` — public routes by bbox
+   - `GET /api/v1/routes/{id}/gpx` — export a route as a GPX file
 
-5. **Notifications**
-   - `notifications` table migration
-   - `GET /api/v1/notifications` — polling endpoint for current user's notifications
-   - `PATCH /api/v1/notifications/:id/read` — mark notification as read
-   - Trigger notifications on follow, like, and comment actions
+5. **Route planner UI** (`apps/web/src/map/RoutePlanner.tsx`)
+   - Click-to-place draggable waypoints; on each change, call the directions proxy to snap
+   - Render the snapped route via `AppMapAdapter.addLayer(layer, { slot: 'top' })`
+   - Show distance + estimated duration; undo/redo for waypoint edits
 
-6. **Web UI**
-   - `pages/UserProfilePage.tsx` — user profile with trip grid
-   - `components/FollowButton.tsx` — follow/unfollow toggle
-   - `components/LikeButton.tsx` — like/unlike with count
-   - `components/SaveButton.tsx` — bookmark toggle
-   - `components/CommentSection.tsx` — comment list + add form
-   - `pages/FeedPage.tsx` — activity feed with trip cards
+6. **Elevation profile** (`apps/web/src/components/ElevationProfile.tsx`)
+   - Sample points with `turf.along()`, query elevation via `map.queryTerrainElevation()`
+   - SVG/Canvas chart: distance vs elevation, total ascent/descent, min/max; hover highlights the point on the map
+   - Reusable for routes, completed activities, and (later) the measurement tool
+
+7. **GPX import / export**
+   - Import: build a route from an uploaded GPX — reuse the Phase 4 GPX parser to derive `waypoints` + `path`
+   - Export: serve a route as GPX via `GET /api/v1/routes/{id}/gpx`
+
+8. **Route store** (`apps/web/src/stores/routeStore.ts`)
+   - State: waypoints, snapped route, elevation samples, the caller's routes
+   - Actions: addWaypoint, moveWaypoint, removeWaypoint, clearRoute, fetchDirections, saveRoute, fetchMyRoutes
 
 ### Key Files
 
 ```
 apps/api/
-├── internal/social/
-│   ├── handler.go
+├── internal/route/
+│   ├── route.go
+│   ├── repository.go
 │   ├── service.go
-│   └── repository.go
-├── migrations/
-│   ├── 008_follows.up.sql
-│   ├── 009_likes_saves.up.sql
-│   ├── 010_comments.up.sql
-│   └── 011_notifications.up.sql
+│   └── handler.go
+└── internal/geo/
+    └── directions.go
 
 apps/web/src/
-├── pages/
-│   ├── UserProfilePage.tsx
-│   └── FeedPage.tsx
-├── components/
-│   ├── FollowButton.tsx
-│   ├── LikeButton.tsx
-│   ├── SaveButton.tsx
-│   └── CommentSection.tsx
+├── map/RoutePlanner.tsx
+├── components/ElevationProfile.tsx
+└── stores/routeStore.ts
 ```
 
 ### Acceptance Criteria
 
-- [ ] Open sign-ups: remove `ALLOWED_EMAILS` restriction on Railway (currently locked to owner email only)
-- [ ] User can view other users' profiles with their public trips
-- [ ] User can follow/unfollow other users
-- [ ] User can like and save trips; counts update in real time
-- [ ] User can comment on trips; comments display chronologically
-- [ ] Activity feed shows recent trips from followed users
-- [ ] Feed supports cursor-based pagination
-- [ ] User can update their avatar, bio, and display name
-- [ ] All social actions require authentication
-- [ ] User receives in-app notifications for follows, likes, and comments
+- [ ] The `routes` table is created and the `activities.route_id` FK is added
+- [ ] User can place draggable waypoints on the map
+- [ ] Route snaps to trails via the Mapbox Directions proxy after each waypoint change
+- [ ] Fallback to straight-line segments if the Directions API is unavailable
+- [ ] Directions responses are cached in Redis (1-hour TTL)
+- [ ] Elevation profile chart displays for the planned route with total ascent/descent
+- [ ] Hovering the elevation profile highlights the corresponding point on the map
+- [ ] User can save a route (`POST /api/v1/routes`) and re-open it for editing
+- [ ] Route CRUD via `/api/v1/routes` works with ownership checks
+- [ ] Public routes are queryable by bbox via `GET /api/v1/map/routes`
+- [ ] A route can be imported from a GPX file and exported as GPX
+- [ ] A completed activity can link the route it followed via `route_id`
+- [ ] User can push a route to a Garmin device as a course
 
 ---
 
-## Phase 7: Terrain Analysis Layers
+## Phase 7: Mobile App + Offline
 
-**Goal**: Custom-generated overlay layers for slope angle (avalanche terrain), sun/shade exposure, and flat/steep terrain indicators.
+**Goal**: A React Native mobile app sharing code with the web app, with offline map and data support for field use. Split into 7a (the app, online) and 7b (offline).
+
+### Dependencies
+
+- Phase 1 (auth, API, shared packages)
+- Phase 2 (map-core package)
+- Phase 4 (activities) and Phase 6 (routes) — the app's primary content
+
+---
+
+### Sub-milestone 7a — Mobile App (online)
+
+**Goal**: A shippable React Native app — auth, map, and browsing activities and routes online.
+
+**Features**
+
+- React Native app shell (iOS + Android)
+- Google and Apple Sign-In (native SDKs)
+- Full-screen map with `@rnmapbox/maps`; base layer switching, 3D terrain, winter/summer
+- Browse activities and routes on the map (tap to view detail)
+- Activity / route detail screens (track, stats, photos)
+- User profile screen; tab navigation (map, explore, profile)
+
+**Technical Tasks**
+
+1. **React Native setup** (`apps/mobile/`) — initialize the project (bare or Expo), configure `@rnmapbox/maps` for iOS/Android, React Navigation (tab + stack), integrate `packages/shared` (types, API client) and `packages/map-core` (map config, provider types — the provider model extends to mobile)
+2. **Authentication** — Google Sign-In (`@react-native-google-signin/google-signin`), Apple Sign-In (`@invertase/react-native-apple-authentication`), token storage via `react-native-keychain` / `expo-secure-store`; same flow as web (ID token → backend → JWT)
+3. **Map screen** — full-screen map with gestures; base layer / style switching from `map-core`; activity tracks + route lines rendered; tap → detail
+4. **Activity / route screens** — detail screens (mini-map, stats, photos); explore/list screens with cards
+5. **Profile screen** — current user's profile, activities, routes, stats; edit profile
+
+**7a Verification**
+
+- [ ] App builds and runs on iOS and Android simulators
+- [ ] Google and Apple Sign-In work natively
+- [ ] Map renders with Mapbox; base layer switching and 3D terrain work
+- [ ] Activity tracks and route lines display; tapping opens detail
+- [ ] User can view and edit their profile
+- [ ] Shared `shared` and `map-core` packages work correctly in React Native
+
+---
+
+### Sub-milestone 7b — Offline
+
+**Goal**: Download map regions and activity/route data for use in the field with no connectivity.
+
+**Features**
+
+- Offline map downloads — select a region + zoom range, download tiles
+- Cached activity and route data available offline
+- Offline indicator + graceful no-network UX
+
+**Technical Tasks**
+
+1. **Offline maps** — region/zoom selection UI, tile-pack download with progress, offline indicator. The PMTiles-on-R2 tile strategy (see `Architecture.md`) is offline-friendly: a region is a PMTiles slice
+2. **Offline data** — cache the caller's activities and routes locally (SQLite / AsyncStorage); read-through cache, sync on reconnect
+3. **Field UX** — clear offline/online state indication, queued actions where applicable
+
+**7b Verification**
+
+- [ ] User can download a map region for offline use
+- [ ] Offline maps render with no network connectivity
+- [ ] The caller's activities and routes are viewable offline
+- [ ] The app clearly indicates offline state and recovers on reconnect
+
+### Key Files
+
+```
+apps/mobile/
+├── package.json
+├── app.json
+└── src/
+    ├── App.tsx
+    ├── navigation/RootNavigator.tsx
+    ├── screens/
+    │   ├── MapScreen.tsx
+    │   ├── ExploreScreen.tsx
+    │   ├── ActivityDetailScreen.tsx
+    │   ├── RouteDetailScreen.tsx
+    │   ├── ProfileScreen.tsx
+    │   ├── LoginScreen.tsx
+    │   └── OfflineMapsScreen.tsx
+    ├── components/
+    │   ├── MapView.tsx
+    │   └── ActivityCard.tsx
+    ├── services/offlineManager.ts
+    └── hooks/useAuth.ts
+```
+
+### Acceptance Criteria
+
+- [ ] (7a) Mobile app builds and runs on iOS + Android with native auth, map, and activity/route browsing
+- [ ] (7a) Shared `shared` and `map-core` packages work in React Native
+- [ ] (7b) Map regions download for offline use and render with no connectivity
+- [ ] (7b) The caller's activities and routes are available offline; the app recovers on reconnect
+
+---
+
+## Phase 8: Terrain Analysis Layers
+
+**Goal**: Custom-generated overlay layers for slope angle (avalanche terrain), aspect, sun/shade exposure, and flat/steep terrain — plus an interactive elevation/slope/aspect terrain filter.
 
 ### Dependencies
 
 - Phase 2 (map layer system, layer toggle UI)
+- Phase 6 (route planning — slope/aspect layers directly inform planning)
 
 ### Features
 
@@ -791,6 +891,7 @@ apps/web/src/
 - Avalanche slope filter layer: highlights only 25°–45°+ terrain (yellow→dark red), all other angles transparent
 - Sun/shade exposure layer: shows which slopes receive sun vs. shade at a given time
 - Flat/steep terrain indicator layer
+- Interactive terrain filter: set elevation + slope + aspect ranges → highlight matching terrain live (client-side WebGL)
 - Custom raster tile generation pipeline in Go
 - Tile serving endpoint
 
@@ -823,6 +924,13 @@ apps/web/src/
    - Opacity slider for overlay layers
    - Legend showing color scale (e.g., slope angle 0°–60°)
 
+5. **Custom terrain filter** (interactive, client-side)
+   - `TerrainFilterPanel.tsx` — filter panel UI: elevation range slider, slope/gradient range slider, aspect multi-select toggles (N/NE/E/SE/S/SW/W/NW)
+   - `TerrainFilterLayer.tsx` — WebGL `CustomLayerInterface` that reads Mapbox Terrain RGB tiles, computes slope/aspect per pixel from a 3×3 kernel, applies the user-defined filter, renders matching pixels as a green overlay
+   - `terrainFilterStore.ts` — Zustand store for filter state (elevation min/max, slope min/max, selected aspects)
+   - Shares slope/aspect math with the pre-rendered overlays above; unlike them it renders live as the user drags the sliders
+   - Primary use case: once Phase 10 (Live Data) ships, correlate avalanche bulletin warnings (danger aspects/elevations) with actual terrain
+
 ### Key Files
 
 ```
@@ -841,8 +949,12 @@ packages/map-core/src/layers/
 ├── sun-exposure.ts     # Sun exposure layer config
 └── steep-flat.ts       # Steep/flat layer config
 
-apps/web/src/map/
-└── OverlayLayers.tsx   # Raster overlay layer rendering
+apps/web/src/
+├── map/
+│   ├── OverlayLayers.tsx       # Raster overlay layer rendering
+│   └── TerrainFilterLayer.tsx  # Interactive WebGL terrain filter
+├── components/TerrainFilterPanel.tsx
+└── stores/terrainFilterStore.ts
 ```
 
 ### Acceptance Criteria
@@ -856,17 +968,113 @@ apps/web/src/map/
 - [ ] User can toggle each overlay layer on/off independently
 - [ ] Overlay opacity is adjustable
 - [ ] Layer legend explains the color coding
+- [ ] Interactive terrain filter highlights terrain matching user-specified elevation, slope, and aspect criteria
+- [ ] The terrain filter renders dynamically via WebGL as the user adjusts filter parameters
 
 ---
 
-## Phase 8: Live Data Integrations
+## Phase 9: User & Social
+
+**Goal**: User profiles, social interactions (follow, like, save, comment), an activity feed, and in-app notifications.
+
+### Dependencies
+
+- Phase 1 (auth, users)
+- Phase 4 (activities exist to like/save/comment on)
+- Phase 5 (device-synced activities also appear in social feeds)
+
+### Features
+
+- Public user profile pages (avatar, bio, activity list, stats)
+- Follow / unfollow users
+- Like / unlike activities
+- Save / unsave (bookmark) activities
+- Comments on activities
+- Activity feed (activities from followed users)
+- Follower/following counts and lists
+- In-app notifications (follow, like, comment triggers)
+
+### Technical Tasks
+
+1. **Social API** (`apps/api/internal/social/`)
+   - `handler.go` — follow, like, save, comment endpoints
+   - `service.go` — social logic, feed generation
+   - `repository.go` — follows, likes, saves, comments table operations
+   - Database migrations for the social tables (`follows`, `likes`/`saves`, `comments`, `notifications`) — numbers assigned at implementation
+
+2. **Activity feed**
+   - `GET /api/v1/feed` — returns activities from followed users, sorted by recency
+   - Pagination (cursor-based)
+   - Include activity previews with like/save counts
+
+3. **User profile enhancements**
+   - `PATCH /api/v1/users/me` — update avatar, bio, display name
+   - Fix nullable field clearing: PATCH currently uses COALESCE so clients can't set bio/avatar_url to null. Use a three-state patch type (unset / null / value) or explicit clear flags
+   - Avatar upload via S3 pre-signed URL
+   - Activity count, follower/following counts on profile
+
+4. **Auth improvements**
+   - Multi-provider account linking: sign-in with a second provider for the same email should attach the provider to the existing user, not fail with 409. Implement "find by normalized email and attach provider" in one transaction
+   - Refresh token rotation: implement one-time-use refresh tokens. Once rotation is in place, also fix the StrictMode double-restore in App.tsx (dev-only mount effect fires twice, issuing duplicate /auth/refresh requests)
+
+5. **Notifications**
+   - `notifications` table migration
+   - `GET /api/v1/notifications` — polling endpoint for current user's notifications
+   - `PATCH /api/v1/notifications/:id/read` — mark notification as read
+   - Trigger notifications on follow, like, and comment actions
+
+6. **Web UI**
+   - `pages/UserProfilePage.tsx` — user profile with activity grid
+   - `components/FollowButton.tsx` — follow/unfollow toggle
+   - `components/LikeButton.tsx` — like/unlike with count
+   - `components/SaveButton.tsx` — bookmark toggle
+   - `components/CommentSection.tsx` — comment list + add form
+   - `pages/FeedPage.tsx` — activity feed with activity cards
+
+### Key Files
+
+```
+apps/api/
+├── internal/social/
+│   ├── handler.go
+│   ├── service.go
+│   └── repository.go
+└── migrations/        # follows, likes_saves, comments, notifications
+
+apps/web/src/
+├── pages/
+│   ├── UserProfilePage.tsx
+│   └── FeedPage.tsx
+├── components/
+│   ├── FollowButton.tsx
+│   ├── LikeButton.tsx
+│   ├── SaveButton.tsx
+│   └── CommentSection.tsx
+```
+
+### Acceptance Criteria
+
+- [ ] Open sign-ups: remove `ALLOWED_EMAILS` restriction on Railway (currently locked to owner email only)
+- [ ] User can view other users' profiles with their public activities
+- [ ] User can follow/unfollow other users
+- [ ] User can like and save activities; counts update in real time
+- [ ] User can comment on activities; comments display chronologically
+- [ ] Activity feed shows recent activities from followed users
+- [ ] Feed supports cursor-based pagination
+- [ ] User can update their avatar, bio, and display name
+- [ ] All social actions require authentication
+- [ ] User receives in-app notifications for follows, likes, and comments
+
+---
+
+## Phase 10: Live Data Integrations
 
 **Goal**: Real-time environmental data displayed on the map — weather, wind, snow depth, avalanche reports, ski lift status.
 
 ### Dependencies
 
 - Phase 2 (map, layer system)
-- Phase 7 (overlay layer infrastructure, tile serving)
+- Phase 8 (overlay layer infrastructure, tile serving)
 
 ### Features
 
@@ -882,7 +1090,7 @@ apps/web/src/map/
 
 ### Technical Tasks
 
-> **Prerequisite**: Extract background job scheduler into `cmd/worker/` (see Phase 5 note). Phase 8 pipelines run in the worker process, not the API.
+> **Prerequisite**: Extract background job scheduler into `cmd/worker/` (see Phase 5 note). Phase 10 pipelines run in the worker process, not the API.
 
 1. **Data ingestion pipeline** (`apps/api/internal/ingest/`)
    - `scheduler.go` — cron-like scheduler for periodic fetches
@@ -984,112 +1192,22 @@ apps/web/src/map/
 
 ---
 
-## Phase 9: Mobile App
+## Phase 11: Search & Discovery
 
-**Goal**: React Native mobile app with map, auth, and trip browsing — sharing code with the web app.
-
-### Dependencies
-
-- Phase 1 (auth, API, shared packages)
-- Phase 2 (map-core package)
-- Phase 4 (trip system)
-
-### Features
-
-- React Native app shell (iOS + Android)
-- Google and Apple Sign-In (native SDKs)
-- Full-screen map with `@rnmapbox/maps`
-- Base layer switching, 3D terrain, winter/summer modes
-- Trip browsing on map (tap route to view details)
-- Trip detail screen (route, stats, photos)
-- User profile screen
-- Navigation (tab bar: map, explore, profile)
-
-### Technical Tasks
-
-1. **React Native setup** (`apps/mobile/`)
-   - Initialize React Native project (bare or Expo)
-   - Configure `@rnmapbox/maps` for iOS and Android
-   - Set up React Navigation with tab and stack navigators
-   - Integrate `packages/shared` for types and API client
-   - Integrate `packages/map-core` for map configuration
-   - Import provider types from `packages/map-core` — provider selection model extends to mobile
-
-2. **Authentication**
-   - Google Sign-In: `@react-native-google-signin/google-signin`
-   - Apple Sign-In: `@invertase/react-native-apple-authentication`
-   - Token storage: `react-native-keychain` or `expo-secure-store`
-   - Same auth flow as web (get ID token → call backend → store JWT)
-
-3. **Map screen**
-   - Full-screen Mapbox map with gestures (pan, zoom, tilt, rotate)
-   - Base layer and style switching (from `map-core` config)
-   - Trip routes rendered on map
-   - Tap route → navigate to trip detail
-
-4. **Trip screens**
-   - Trip detail screen: mini-map, stats, photos, description
-   - Trip list / explore screen: scroll through trip cards
-
-5. **Profile screen**
-   - Current user's profile, trips, stats
-   - Edit profile (avatar, bio, display name)
-
-### Key Files
-
-```
-apps/mobile/
-├── package.json
-├── app.json
-├── src/
-│   ├── App.tsx
-│   ├── navigation/
-│   │   └── RootNavigator.tsx
-│   ├── screens/
-│   │   ├── MapScreen.tsx
-│   │   ├── ExploreScreen.tsx
-│   │   ├── TripDetailScreen.tsx
-│   │   ├── ProfileScreen.tsx
-│   │   └── LoginScreen.tsx
-│   ├── components/
-│   │   ├── MapView.tsx
-│   │   └── TripCard.tsx
-│   └── hooks/
-│       └── useAuth.ts
-├── ios/
-└── android/
-```
-
-### Acceptance Criteria
-
-- [ ] App builds and runs on iOS and Android simulators
-- [ ] Google and Apple Sign-In work natively
-- [ ] Map renders with Mapbox, supports base layer switching and 3D terrain
-- [ ] Trip routes display on map; tapping opens trip detail
-- [ ] Trip detail screen shows route, stats, photos
-- [ ] User can view and edit their profile
-- [ ] Shared packages (`shared`, `map-core`) work correctly in React Native
-- [ ] Shared `map-core` provider types and capability model are compatible with mobile
-- [ ] Navigation between screens is smooth and intuitive
-
----
-
-## Phase 10: Search & Discovery
-
-**Goal**: Full-text and location-based search for trips, locations, and users.
+**Goal**: Full-text and location-based search for activities, locations, and users.
 
 ### Dependencies
 
-- Phase 4 (trips to search)
-- Phase 6 (users to search)
+- Phase 4 (activities to search)
+- Phase 9 (users to search)
 
 ### Features
 
-- Global search bar (trips + locations + users)
+- Global search bar (activities + locations + users)
 - Full-text search with typo tolerance (Meilisearch)
-- Location-based search ("trips near me", "trips in Chamonix")
+- Location-based search ("activities near me", "activities in Chamonix")
 - Filter by activity type, distance, elevation, date
-- Featured/trending trips on explore page
+- Featured/trending activities on explore page
 - Search results displayed as map pins and list cards
 
 ### Technical Tasks
@@ -1100,9 +1218,10 @@ apps/mobile/
    - Geo search enabled with `_geo` field
 
 2. **Locations and climbing tables**
-   - Migration `018_locations.up.sql` — `locations` table (resorts, peaks, trailheads, towns, huts, crags)
-   - Migration `019_climbing_routes.up.sql` — `climbing_routes` table (linked to crag locations)
-   - Migration `020_crag_topos.up.sql` — `crag_topos` table (photo topo storage)
+   - Migration: `locations` table (resorts, peaks, trailheads, towns, huts, crags)
+   - Migration: `climbing_routes` table (linked to crag locations)
+   - Migration: `crag_topos` table (photo topo storage)
+   - Migration numbers assigned at implementation
    - Seed pipeline: import resorts from OpenSkiData, peaks and trailheads from OSM, crags from OpenBeta (GraphQL bulk import with `source='openbeta'`, dedup by `source_id`)
    - Climbing routes from OpenBeta imported into `climbing_routes` table, linked to crag locations
    - Locations indexed in Meilisearch for search
@@ -1142,10 +1261,7 @@ apps/api/internal/search/
 ├── handler.go
 └── service.go
 
-apps/api/migrations/
-├── 018_locations.up.sql
-├── 019_climbing_routes.up.sql
-└── 020_crag_topos.up.sql
+apps/api/migrations/   # locations, climbing_routes, crag_topos
 
 apps/web/src/
 ├── components/
@@ -1160,39 +1276,34 @@ docker-compose.yml  # Add Meilisearch service
 
 ### Acceptance Criteria
 
-- [ ] Searching "chamonix trail run" returns relevant trips with typo tolerance
-- [ ] "Trips near me" returns trips sorted by distance from user's location
+- [ ] Searching "chamonix trail run" returns relevant activities with typo tolerance
+- [ ] "Activities near me" returns activities sorted by distance from user's location
 - [ ] Filters by activity type, min/max distance, and date range work correctly
 - [ ] Search results appear both as map pins and list cards
 - [ ] Autocomplete suggestions appear while typing
-- [ ] Trending page shows popular recent trips
+- [ ] Trending page shows popular recent activities
 - [ ] Search is fast (<200ms for typical queries)
 
 ---
 
-## Phase 11: Advanced Features
+## Phase 12: Advanced Features
 
-**Goal**: Offline maps on mobile, in-app GPS recording, heatmaps, and route planning tools.
+**Goal**: In-app GPS recording, activity heatmaps, map measurement tools, and climbing photo-topo + 3D-wall visualization.
 
 ### Dependencies
 
-- Phase 9 (mobile app)
-- Phase 4 (trip system)
 - Phase 2 (map)
-- Phase 7 (terrain analysis)
-- Phase 8 (live data)
-- Phase 10 (search & discovery)
+- Phase 4 (activities — GPS recording produces activities)
+- Phase 7 (mobile app — GPS recording is mobile)
+- Phase 8 (terrain analysis — the `tilegen` CLI is reused for heatmaps)
+- Phase 11 (search & discovery — `climbing_routes` / `crag_topos` tables)
 
 ### Features
 
-- Offline map downloads (mobile) — download tile regions for offline use
 - In-app GPS track recording (mobile + PWA)
-- Heatmaps showing popular routes/areas
-- Route planning tools (draw waypoints on map, snap to trails via Mapbox Directions API, elevation profile, save as planned trip, push to Garmin)
-- Elevation profile visualization for any route
+- Heatmaps showing popular activity areas
 - Elevation point query: tap map → show elevation at point (client-side DEM decode)
-- Distance measurement tool: click points → measure geodesic distance with optional elevation profile
-- Custom terrain filter: set elevation + gradient + aspect → highlight matching terrain (client-side WebGL)
+- Distance measurement tool: click points → geodesic distance with optional elevation profile
 - Photo topo editor: web-based tool for drawing SVG route lines on crag photos
 - Crag detail page with climbing routes, grades, photo topos, and approach info
 - Climbing route search and filtering (by grade, type, crag)
@@ -1200,78 +1311,31 @@ docker-compose.yml  # Add Meilisearch service
 
 ### Technical Tasks
 
-1. **Offline maps** (mobile)
-   - Mapbox offline tile pack management
-   - UI to select region and zoom levels for download
-   - Download progress indicator
-   - Offline indicator when no network
-
-2. **GPS recording**
+1. **GPS recording**
    - Background location tracking (React Native)
-   - Record trackpoints (lat/lon/ele/time)
-   - Live track display on map during recording
+   - Record trackpoints (lat/lon/ele/time); live track display on map during recording
    - Save recording as an activity (auto-generate GPX)
    - Activity timer and live stats (distance, elevation, speed)
 
-3. **Heatmaps**
+2. **Heatmaps**
    - Heatmap tiles pre-rendered from activity track density using PostGIS aggregation (`ST_HexGrid` or similar)
-   - Stored in S3 (`s3://mtamta-tiles/heatmap/`). Regenerated as batch job via `tilegen` CLI. No dedicated table
+   - Stored in S3 (`s3://mtamta-tiles/heatmap/`). Regenerated as a batch job via the `tilegen` CLI. No dedicated table
    - Toggleable layer on the map
 
-4. **Route planning** — builds the `route` entity designed in `Architecture.md`
-   - **Schema migration** (`022_routes.up.sql`):
-     - `CREATE TABLE routes` per the Architecture.md schema (`path` geometry, `waypoints` JSONB, `activity_type`, distance/elevation, `visibility`)
-     - `ALTER TABLE activities ADD CONSTRAINT fk_activities_route FOREIGN KEY (route_id) REFERENCES routes(id) ON DELETE SET NULL` — adds the deferred FK; the `activities.route_id` column itself already exists (created NULL-able, FK-less, in migration 003)
-   - **Directions proxy** (`apps/api/internal/geo/directions.go`):
-     - `POST /api/v1/routes/directions` — accepts waypoints, calls Mapbox Directions API (walking profile), returns snapped GeoJSON LineString + distance_m + duration_s
-     - Redis cache: `directions:{sha256(waypoints)}`, 1-hour TTL
-     - Rate limit: 10 req/min per user
-     - Fallback: straight-line segments if Mapbox returns error
-   - **Route CRUD** (`apps/api/internal/route/`):
-     - `POST/GET/PATCH/DELETE /api/v1/routes` — create, read, update, delete planned routes
-     - `GET /api/v1/routes` lists the caller's own routes; `GET /api/v1/map/routes` for public routes by bbox
-   - **Route planner UI** (`apps/web/src/map/RoutePlanner.tsx`):
-     - Click-to-place waypoints on map (draggable markers)
-     - On each waypoint change, call the directions proxy to snap the route
-     - Display the snapped route as a GeoJSON layer
-     - Show distance and estimated duration
-     - Undo/redo for waypoint edits
-   - **Elevation profile** (`apps/web/src/components/ElevationProfile.tsx`):
-     - Sample points along the route using `turf.along()`, query elevation via `map.queryTerrainElevation()`
-     - SVG/Canvas chart: distance vs elevation, total ascent/descent, min/max
-     - Hover highlights the corresponding point on the map
-     - Reusable for planned routes, completed activities, and the measurement tool
-   - **Save & manage routes**:
-     - Save via `POST /api/v1/routes` (`path` + `waypoints` JSONB + `activity_type`)
-     - Edit re-opens the planner with the saved waypoints
-     - Routes on the user profile with a "Route" badge
-     - Push to Garmin via the existing course push endpoint
-     - A completed activity can link the route it followed via `activities.route_id`
-   - **Zustand store** (`apps/web/src/stores/routePlannerStore.ts`):
-     - State: waypoints, snapped route, elevation samples, loading/error
-     - Actions: addWaypoint, moveWaypoint, removeWaypoint, clearRoute, fetchDirections, saveAsRoute
-
-5. **Elevation point query**
+3. **Elevation point query**
    - Click/tap handler on map to capture coordinates
-   - Decode Mapbox Terrain RGB tile at clicked coordinate (client-side): `height = -10000 + ((R × 256 × 256 + G × 256 + B) × 0.1)`
-   - Display elevation as popup (meters + feet). No server round-trip
+   - Decode Mapbox Terrain RGB tile at the clicked coordinate (client-side): `height = -10000 + ((R × 256 × 256 + G × 256 + B) × 0.1)`
+   - Display elevation as a popup (meters + feet). No server round-trip
    - `ElevationQuery.tsx` — click handler + popup display
 
-6. **Distance measurement**
+4. **Distance measurement**
    - Interactive polyline tool: click points on map to build a measurement path
-   - Calculate geodesic distance between points using turf.js
-   - Display cumulative distance on each segment
-   - Optional elevation profile along the measurement path
+   - Geodesic distance between points via turf.js; cumulative distance per segment
+   - Optional elevation profile along the path (reuses the Phase 6 `ElevationProfile`)
    - `MeasureTool.tsx` — interactive polyline + distance display
 
-7. **Custom terrain filter**
-   - `TerrainFilterPanel.tsx` — filter panel UI with elevation range slider, gradient range slider, and aspect multi-select toggles (N/NE/E/SE/S/SW/W/NW)
-   - `TerrainFilterLayer.tsx` — WebGL `CustomLayerInterface` that reads Mapbox Terrain RGB tiles, computes slope/aspect per pixel from 3×3 kernel, applies user-defined filter, renders matching pixels as green overlay
-   - `terrainFilterStore.ts` — Zustand store for filter state (elevation min/max, gradient min/max, selected aspects)
-   - Primary use case: correlate avalanche bulletin warnings with actual terrain
-
-8. **Photo topo system** (Tier 2 — `apps/api/internal/climbing/`)
-   - Uses `climbing_routes` and `crag_topos` tables from Phase 10 (`019_climbing_routes.up.sql`, `020_crag_topos.up.sql`)
+5. **Photo topo system** (climbing — `apps/api/internal/climbing/`)
+   - Uses the `climbing_routes` and `crag_topos` tables from Phase 11
    - `climbing/` package: `handler.go`, `service.go`, `repository.go`, `grades.go`, `topo.go`
    - `TopoEditor.tsx` — interactive SVG drawing tool for route lines on crag photos
    - `CragDetailPage.tsx` — crag overview with climbing routes, grades, photo topos, approach info
@@ -1280,8 +1344,8 @@ docker-compose.yml  # Add Meilisearch service
    - `RouteTable.tsx` — sortable/filterable climbing route table
    - `climbingStore.ts` — Zustand store for crags, climbing routes, topos
 
-9. **3D wall visualization** (Tier 3, experimental)
-   - `021_crag_models.up.sql` migration
+6. **3D wall visualization** (experimental)
+   - `crag_models` migration (number assigned at implementation)
    - `WallModelLayer.tsx` — Threebox `CustomLayerInterface` for rendering glTF crag models in Mapbox
    - `PointCloudViewer.tsx` — Potree integration for large point cloud visualization
    - Feature-flagged: disabled by default, enabled via settings
@@ -1290,87 +1354,52 @@ docker-compose.yml  # Add Meilisearch service
 
 ```
 apps/mobile/src/
-├── screens/
-│   ├── RecordScreen.tsx       # GPS recording UI
-│   └── OfflineMapsScreen.tsx  # Download management
-├── services/
-│   ├── locationTracker.ts     # Background GPS tracking
-│   └── offlineManager.ts     # Tile download management
+├── screens/RecordScreen.tsx       # GPS recording UI
+└── services/locationTracker.ts    # Background GPS tracking
 
-apps/api/
-├── internal/climbing/
-│   ├── handler.go
-│   ├── service.go
-│   ├── repository.go
-│   ├── grades.go
-│   └── topo.go
-├── internal/geo/
-│   └── directions.go         # Mapbox Directions API proxy
-├── migrations/
-│   ├── 021_crag_models.up.sql   # 019-020 are in Phase 10
-│   └── 022_routes.up.sql
+apps/api/internal/climbing/
+├── handler.go
+├── service.go
+├── repository.go
+├── grades.go
+└── topo.go
 
 apps/web/src/
 ├── map/
 │   ├── HeatmapLayer.tsx
-│   ├── RoutePlanner.tsx
 │   ├── ElevationQuery.tsx
 │   ├── MeasureTool.tsx
-│   ├── TerrainFilterLayer.tsx
 │   └── WallModelLayer.tsx
 ├── pages/
 │   └── CragDetailPage.tsx
 ├── components/
-│   ├── ElevationProfile.tsx
-│   ├── TerrainFilterPanel.tsx
 │   ├── TopoEditor.tsx
 │   ├── TopoViewer.tsx
 │   ├── GradeDisplay.tsx
 │   ├── RouteTable.tsx
 │   └── PointCloudViewer.tsx
-├── stores/
-│   ├── terrainFilterStore.ts
-│   ├── routePlannerStore.ts
-│   └── climbingStore.ts
+└── stores/climbingStore.ts
 ```
 
 ### Acceptance Criteria
 
-- [ ] User can download a map region for offline use on mobile
-- [ ] Offline maps work without network connectivity
-- [ ] GPS recording captures track with live display on map
+- [ ] GPS recording captures a track with live display on the map
 - [ ] Recorded track can be saved as an activity with auto-calculated stats
-- [ ] Heatmap layer shows popular routes with configurable intensity
-- [ ] User can place waypoints on the map; waypoints are draggable
-- [ ] Route snaps to trails via Mapbox Directions API after each waypoint change
-- [ ] Fallback to straight-line segments if Directions API unavailable
-- [ ] Elevation profile chart displays for drawn route with total ascent/descent
-- [ ] Hovering on elevation profile highlights corresponding point on map
-- [ ] User can save a planned route as a `route` (via `POST /api/v1/routes`)
-- [ ] Routes appear on the user profile with a "Route" badge
-- [ ] User can edit a saved route (waypoints reload, re-snap)
-- [ ] User can push a route to Garmin via the existing course push
-- [ ] Route CRUD via `/api/v1/routes` works; a completed activity can link a route via `route_id`
-- [ ] Directions API responses cached in Redis (1-hour TTL)
-- [ ] Elevation profile is reusable for planned routes, completed trips, and measurement tool
-- [ ] Tapping the map with elevation query tool shows a popup with elevation in meters and feet
+- [ ] Heatmap layer shows popular activity areas with configurable intensity
+- [ ] Tapping the map with the elevation query tool shows a popup with elevation in meters and feet
 - [ ] Distance measurement tool allows clicking multiple points and displays cumulative geodesic distance
-- [ ] Custom terrain filter highlights terrain matching user-specified elevation, gradient, and aspect criteria
-- [ ] Custom terrain filter renders dynamically via WebGL as the user adjusts filter parameters
-- [ ] Custom terrain filter can be combined with avalanche bulletin data to identify dangerous terrain
 - [ ] User can create, view, and edit crags with crag-specific metadata (rock type, approach, orientation)
 - [ ] User can add, edit, and delete climbing routes at a crag with multi-system grades
 - [ ] Photo topo editor allows drawing SVG route lines on uploaded crag photos
 - [ ] Crag detail page displays climbing routes, grades, photo topos, and approach info
 - [ ] Crags display on the map as markers within the current viewport
 - [ ] Climbing routes and crags are searchable via Meilisearch (by name, grade, type)
-- [ ] OpenBeta data seeds crags and climbing routes with `source='openbeta'`
 - [ ] Grades display correctly across systems (YDS, French, UIAA) via `@openbeta/sandbag`
 - [ ] 3D wall visualization renders glTF crag models in Mapbox via Threebox (feature-flagged)
 
 ---
 
-## Phase 12: Polish & Launch
+## Phase 13: Polish & Launch
 
 **Goal**: Production readiness — performance, SEO, monitoring, analytics, and final polish.
 
@@ -1382,7 +1411,7 @@ apps/web/src/
 
 - Performance optimization (bundle size, lazy loading, image optimization)
 - PWA support (installable web app, service worker)
-- SEO for public trip pages (server-side rendering or meta tags)
+- SEO for public activity pages (server-side rendering or meta tags)
 - Analytics (privacy-respecting usage tracking)
 - Error monitoring and logging
 - Rate limiting and abuse prevention
@@ -1405,9 +1434,9 @@ apps/web/src/
    - Install prompt
 
 3. **SEO**
-   - Meta tags for trip pages (title, description, Open Graph, Twitter Cards)
-   - Sitemap generation for public trips
-   - Structured data (JSON-LD) for trip pages
+   - Meta tags for activity pages (title, description, Open Graph, Twitter Cards)
+   - Sitemap generation for public activities
+   - Structured data (JSON-LD) for activity pages
    - Consider SSR/SSG for public pages (or prerendering)
 
 4. **Analytics & Monitoring**
@@ -1426,7 +1455,7 @@ apps/web/src/
    - Dependency vulnerability scanning
 
 6. **E2E tests**
-   - Playwright for critical user flows: sign in → create trip (GPX upload) → view on map → like → search → find trip
+   - Playwright for critical user flows: sign in → create activity (GPX upload) → view on map → like → search → find activity
    - 5 core scenarios, run against staging environment
 
 7. **Landing page**
@@ -1454,13 +1483,13 @@ apps/api/
 
 - [ ] Lighthouse score >90 on performance, accessibility, best practices, SEO
 - [ ] Web app is installable as PWA
-- [ ] Public trip pages have correct meta tags and Open Graph images
+- [ ] Public activity pages have correct meta tags and Open Graph images
 - [ ] Error monitoring captures and alerts on backend errors
 - [ ] API responds within 200ms for typical requests under normal load
 - [ ] Rate limiting prevents abuse (429 responses for excessive requests)
 - [ ] No critical accessibility violations
 - [ ] Landing page clearly communicates the platform's value
-- [ ] E2E tests pass for 5 critical user flows (sign in, create trip, view on map, like, search)
+- [ ] E2E tests pass for 5 critical user flows (sign in, create activity, view on map, like, search)
 
 ---
 
@@ -1473,13 +1502,14 @@ apps/api/
 | 3 | Map Sources & Overlays | Country-specific topo maps, seasonal satellite, ski overlays |
 | 3.5 | Multi-Provider Support | Dual Mapbox/MapTiler rendering, shared adapter, capability matrix |
 | 4 | Activity System | GPX upload + manual entry, activity CRUD, tracks via provider-neutral adapter, climbing segments + pitch metadata |
-| 5 | **Device Integrations** | **Garmin sync, FIT parsing, course push, multi-pitch climb parsing** |
-| 6 | User & Social | Profiles, follows, likes, comments, feed, notifications |
-| 7 | Terrain Analysis | Slope angle, aspect, avalanche slope filter, sun exposure, custom tiles |
-| 8 | Live Data | Weather, wind, snow, avalanche, lifts |
-| 9 | Mobile App | React Native with shared code |
-| 10 | Search & Discovery | Full-text + geo search, trending, locations, crag/route seeding from OpenBeta |
-| 11 | Advanced | Offline maps, GPS recording, heatmaps, custom terrain filter, map tools, photo topos, 3D walls |
-| 12 | Polish & Launch | Performance, PWA, SEO, monitoring |
+| 5 | Device Integrations | Garmin sync, FIT parsing, course push, multi-pitch climb parsing |
+| 6 | Route & Planning | Route entity, planner UI, trail snapping, elevation profile, GPX import/export |
+| 7 | Mobile App + Offline | React Native app (shared code) + offline map regions and data |
+| 8 | Terrain Analysis | Slope/aspect/avalanche overlays, sun exposure, interactive terrain filter |
+| 9 | User & Social | Profiles, follows, likes, comments, feed, notifications |
+| 10 | Live Data | Weather, wind, snow, avalanche, lifts |
+| 11 | Search & Discovery | Full-text + geo search, trending, locations, crag/route seeding from OpenBeta |
+| 12 | Advanced Features | GPS recording, heatmaps, map tools, photo topos, 3D walls |
+| 13 | Polish & Launch | Performance, PWA, SEO, monitoring |
 
-Each phase produces a working increment. Phases 1–3 build the core map experience. Phase 3.5 adds multi-provider support (Mapbox + MapTiler) with a shared adapter before activity features land. Phases 1–4 form the minimum viable product (including climbing activity segments with pitch metadata). Phase 5 adds device connectivity with multi-pitch FIT parsing. Phases 6–8 add social and data richness. Phase 10 seeds crags and climbing routes from OpenBeta. Phase 11 adds photo topos and experimental 3D wall visualization. Phase 12 polishes for launch.
+Each phase produces a working increment. Phases 1–3 build the core map experience; Phase 3.5 adds multi-provider support (Mapbox + MapTiler) before activity features land. Phases 1–4 form the minimum viable product (including climbing activity segments with pitch metadata). Phase 5 adds device sync; Phase 6 the route planner; Phase 7 the mobile app with offline support. Phases 8–10 add terrain analysis, social, and live data. Phase 11 adds search and seeds crags/climbing routes from OpenBeta. Phase 12 adds advanced map tools and climbing topos. Phase 13 polishes for launch.
