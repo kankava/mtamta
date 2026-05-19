@@ -10,7 +10,7 @@
 2. [Phase 2: Maps Core](#phase-2-maps-core)
 3. [Phase 3: Map Sources & Overlays](#phase-3-map-sources--overlays)
 4. [Phase 3.5: Multi-Provider Support](#phase-35-multi-provider-support)
-5. [Phase 4: Trip System](#phase-4-trip-system)
+5. [Phase 4: Activity System](#phase-4-activity-system)
 6. [Phase 5: Device Integrations](#phase-5-device-integrations)
 7. [Phase 6: User & Social](#phase-6-user--social)
 8. [Phase 7: Terrain Analysis Layers](#phase-7-terrain-analysis-layers)
@@ -91,7 +91,7 @@ None — this is the starting point.
    - Token storage utilities
 
 8. **Docker & deployment setup**
-   - `apps/api/Dockerfile` — multi-stage Go build (golang:1.23-alpine builder → alpine:3.20 runtime)
+   - `apps/api/Dockerfile` — multi-stage Go build (golang:1.26-alpine builder → alpine:3.20 runtime)
    - `docker-compose.yml` — local dev services (TimescaleDB+PostGIS, Redis). MinIO added in Phase 4, Meilisearch in Phase 10
    - `railway.toml` — deploy config with health check path
    - Railway project setup: api service (Docker), Postgres via TimescaleDB+PostGIS template (Docker), managed Redis
@@ -122,7 +122,6 @@ mtamta/
 ├── turbo.json
 ├── tsconfig.base.json
 ├── docker-compose.yml
-├── railway.toml
 ├── .gitignore
 ├── .github/
 │   └── workflows/
@@ -131,6 +130,7 @@ mtamta/
 ├── apps/
 │   ├── api/
 │   │   ├── Dockerfile
+│   │   ├── railway.toml
 │   │   ├── go.mod
 │   │   ├── cmd/server/main.go
 │   │   ├── internal/auth/
@@ -411,7 +411,7 @@ apps/web/src/map/
 - Create post-login `MapProviderGate` (only shown when no stored preference exists)
 - Extract current Mapbox code into `runtime/mapbox/` modules
 - Define `AppMapAdapter` type interface (source/layer lifecycle, style reload, viewport reads)
-- Move shared overlays (`useRasterOverlays`, trip layers) to `runtime/shared/` targeting `AppMapAdapter`
+- Move shared overlays (`useRasterOverlays`, activity track layers) to `runtime/shared/` targeting `AppMapAdapter`
 - Verify zero behavior regression in existing Mapbox stack
 
 **M2 — MapTiler Runtime Boot + Shared Layer Parity**
@@ -426,7 +426,7 @@ apps/web/src/map/
 - Migrated the Mapbox runtime from `outdoors-v12` to Mapbox Standard — Outdoors / Outdoors Winter custom styles give a true seasonal pair matching MapTiler
 - Mapbox style resolution is season-aware (`resolveStyleUrl`)
 - `AppMapAdapter` + `rasterOverlays.ts` use slot-based layer insertion on Mapbox; the MapTiler adapter derives an equivalent `beforeId`
-- Settled the adapter layer-insertion contract ahead of Phase 4 trip-route layers
+- Settled the adapter layer-insertion contract ahead of Phase 4 activity-track layers
 - Full detail in [Phase3_5.md](Phase3_5.md#m3--mapbox-standard-migration)
 
 **M4 — Provider-Specific Features (deferred to after Phase 4)**
@@ -450,7 +450,7 @@ apps/web/src/map/
       terrain.ts
     shared/
       mapAdapter.ts
-      tripLayers.ts
+      activityTracks.ts
       rasterOverlays.ts
       providerCapabilities.ts
   MapRuntime.tsx
@@ -467,7 +467,7 @@ packages/map-core/src/
 - [ ] Selecting Mapbox loads the Mapbox runtime with no behavior regression
 - [ ] Selecting MapTiler loads the MapTiler runtime with base maps and 3D terrain
 - [ ] Shared overlays (country topo, seasonal satellite) render in both providers
-- [ ] Trip route layers (from Phase 4) use `AppMapAdapter` and work in both providers
+- [ ] Activity track layers (from Phase 4) use `AppMapAdapter` and work in both providers
 - [ ] Provider choice persists in localStorage; gate is skipped on subsequent visits
 - [ ] Unsupported or not-yet-implemented features show `Coming soon` in the UI
 - [ ] Capability matrix accurately reflects implementation status
@@ -476,65 +476,69 @@ packages/map-core/src/
 
 ---
 
-## Phase 4: Trip System
+## Phase 4: Activity System
 
-**Goal**: Users can create trips by uploading GPX files, view trip routes on the map, and browse trip detail pages.
+**Goal**: Users can log activities — by uploading a GPX file or by manual entry — view activity tracks on the map, and browse activity detail pages.
 
 ### Dependencies
 
 - Phase 1 (auth, user system, API)
 - Phase 2 (map rendering)
-- Phase 3.5 (multi-provider adapter — trip routes written against `AppMapAdapter`)
+- Phase 3.5 (multi-provider adapter — activity tracks written against `AppMapAdapter`)
 
 ### Features
 
-- GPX file upload and server-side parsing (Go)
-- Trip CRUD API (create, read, update, delete)
-- Route geometry extraction from GPX → PostGIS LineString
-- Distance, elevation gain/loss, duration calculation from GPX
-- Trip routes displayed on the map as colored lines
-- Trip detail page with route, stats, description, photos
-- Photo upload for trips (S3 pre-signed URLs)
-- Trip list view with cards
-- Trip segments model for climbing: approach/climb/descent phases with per-pitch metadata
+- Activity creation as one unified flow: a metadata form with an **optional** GPX file (a GPX pre-fills the `track` + stats; without one, it is manual entry)
+- GPX file parsing (Go, `encoding/xml`) → PostGIS LineString `track` + derived distance, elevation gain/loss, duration
+- Activity CRUD API (create, read, update, delete)
+- Manual entry with activity-type-aware fields — type-specific stats stored in a `metrics` JSONB column
+- Per-activity visibility: private / followers / public
+- Activity tracks displayed on the map as colored lines
+- Activity detail page with track, stats, description, photos
+- Photo upload for activities (S3 pre-signed URLs) with EXIF / GPX-timestamp geotagging
+- Activity list view with cards
+- Activity segments model for climbing: approach/climb/descent phases with per-pitch metadata
 - Pitch-by-pitch data: grade (multi-system JSONB), elevation gain, duration, belay type
 - Vertical elevation profile visualization for climb segments (pitch stacked bars, color = grade)
-- Map search bar — geocode cities, peaks, POIs via Mapbox Search Box API (free tier: 100k req/month)
+- Map search bar — geocode cities, peaks, POIs via Mapbox Search Box API
 - Radix UI primitives for accessible interactive components (dialogs, dropdowns, toasts) — install per-component as needed (`@radix-ui/react-dialog`, etc.), styled with Tailwind
+
+> **Activity vs Route**: a recorded **activity** is distinct from a planned **route**. The `Route` entity (planned itineraries) and the route planner are designed in `Architecture.md` but built in a later phase — Phase 4 ships activities only. An activity may later link to the route it followed via `activities.route_id`.
+
+> **Ingestion**: Phase 4 ingests **GPX**. FIT parsing (the richer device format) lands in Phase 5 behind the same neutral `ParsedActivity` parser seam.
 
 ### Technical Tasks
 
-1. **GPX parsing** (`apps/api/internal/trip/gpx.go`)
-   - Parse GPX XML format
-   - Extract track points with lat/lon/ele/time
+1. **GPX parsing** (`apps/api/internal/activity/gpx.go`)
+   - Parse GPX XML format; extract track points with lat/lon/ele/time
    - Build PostGIS LineString from track points
-   - Calculate total distance (PostGIS `ST_Length` on geography column — returns meters)
-   - Calculate elevation gain and loss
-   - Calculate duration from first/last trackpoint timestamps
+   - Calculate total distance, elevation gain/loss, duration → a format-neutral `ParsedActivity`
 
-2. **Trip CRUD API** — GPX parsing (`encoding/xml`), PostGIS route storage, trip CRUD endpoints, bbox GeoJSON query with zoom-dependent simplification
+2. **Activity CRUD API** — unified create (metadata form + optional GPX), PostGIS `track` storage, activity CRUD endpoints, bbox GeoJSON query with zoom-dependent simplification
 3. **Photo upload + geotagging** — S3 pre-signed uploads (server-generated keys), EXIF GPS extraction, timestamp interpolation fallback
-4. **Map trip display** — trip routes as GeoJSON on map, color by activity type, click to open detail panel; `useTripRoutes` uses `AppMapAdapter`, placed in `runtime/shared/`
-5. **Trip UI** — creation page (GPX upload + metadata), detail page, card component, Radix UI primitives (Dialog, DropdownMenu, Toast)
+4. **Map activity display** — activity tracks as GeoJSON on map, color by activity type, click to open detail panel; `useActivityTracks` uses `AppMapAdapter`, placed in `runtime/shared/`
+5. **Activity UI** — unified create page (form + optional GPX), detail page, card component, Radix UI primitives (Dialog, DropdownMenu, Toast)
 6. **Map search bar** — Mapbox SearchBox geocoder (fly-to-place only; full app search is Phase 10); Mapbox SearchBox is Mapbox-specific, wrap in capability check, mark `coming_soon` for MapTiler
-7. **Climbing trip segments** — approach/climb/descent segments, per-pitch JSONB metadata, `@openbeta/sandbag` grade display, vertical profile
+7. **Climbing activity segments** — approach/climb/descent segments, per-pitch JSONB metadata, `@openbeta/sandbag` grade display, vertical profile
 
 > **Detailed implementation plan**: See [`docs/Phase4.md`](Phase4.md) for sub-milestones (4a–4d), file manifests, SQL schemas, endpoint contracts, and verification checklists.
 
 ### Acceptance Criteria
 
-- [ ] User can upload a GPX file and create a trip with title, description, activity type
-- [ ] Backend parses GPX and stores route geometry in PostGIS
-- [ ] Trip detail page shows route on map with distance, elevation, duration stats
-- [ ] Trip routes appear on the main map when browsing (public + published only)
-- [ ] Clicking a route on the map opens the trip detail panel
-- [ ] Photos can be uploaded and displayed on the trip detail page
-- [ ] Only the trip owner can edit or delete their trip
-- [ ] Trips are queryable by bounding box with zoom-dependent simplification and feature cap
+- [ ] User can create an activity by uploading a GPX file, or by manual entry, with title, description, activity type
+- [ ] Backend parses GPX and stores track geometry in PostGIS
+- [ ] Manual entry captures activity-type-specific fields into the `metrics` column
+- [ ] Activity detail page shows the track on a map with distance, elevation, duration stats
+- [ ] Activity tracks appear on the main map when browsing (`visibility='public'` only)
+- [ ] Clicking a track on the map opens the activity detail panel
+- [ ] Photos can be uploaded and displayed on the activity detail page
+- [ ] Per-activity visibility (private / followers / public) is respected
+- [ ] Only the activity owner can edit or delete their activity
+- [ ] Activities are queryable by bounding box with zoom-dependent simplification and feature cap
 - [ ] Map search bar geocodes locations and flies to result on map
-- [ ] User can add approach/climb/descent segments to a climbing trip
+- [ ] User can add approach/climb/descent segments to a climbing activity
 - [ ] Each climb segment supports per-pitch metadata (grade, elevation, duration, belay type)
-- [ ] Climbing trip detail shows vertical elevation profile with pitch-by-pitch stacked bars
+- [ ] Climbing activity detail shows vertical elevation profile with pitch-by-pitch stacked bars
 
 ---
 
@@ -545,14 +549,14 @@ packages/map-core/src/
 ### Dependencies
 
 - Phase 1 (auth, user system, API, database)
-- Phase 4 (trip system — synced activities create trips)
+- Phase 4 (activity system — synced device activities create activity records)
 
 ### Features
 
 - Provider-agnostic integration framework (`Provider` interface)
 - Garmin Connect OAuth 2.0 with PKCE (connect/disconnect)
 - Background activity sync (every 15 min polling + manual sync)
-- FIT binary file parsing → trip creation with route, stats, activity type
+- FIT binary file parsing → activity creation with track, stats, activity type
 - Course push — send planned routes to Garmin device
 - Sync dashboard (connection status, sync history, error visibility)
 - AES-256-GCM encryption for stored OAuth tokens
@@ -566,7 +570,7 @@ packages/map-core/src/
    - `handler.go` — HTTP handlers for `/api/v1/integrations/*` (9 endpoints)
    - `oauth.go` — PKCE code verifier/challenge generation, state management via Redis (5 min TTL)
    - `crypto.go` — AES-256-GCM encrypt/decrypt for OAuth tokens, HKDF key derivation from `INTEGRATION_TOKEN_KEY` env var
-   - `fit.go` — FIT binary file parsing using `github.com/muktihari/fit`, extract trackpoints → PostGIS LineString, calculate distance/elevation/duration. For climbing activities: detect approach/climb/descent segments from FIT session data (COROS multi-pitch, Garmin climbing mode), extract per-pitch elevation/duration, auto-populate `trip_segments` with pitch JSONB
+   - `fit.go` — FIT binary file parsing using `github.com/muktihari/fit`, extract trackpoints → PostGIS LineString, calculate distance/elevation/duration. For climbing activities: detect approach/climb/descent segments from FIT session data (COROS multi-pitch, Garmin climbing mode), extract per-pitch elevation/duration, auto-populate `activity_segments` with pitch JSONB. FIT parsing produces the same neutral `ParsedActivity` that Phase 4's GPX parser yields
    - `scheduler.go` — sync scheduler: tick every 15 min, query active providers, acquire Redis lock, refresh tokens if needed, fetch + process activities, release lock
 
 2. **Garmin provider** (`apps/api/internal/integration/garmin/`)
@@ -576,9 +580,9 @@ packages/map-core/src/
    - `oauth.go` — Garmin-specific OAuth 2.0 endpoints, scopes, token exchange
 
 3. **Database migrations**
-   - `005_device_providers.up.sql` — `device_providers` table (user_id, provider, encrypted tokens, sync state)
-   - `006_synced_activities.up.sql` — `synced_activities` table (provider activity → trip mapping)
-   - `007_trips_source.up.sql` — ALTER trips: add `source`, `source_id`, `fit_file_url` columns
+   - `006_device_providers.up.sql` — `device_providers` table (user_id, provider, encrypted tokens, sync state)
+   - `007_synced_activities.up.sql` — `synced_activities` table (provider activity → local activity mapping)
+   - No `activities` ALTER needed — `source`, `source_id`, `original_file_url`, `original_file_format` are already in migration 003 (Phase 4)
 
 4. **Sync scheduler**
    - Background goroutine within main API process
@@ -604,15 +608,15 @@ packages/map-core/src/
    - `pages/IntegrationsPage.tsx` — list providers, connect/disconnect buttons, sync status, sync history. Add IntegrationsPage route to React Router configuration
    - `components/ProviderCard.tsx` — provider connection card with status indicator
    - `components/SyncHistory.tsx` — paginated list of synced activities with status
-   - `components/SourceBadge.tsx` — "Synced from Garmin" badge on trip detail
-   - `components/PushToDeviceButton.tsx` — "Send to Garmin" button on trip detail (if connected + provider supports courses)
+   - `components/SourceBadge.tsx` — "Synced from Garmin" badge on activity detail
+   - `components/PushToDeviceButton.tsx` — "Send to Garmin" button on activity detail (if connected + provider supports courses)
    - `stores/integrationStore.ts` — connected providers, sync status, sync history, actions for connect/disconnect/sync/push
 
 7. **Shared types** (`packages/shared/src/types/integration.ts`)
    - `ProviderInfo` — provider name, connected status, features, last sync
-   - `SyncedActivity` — synced activity with status, provider activity ID, trip ID
+   - `SyncedActivity` — synced activity with status, provider activity ID, local activity ID
    - `SyncSettings` — auto-sync toggle, sync frequency
-   - Extended `Trip` type with `source`, `sourceId`, `fitFileUrl` fields
+   - The `Activity` type already carries `source`, `sourceId`, `originalFileUrl`, `originalFileFormat` — no extension needed
 
 ### Key Files
 
@@ -633,9 +637,8 @@ apps/api/
 │       ├── courses.go
 │       └── oauth.go
 ├── migrations/
-│   ├── 005_device_providers.up.sql
-│   ├── 006_synced_activities.up.sql
-│   └── 007_trips_source.up.sql
+│   ├── 006_device_providers.up.sql
+│   └── 007_synced_activities.up.sql
 
 apps/web/src/
 ├── pages/
@@ -659,19 +662,19 @@ packages/shared/src/types/
 - [ ] On connect, last 30 days of activities are synced automatically
 - [ ] Background sync runs every 15 minutes for connected users
 - [ ] User can trigger manual sync (rate-limited to 1 per 5 min)
-- [ ] FIT files are downloaded, stored in S3, and parsed into trips
-- [ ] Parsed trips have correct route geometry, distance, elevation, duration, and activity type
+- [ ] FIT files are downloaded, stored in S3, and parsed into activities
+- [ ] Parsed activities have correct track geometry, distance, elevation, duration, and activity type
 - [ ] Activity type mapping works correctly (Garmin FIT Sport → mtamta activity_type)
-- [ ] Synced trips are created with `is_public=false` and `source='garmin'`
+- [ ] Synced activities are created with `visibility='private'` and `source='garmin'`
 - [ ] Duplicate activities are not re-synced (dedup by `source_id`)
-- [ ] User can push a trip route to their Garmin device as a course
+- [ ] User can push a route to their Garmin device as a course
 - [ ] OAuth tokens are encrypted at rest with AES-256-GCM
 - [ ] Token refresh happens proactively before expiry
 - [ ] Failed syncs are recorded with error messages and retried next cycle
 - [ ] Integrations page shows connected providers, sync status, and sync history
-- [ ] Trip detail shows source badge and "Send to Garmin" button when applicable
+- [ ] Activity detail shows source badge and "Send to Garmin" button when applicable
 - [ ] COROS/Garmin climbing activities are parsed into approach/climb/descent segments with pitch data
-- [ ] Per-pitch elevation and duration from FIT multi-pitch data populate trip_segments
+- [ ] Per-pitch elevation and duration from FIT multi-pitch data populate activity_segments
 
 ---
 
@@ -1093,7 +1096,7 @@ apps/mobile/
 
 1. **Meilisearch setup**
    - Docker Compose service for Meilisearch
-   - Index configuration (trips, locations, users)
+   - Index configuration (activities, locations, users)
    - Geo search enabled with `_geo` field
 
 2. **Locations and climbing tables**
@@ -1106,26 +1109,26 @@ apps/mobile/
 
 3. **Search sync** (`apps/api/internal/search/`)
    - `service.go` — Meilisearch client, index management
-   - Sync trips to Meilisearch on create/update/delete
+   - Sync activities to Meilisearch on create/update/delete
    - Sync users to Meilisearch on create/update
    - Bulk re-index command for initial population
 
 4. **Search API**
    - `GET /api/v1/search?q=&type=` — global search
-   - `GET /api/v1/search/trips?q=&activity=&near=&radius=` — trip search with filters
+   - `GET /api/v1/search/activities?q=&activity_type=&near=&radius=` — activity search with filters
    - `GET /api/v1/search/locations?q=` — location search
 
 5. **Trending/featured**
-   - Trending: trips with most likes/views in recent timeframe
+   - Trending: activities with most likes/views in recent timeframe
    - Featured: manually curated or algorithmically selected
-   - `GET /api/v1/trips/trending`
-   - `GET /api/v1/trips/featured`
+   - `GET /api/v1/activities/trending`
+   - `GET /api/v1/activities/featured`
 
 6. **Web UI**
    - `components/SearchBar.tsx` — global search with autocomplete
    - `pages/SearchResultsPage.tsx` — results as map pins + list
    - `components/SearchFilters.tsx` — activity type, distance, date filters
-   - `pages/ExplorePage.tsx` — trending + featured trips
+   - `pages/ExplorePage.tsx` — trending + featured activities
 
 7. **Mobile UI**
    - Search bar on explore screen
@@ -1207,46 +1210,46 @@ docker-compose.yml  # Add Meilisearch service
    - Background location tracking (React Native)
    - Record trackpoints (lat/lon/ele/time)
    - Live track display on map during recording
-   - Save recording as trip (auto-generate GPX)
+   - Save recording as an activity (auto-generate GPX)
    - Activity timer and live stats (distance, elevation, speed)
 
 3. **Heatmaps**
-   - Heatmap tiles pre-rendered from trip route density using PostGIS aggregation (`ST_HexGrid` or similar)
+   - Heatmap tiles pre-rendered from activity track density using PostGIS aggregation (`ST_HexGrid` or similar)
    - Stored in S3 (`s3://mtamta-tiles/heatmap/`). Regenerated as batch job via `tilegen` CLI. No dedicated table
    - Toggleable layer on the map
 
-4. **Route planning**
-   - **Schema migration** (`022_route_planning.up.sql`):
-     - `ALTER TABLE trips ADD COLUMN status TEXT NOT NULL DEFAULT 'published';` — values: 'draft', 'planned', 'published'
-     - `ALTER TABLE trips ADD COLUMN route_waypoints JSONB;` — original waypoints for re-editing
-     - Partial index on `status` where not 'published'
+4. **Route planning** — builds the `route` entity designed in `Architecture.md`
+   - **Schema migration** (`022_routes.up.sql`):
+     - `CREATE TABLE routes` per the Architecture.md schema (`path` geometry, `waypoints` JSONB, `activity_type`, distance/elevation, `visibility`)
+     - `ALTER TABLE activities ADD CONSTRAINT fk_activities_route FOREIGN KEY (route_id) REFERENCES routes(id) ON DELETE SET NULL` — adds the deferred FK; the `activities.route_id` column itself already exists (created NULL-able, FK-less, in migration 003)
    - **Directions proxy** (`apps/api/internal/geo/directions.go`):
      - `POST /api/v1/routes/directions` — accepts waypoints, calls Mapbox Directions API (walking profile), returns snapped GeoJSON LineString + distance_m + duration_s
      - Redis cache: `directions:{sha256(waypoints)}`, 1-hour TTL
      - Rate limit: 10 req/min per user
      - Fallback: straight-line segments if Mapbox returns error
+   - **Route CRUD** (`apps/api/internal/route/`):
+     - `POST/GET/PATCH/DELETE /api/v1/routes` — create, read, update, delete planned routes
+     - `GET /api/v1/routes` lists the caller's own routes; `GET /api/v1/map/routes` for public routes by bbox
    - **Route planner UI** (`apps/web/src/map/RoutePlanner.tsx`):
      - Click-to-place waypoints on map (draggable markers)
-     - On each waypoint change, call directions proxy to snap route
-     - Display snapped route as GeoJSON layer
+     - On each waypoint change, call the directions proxy to snap the route
+     - Display the snapped route as a GeoJSON layer
      - Show distance and estimated duration
      - Undo/redo for waypoint edits
    - **Elevation profile** (`apps/web/src/components/ElevationProfile.tsx`):
-     - Sample points along route using `turf.along()`, query elevation via `map.queryTerrainElevation()`
+     - Sample points along the route using `turf.along()`, query elevation via `map.queryTerrainElevation()`
      - SVG/Canvas chart: distance vs elevation, total ascent/descent, min/max
-     - Hover highlights corresponding point on map
-     - Reusable for planned routes, completed trips, and measurement tool
-   - **Save & manage planned routes**:
-     - Save via `POST /api/v1/trips` with `source='planned'`, `status='planned'`, `route_waypoints` JSONB
-     - Edit re-opens planner with saved waypoints
-     - Planned routes on user profile with "Planned" badge
-     - Push to Garmin via existing course push endpoint
-   - **Trip status filtering**:
-     - `GET /api/v1/trips` and `GET /api/v1/map/trips` default to `status=published`
-     - User's own trip list shows all statuses with filter tabs
+     - Hover highlights the corresponding point on the map
+     - Reusable for planned routes, completed activities, and the measurement tool
+   - **Save & manage routes**:
+     - Save via `POST /api/v1/routes` (`path` + `waypoints` JSONB + `activity_type`)
+     - Edit re-opens the planner with the saved waypoints
+     - Routes on the user profile with a "Route" badge
+     - Push to Garmin via the existing course push endpoint
+     - A completed activity can link the route it followed via `activities.route_id`
    - **Zustand store** (`apps/web/src/stores/routePlannerStore.ts`):
      - State: waypoints, snapped route, elevation samples, loading/error
-     - Actions: addWaypoint, moveWaypoint, removeWaypoint, clearRoute, fetchDirections, saveAsTrip
+     - Actions: addWaypoint, moveWaypoint, removeWaypoint, clearRoute, fetchDirections, saveAsRoute
 
 5. **Elevation point query**
    - Click/tap handler on map to capture coordinates
@@ -1305,7 +1308,7 @@ apps/api/
 │   └── directions.go         # Mapbox Directions API proxy
 ├── migrations/
 │   ├── 021_crag_models.up.sql   # 019-020 are in Phase 10
-│   └── 022_route_planning.up.sql
+│   └── 022_routes.up.sql
 
 apps/web/src/
 ├── map/
@@ -1336,18 +1339,18 @@ apps/web/src/
 - [ ] User can download a map region for offline use on mobile
 - [ ] Offline maps work without network connectivity
 - [ ] GPS recording captures track with live display on map
-- [ ] Recorded track can be saved as a trip with auto-calculated stats
+- [ ] Recorded track can be saved as an activity with auto-calculated stats
 - [ ] Heatmap layer shows popular routes with configurable intensity
 - [ ] User can place waypoints on the map; waypoints are draggable
 - [ ] Route snaps to trails via Mapbox Directions API after each waypoint change
 - [ ] Fallback to straight-line segments if Directions API unavailable
 - [ ] Elevation profile chart displays for drawn route with total ascent/descent
 - [ ] Hovering on elevation profile highlights corresponding point on map
-- [ ] User can save planned route as trip with status='planned'
-- [ ] Planned routes appear on user profile with "Planned" badge
-- [ ] User can edit a saved planned route (waypoints reload, re-snap)
-- [ ] User can push planned route to Garmin via existing course push
-- [ ] GET /api/v1/trips defaults to status=published (backward compatible)
+- [ ] User can save a planned route as a `route` (via `POST /api/v1/routes`)
+- [ ] Routes appear on the user profile with a "Route" badge
+- [ ] User can edit a saved route (waypoints reload, re-snap)
+- [ ] User can push a route to Garmin via the existing course push
+- [ ] Route CRUD via `/api/v1/routes` works; a completed activity can link a route via `route_id`
 - [ ] Directions API responses cached in Redis (1-hour TTL)
 - [ ] Elevation profile is reusable for planned routes, completed trips, and measurement tool
 - [ ] Tapping the map with elevation query tool shows a popup with elevation in meters and feet
@@ -1469,7 +1472,7 @@ apps/api/
 | 2 | Maps Core | Interactive map with layers, 3D terrain |
 | 3 | Map Sources & Overlays | Country-specific topo maps, seasonal satellite, ski overlays |
 | 3.5 | Multi-Provider Support | Dual Mapbox/MapTiler rendering, shared adapter, capability matrix |
-| 4 | Trip System | GPX upload, trip CRUD, routes via provider-neutral adapter, climbing segments + pitch metadata |
+| 4 | Activity System | GPX upload + manual entry, activity CRUD, tracks via provider-neutral adapter, climbing segments + pitch metadata |
 | 5 | **Device Integrations** | **Garmin sync, FIT parsing, course push, multi-pitch climb parsing** |
 | 6 | User & Social | Profiles, follows, likes, comments, feed, notifications |
 | 7 | Terrain Analysis | Slope angle, aspect, avalanche slope filter, sun exposure, custom tiles |
@@ -1479,4 +1482,4 @@ apps/api/
 | 11 | Advanced | Offline maps, GPS recording, heatmaps, custom terrain filter, map tools, photo topos, 3D walls |
 | 12 | Polish & Launch | Performance, PWA, SEO, monitoring |
 
-Each phase produces a working increment. Phases 1–3 build the core map experience. Phase 3.5 adds multi-provider support (Mapbox + MapTiler) with a shared adapter before trip features land. Phases 1–4 form the minimum viable product (including climbing trip segments with pitch metadata). Phase 5 adds device connectivity with multi-pitch FIT parsing. Phases 6–8 add social and data richness. Phase 10 seeds crags and climbing routes from OpenBeta. Phase 11 adds photo topos and experimental 3D wall visualization. Phase 12 polishes for launch.
+Each phase produces a working increment. Phases 1–3 build the core map experience. Phase 3.5 adds multi-provider support (Mapbox + MapTiler) with a shared adapter before activity features land. Phases 1–4 form the minimum viable product (including climbing activity segments with pitch metadata). Phase 5 adds device connectivity with multi-pitch FIT parsing. Phases 6–8 add social and data richness. Phase 10 seeds crags and climbing routes from OpenBeta. Phase 11 adds photo topos and experimental 3D wall visualization. Phase 12 polishes for launch.

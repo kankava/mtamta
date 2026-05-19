@@ -1,6 +1,6 @@
 # mtamta — Architecture
 
-> An outdoor adventure platform for logging, finding, and sharing extreme outdoor trips with rich map rendering, terrain analysis, and live data integrations.
+> An outdoor adventure platform for logging, finding, and sharing outdoor activities with rich map rendering, terrain analysis, and live data integrations.
 
 ---
 
@@ -29,7 +29,7 @@
 
 ## Overview
 
-**mtamta** (working name) is a platform for outdoor enthusiasts to log, discover, and share trips across activities like backcountry skiing, resort skiing, snowboarding, trail running, rock climbing, and alpinism.
+**mtamta** (working name) is a platform for outdoor enthusiasts to log, discover, and share activities across sports like backcountry skiing, resort skiing, snowboarding, trail running, rock climbing, and alpinism.
 
 The platform combines rich interactive maps (topographic, satellite, 3D terrain) with live environmental data (weather, wind, avalanche conditions, snow depth, ski lift status) and user-generated content (GPX tracks, photos, trip reports).
 
@@ -55,7 +55,7 @@ The platform combines rich interactive maps (topographic, satellite, 3D terrain)
 | **Database** | PostgreSQL + PostGIS | Robust relational store with first-class geospatial support |
 | **Time-series** | TimescaleDB | PostgreSQL extension for weather/snow/wind time-series data. Included in `timescale/timescaledb-ha` image; hypertables enabled when data volume justifies it |
 | **Cache** | Redis | Map tile caching, sessions, rate limiting |
-| **Search** | Meilisearch | Fast full-text search for trips, locations, resorts |
+| **Search** | Meilisearch | Fast full-text search for activities, locations, resorts |
 | **Object storage** | S3-compatible | GPX files, photos, user uploads |
 | **Auth** | Self-built in Go | Only 2 OAuth providers (Google + Apple); ~200-300 lines of Go; full control over user model |
 | **FIT parsing** | `github.com/muktihari/fit` | Parse binary FIT files from Garmin and other GPS devices |
@@ -87,7 +87,7 @@ The platform combines rich interactive maps (topographic, satellite, 3D terrain)
 | Service | Free Tier | Paid Tier | Notes |
 |---|---|---|---|
 | **Mapbox** | 50K web map loads/month, 25K mobile MAU/month, 750K raster tile requests/month | Pay-as-you-go beyond free tier | A "map load" = one `new Map()` initialization, NOT per-interaction |
-| **MapTiler** | Free (no hard limit, fair use) | From EUR 25/month | MapTiler SDK includes terrain, geocoding, weather; alternative to Mapbox for base maps |
+| **MapTiler** | 5K API sessions/month + 100K API requests/month (no overage on Free — maps pause past the limit) | From USD 25/month | MapTiler SDK includes terrain, geocoding, weather; alternative to Mapbox for base maps |
 | **Mapbox Directions API** | 100K requests/month (included in Mapbox free tier) | Pay-as-you-go beyond | Walking profile for trail snapping; proxied through backend |
 | **Open-Meteo** | <10K calls/day (no API key) | From $29/month for 1M calls | Free for non-commercial use |
 | **OpenSkiData** | Free | — | ODbL license, self-hostable |
@@ -177,7 +177,7 @@ mtamta/
 │       ├── internal/
 │       │   ├── auth/         # Authentication (OAuth, JWT)
 │       │   ├── user/         # User management
-│       │   ├── trip/         # Trip CRUD, GPX parsing
+│       │   ├── activity/     # Activity CRUD, GPX parsing
 │       │   ├── social/       # Follow, likes, comments
 │       │   ├── geo/          # Geospatial operations
 │       │   ├── terrain/      # Terrain analysis, tile generation
@@ -191,7 +191,8 @@ mtamta/
 │       ├── pkg/              # Shared utilities (exported)
 │       ├── migrations/       # Database migrations
 │       ├── go.mod
-│       └── go.sum
+│       ├── go.sum
+│       └── railway.toml      # Railway deploy config (health check path)
 │
 ├── packages/
 │   ├── shared/               # Shared TypeScript types, API client, utils
@@ -223,7 +224,6 @@ mtamta/
 ├── turbo.json                # Turborepo configuration
 ├── package.json              # Root package.json (workspaces)
 ├── docker-compose.yml        # Local development services (TimescaleDB+PostGIS, Redis)
-├── railway.toml              # Railway deployment configuration
 ├── Architecture.md           # This file
 └── Plan.md                   # Implementation plan
 ```
@@ -249,11 +249,11 @@ apps/api/internal/
 │   ├── handler.go        # HTTP handlers (GET /users/:id, etc.)
 │   ├── service.go        # User business logic
 │   └── repository.go     # users table operations
-├── trip/
+├── activity/
 │   ├── handler.go        # HTTP handlers (CRUD)
-│   ├── service.go        # Trip logic, GPX parsing
+│   ├── service.go        # Activity logic, GPX parsing
 │   ├── gpx.go            # GPX file parsing
-│   └── repository.go     # trips table operations
+│   └── repository.go     # activities table operations
 ├── social/
 │   ├── handler.go        # Follow, like, comment handlers
 │   ├── service.go        # Social logic
@@ -300,7 +300,7 @@ apps/api/internal/
 ├── climbing/
 │   ├── handler.go        # HTTP handlers (crags, climbing routes, topos)
 │   ├── service.go        # Climbing route/crag/topo business logic
-│   ├── repository.go     # climbing_routes, crag_topos, trip_segments tables
+│   ├── repository.go     # climbing_routes, crag_topos, activity_segments tables
 │   ├── grades.go         # Grade normalization and comparison (server-side)
 │   └── topo.go           # Photo topo overlay processing and validation
 ├── storage/
@@ -394,7 +394,7 @@ Machine-readable codes: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ER
 **File Uploads**:
 
 - GPX: max 50MB, validates XML structure
-- Photos: max 10MB per file, max 50 per trip. Types: JPEG, PNG, WebP. Magic byte validation. EXIF GPS stripped for privacy
+- Photos: max 10MB per file, max 50 per activity. Types: JPEG, PNG, WebP. Magic byte validation. EXIF GPS stripped for privacy
 - FIT: max 50MB
 - Avatars: max 5MB, JPEG/PNG/WebP
 - Presigned upload URLs valid 1h. Download URLs valid 24h
@@ -424,7 +424,7 @@ Machine-readable codes: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ER
 **Go Backend**:
 
 - **Unit tests**: Table-driven tests for: auth token verification (valid/expired/malformed), GPX parsing (valid track, empty, multi-segment, malformed XML), FIT parsing (activity types, multi-pitch detection, corrupt files), grade normalization, distance/elevation calculation, OAuth token encryption/decryption
-- **Integration tests**: Use `testcontainers-go` or CI service containers for PostGIS. Test full flows: auth → create trip → query by bbox → verify PostGIS spatial query. Test migration up/down for all migrations
+- **Integration tests**: Use `testcontainers-go` or CI service containers for PostGIS. Test full flows: auth → create activity → query by bbox → verify PostGIS spatial query. Test migration up/down for all migrations
 - **Repository tests**: Test PostGIS spatial queries with real data (point-in-polygon, bbox intersection, nearest neighbor)
 - **Coverage target**: 80% on `internal/` packages. Handler layer tested via integration tests, not unit tests
 - **Mocking**: Interface-based. Each service depends on repository interfaces, injected in tests. No global mocks
@@ -437,7 +437,7 @@ Machine-readable codes: `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ER
 
 **E2E Tests** (Phase 12):
 
-- Playwright for critical user flows: sign in → create trip (GPX upload) → view on map → like → search → find trip
+- Playwright for critical user flows: sign in → create activity (GPX upload) → view on map → like → search → find activity
 - Run against staging environment
 - 5 core scenarios, not exhaustive
 
@@ -554,7 +554,7 @@ The web app is centered around an interactive map. **Current state (Phase 3.5 �
 **Provider-neutral runtime dispatch:**
 - Post-login provider selection (stored in `localStorage`, surfaced via `mapStore`)
 - Lazy-loaded provider runtimes: `runtime/mapbox/` or `runtime/maptiler/`
-- Shared app-owned layers (trip routes, raster overlays) target an `AppMapAdapter` type interface — not the raw vendor SDK — covering source/layer lifecycle, style inspection for layer ordering, viewport reads, and interaction events
+- Shared app-owned layers (activity tracks, raster overlays) target an `AppMapAdapter` type interface — not the raw vendor SDK — covering source/layer lifecycle, slot-based layer ordering (`addLayer(layer, { slot })`), viewport reads, and interaction events
 - Provider-specific features (search, weather, directions) live inside each runtime module
 - Capability matrix (`providerCapabilities.ts`) gates UI controls: `available`, `coming_soon`, or `unsupported`
 
@@ -567,7 +567,7 @@ See [`MapProviders.md`](MapProviders.md) for the detailed implementation spec (a
 - `VITE_MAPBOX_ACCESS_TOKEN` must be a public `pk.*` token with URL restrictions; `VITE_MAPTILER_API_KEY` is the MapTiler API key
 
 **Layer ordering — user content must render on top:**
-All app-generated layers (trip routes, waypoints, user position) must be added after the base style loads and appended without a `beforeId` so they sit above POI symbols. A route line covering a café icon is acceptable; a POI icon covering a route line is not.
+All app-generated layers (activity tracks, waypoints, user position) must be added after the base style loads and placed via `AppMapAdapter.addLayer(layer, { slot })` — the Mapbox runtime maps the slot to a Mapbox Standard slot (`top` for user content), the MapTiler runtime derives an equivalent `beforeId` — so they sit above POI symbols. A track line covering a café icon is acceptable; a POI icon covering a track line is not.
 
 ```
 ┌───────────────────────────────────────┐
@@ -593,7 +593,7 @@ All app-generated layers (trip routes, waypoints, user position) must be added a
 Key stores:
 - **`mapStore`** — viewport (center, zoom, bearing, pitch), active layers, selected features, selected map provider
 - **`authStore`** — current user, tokens, login/logout actions
-- **`tripStore`** — active trip, trip list, filters
+- **`activityStore`** — active activity, activity list, filters
 - **`uiStore`** — panel states, modals, loading indicators
 
 ### Map Layer System
@@ -615,7 +615,7 @@ Layers are toggled via the UI and managed through the shared `map-core` package.
 | **Overlay** | Steep/flat terrain | Raster tiles | Copernicus GLO-30 DEM (pre-generated) |
 | **Overlay** | Aspect (slope direction) | Raster tiles | Copernicus GLO-30 DEM (pre-generated) |
 | **Overlay** | Avalanche slope filter | Raster tiles | Copernicus GLO-30 DEM (pre-generated) |
-| **Data** | Trip routes | GeoJSON | mtamta API (`/api/v1/map/trips`) |
+| **Data** | Activity tracks | GeoJSON | mtamta API (`/api/v1/map/activities`) |
 | **Data** | Ski runs & lifts | GeoJSON | OpenSkiData (openskimap.org), daily export |
 | **Data** | Hiking trails | GeoJSON | OSM via Overpass API |
 | **Data** | Climbing areas | GeoJSON | OSM via Overpass API |
@@ -654,7 +654,7 @@ Layers are toggled via the UI and managed through the shared `map-core` package.
 ### Offline Capabilities (Phase 11)
 
 - Download map tile regions for offline use via Mapbox offline API
-- Cache trip data locally (SQLite or AsyncStorage)
+- Cache activity data locally (SQLite or AsyncStorage)
 - Queue actions (likes, comments) for sync when back online
 - GPS track recording works fully offline
 
@@ -674,7 +674,7 @@ Layers are toggled via the UI and managed through the shared `map-core` package.
 
 > **Note**: This architecture shipped in Phase 3.5. See `apps/web/src/map/runtime/` for the per-provider runtime modules and `apps/web/src/map/runtime/shared/mapAdapter.ts` for the shared `AppMapAdapter`.
 
-The web app supports dual map providers (Mapbox and MapTiler) with runtime selection. Users choose a provider after login; the choice is persisted in `localStorage`. Each provider has its own lazy-loaded runtime module with provider-specific SDK usage. Shared app-owned layers (trip routes, raster overlays) target a narrow `AppMapAdapter` interface so they work with both providers without duplication.
+The web app supports dual map providers (Mapbox and MapTiler) with runtime selection. Users choose a provider after login; the choice is persisted in `localStorage`. Each provider has its own lazy-loaded runtime module with provider-specific SDK usage. Shared app-owned layers (activity tracks, raster overlays) target a narrow `AppMapAdapter` interface so they work with both providers without duplication.
 
 See [`MapProviders.md`](MapProviders.md) for the full implementation reference: adapter interface, runtime file structure, capability matrix, phased rollout plan, and testing strategy.
 
@@ -709,7 +709,7 @@ See [`MapProviders.md`](MapProviders.md) for the full implementation reference: 
 |---|---|---|
 | Provider base styles (Mapbox Standard, MapTiler) | Vector | Crisp at any zoom, smooth, restyleable — and it is what the providers ship |
 | Country topo overlays (swisstopo, IGN, BKG, Kartverket, USGS, OpenTopoMap) | Raster | Each card's value is the *official national map* of that country; the agencies' classic topo products (e.g. swisstopo's Landeskarte) are raster. Raster reproduces that cartography exactly and overlays trivially (image + opacity, slot ordering) |
-| App-owned data (trip routes, markers — Phase 4+) | Vector | GeoJSON sources + vector layers — interactive and restyleable |
+| App-owned data (activity tracks, markers — Phase 4+) | Vector | GeoJSON sources + vector layers — interactive and restyleable |
 
 **Decision — country topo stays raster.** The national agencies do publish vector tiles (e.g. swisstopo's newer "Base Map" line), but those are a separate, more streamlined product — *not* a vector rendering of the classic national map. Switching would change *which* map is shown, not just the format, and the "official national map" identity is the whole point of the country cards. Vector is used where it genuinely pays off: the provider base style and app-owned data.
 
@@ -735,7 +735,7 @@ Mapbox GL JS, MapTiler SDK, and `@rnmapbox/maps` all support 3D terrain natively
 ├─────────────────────────────┤
 │      Live Data Layers       │  ← Weather, wind, snow, avalanche, lifts, webcams
 ├─────────────────────────────┤
-│      Data Layers            │  ← Trips, ski runs, hiking trails, climbing areas
+│      Data Layers            │  ← Activities, ski runs, hiking trails, climbing areas
 ├─────────────────────────────┤
 │      Terrain Overlays       │  ← Slope angle, sun exposure, steep/flat (custom tiles)
 ├─────────────────────────────┤
@@ -800,6 +800,8 @@ Country bounding boxes (approximate, stored in `packages/map-core`):
 
 **Tile caching**: Proxied topo tiles are cached in Redis with a 24h TTL (these tiles change infrequently). swisstopo (summer + winter) and OpenTopoMap are proxied through the Go backend — swisstopo so the proxy can drop blank border tiles (it serves coverage well beyond Switzerland), OpenTopoMap to respect its fair-use rate limit. The remaining country sources — IGN (public key-less `PLANIGNV2` endpoint), basemap.at, BKG, Kartverket, USGS — load directly from the client. Monitor Redis memory usage; consider migrating topo tile cache to S3/disk if memory exceeds budget.
 
+> **Why only proxied tiles are cached in Redis**: Redis only caches tiles that transit the backend. Non-proxied sources rely on the browser's HTTP cache (their upstreams send `Cache-Control` headers), which covers single-user repeat views for free. Redis adds a *cross-user* cache, which only pays off at meaningful traffic — and proxying everything would add backend egress, Redis memory, latency, and a single point of failure. Revisit if an upstream becomes unreliable or tile-URL versioning for cache invalidation is needed.
+
 #### Seasonal Satellite Imagery
 
 > **Status (Phase 3.5)**: deferred. The backend Sentinel proxy handler exists, but no Sentinel Hub Instance ID is configured, the frontend `satellite-winter` basemap card is disabled ("Coming soon"), and `applySentinel` is a no-op stub. The design below is retained as the target.
@@ -810,6 +812,15 @@ Copernicus Sentinel-2 imagery (10m resolution) provides seasonal satellite views
 **API**: Sentinel Hub WMS with `TIME` and `MAXCC` parameters
 **Registration**: Free account → create Configuration Instance → get Instance ID
 **Free tier**: 10,000 processing units/month, 10,000 requests/month
+
+> **Cost reality — "free" has a catch.** Sentinel-2 *data* is genuinely free and open (EU Copernicus open-data policy — free for commercial use too). What is *not* unlimited is serving it as map tiles:
+>
+> - **On-demand API path** (the Sentinel Hub WMS above): the free tier is ~10k requests/month. That is tiny for tile serving — one map view pulls dozens of tiles, so even a few active users exhaust the quota fast. Fine for prototyping, **not viable for production traffic**.
+> - **Pre-render + self-host path** (the actually-free production option): download the raw Sentinel-2 scenes (free), composite a Dec–Feb cloud-filtered winter mosaic once with GDAL, tile it, and host the tiles ourselves. Ongoing cost is then just storage + bandwidth (S3/R2/CDN); the imagery source is $0. The winter composite is static — regenerate ~once a year.
+>
+> **When this is built, prefer the pre-render path.** The WMS-proxy design below is kept for reference, but plan around self-hosted seasonal mosaics, not the on-demand free tier.
+
+**Tile hosting (decision)**: pre-rendered seasonal mosaics are hosted as a **PMTiles** archive on **Cloudflare R2**, served via the Cloudflare CDN (a small Protomaps-style Worker fronts the `.pmtiles` file to expose a standard `{z}/{x}/{y}` endpoint, so both the Mapbox and MapTiler runtimes consume it as a plain raster source). Chosen over Mapbox/MapTiler hosted tilesets because R2 has zero egress fees, there is no per-tile-request billing, and there is no vendor lock-in. The composite is static — regenerate and re-upload (a new versioned filename) roughly once a year. This is separate from the Go tile *proxy*, which handles live upstreams (swisstopo, OpenTopoMap); pre-rendered tiles never pass through the app server.
 
 **WMS URL template** (proxied through Go backend):
 `GET /api/v1/tiles/sentinel/{z}/{x}/{y}?season=winter&year=2024`
@@ -857,7 +868,7 @@ https://sh.dataspace.copernicus.eu/ogc/wms/{INSTANCE_ID}?
 |---|---|---|---|
 | Ski runs & lifts | OpenSkiData (openskimap.org) | GeoJSON | Daily export. Contains run name, difficulty, type, lift type. License: ODbL |
 | Hiking trails | OSM via Overpass API | GeoJSON | On-demand or periodic. Query `highway=path/footway` with `sac_scale`, `route=hiking` relations |
-| Trip routes | mtamta API (`/api/v1/map/trips`) | GeoJSON | Live. User-uploaded GPX tracks within viewport |
+| Activity tracks | mtamta API (`/api/v1/map/activities`) | GeoJSON | Live. User-recorded activity tracks within viewport |
 | Climbing areas | OSM via Overpass API + OpenBeta | GeoJSON | Periodic. Query `sport=climbing`, `natural=cliff`. Supplemented with OpenBeta open-license data |
 | Climbing routes (crags) | mtamta API (`/api/v1/map/crags`) | GeoJSON | Live. User-contributed and OpenBeta-seeded crag locations with route counts |
 | Ski touring routes (CH) | swisstopo WMTS (`ch.swisstopo-karto.skitouren`) | Raster overlay | Winter-only. Ski touring ascent/descent routes in Switzerland |
@@ -890,11 +901,11 @@ Live data layers use client-side polling at the intervals specified (15 min for 
 | Elevation point query | Client-side | Decode Mapbox Terrain RGB at clicked coordinate. Display as popup (meters + feet). No server round-trip |
 | Distance measurement | Client-side | Click points → polyline with geodesic distance (turf.js). Optional elevation profile along path |
 | Custom terrain filter | Client-side (WebGL) | User sets elevation range + gradient range + aspect multi-select. Custom `CustomLayerInterface` with WebGL shader reads Terrain RGB tiles, computes slope/aspect per pixel from 3x3 kernel, applies filter, renders matching pixels as green overlay. Primary use case: correlate avalanche bulletin warnings with actual terrain |
-| Route planner | Client + Server proxy | Draw waypoints on map → `POST /api/v1/routes/directions` (Mapbox Directions walking profile) → display snapped route + elevation profile (client-side `map.queryTerrainElevation`). Save as trip with `status='planned'`, `source='planned'`. Fallback: straight-line segments if Directions API unavailable |
+| Route planner | Client + Server proxy | Draw waypoints on map → `POST /api/v1/routes/directions` (Mapbox Directions walking profile) → display snapped route + elevation profile (client-side `map.queryTerrainElevation`). Save as a `route` (the planned-itinerary entity). Fallback: straight-line segments if Directions API unavailable |
 
 #### Heatmap Storage
 
-Heatmaps are pre-rendered raster tiles generated from trip route density using PostGIS `ST_HexGrid` or similar aggregation. Stored in S3 alongside terrain tiles (`s3://mtamta-tiles/heatmap/`). Regenerated periodically (daily or weekly) as a batch job in the `tilegen` CLI. No dedicated database table needed — generated from existing `trips.route` geometry.
+Heatmaps are pre-rendered raster tiles generated from activity track density using PostGIS `ST_HexGrid` or similar aggregation. Stored in S3 alongside terrain tiles (`s3://mtamta-tiles/heatmap/`). Regenerated periodically (daily or weekly) as a batch job in the `tilegen` CLI. No dedicated database table needed — generated from existing `activities.track` geometry.
 
 ---
 
@@ -1026,7 +1037,7 @@ Each provider implements this interface in its own subdirectory under `internal/
 | indoor_climbing | climb |
 | bouldering | boulder |
 
-> **Multi-pitch climbing data**: COROS watches and some Garmin devices segment climbing activities into approach, climb, and descent phases with per-pitch tracking. When FIT data contains these segments, the sync pipeline extracts them into `trip_segments` with pitch-level JSONB metadata.
+> **Multi-pitch climbing data**: COROS watches and some Garmin devices segment climbing activities into approach, climb, and descent phases with per-pitch tracking. When FIT data contains these segments, the sync pipeline extracts them into `activity_segments` with pitch-level JSONB metadata.
 
 ### Security — Token Encryption
 
@@ -1151,59 +1162,84 @@ Batch process for pre-generating terrain overlay tiles from Copernicus GLO-30 DE
 
 ### PostgreSQL + PostGIS
 
-Primary data store for all persistent data. PostGIS extension enables geospatial queries (nearest trips, trips within bounding box, route intersections).
+Primary data store for all persistent data. PostGIS extension enables geospatial queries (nearest activities, activities within bounding box, track intersections).
 
 ```sql
 -- Users (see auth section above)
 
--- Trips
-CREATE TABLE trips (
+-- Activities (recorded outings — GPX upload now, device sync in Phase 5)
+CREATE TABLE activities (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id       UUID NOT NULL REFERENCES users(id),
     title         TEXT NOT NULL,
     description   TEXT,
     activity_type TEXT NOT NULL,  -- 'ski', 'backcountry_ski', 'trail_run', 'climb', etc.
-    route         GEOGRAPHY(LineString, 4326),  -- PostGIS geography
+    track         GEOGRAPHY(LineString, 4326),  -- recorded GPS path; NULL for a manual activity
+    started_at    TIMESTAMPTZ,                  -- when the activity occurred (vs created_at = record creation)
     distance_m    FLOAT,
     elevation_gain_m FLOAT,
     elevation_loss_m FLOAT,
     duration_s    INTEGER,
     start_point   GEOGRAPHY(Point, 4326),
     end_point     GEOGRAPHY(Point, 4326),
-    gpx_file_url  TEXT,
+    metrics       JSONB,   -- activity-type-specific + device-rich stats (avg_hr, power, vertical_descent_m, ...)
+    original_file_url    TEXT,  -- raw uploaded/synced file in S3, kept as source of truth
+    original_file_format TEXT,  -- 'gpx' | 'fit'
     cover_photo_url TEXT,
-    is_public     BOOLEAN NOT NULL DEFAULT TRUE,
-    status        TEXT NOT NULL DEFAULT 'published',  -- 'draft', 'planned', 'published'
-    route_waypoints JSONB,  -- Original waypoints for planned routes: [{"lng": ..., "lat": ...}, ...]
+    visibility    TEXT NOT NULL DEFAULT 'public',     -- 'private' | 'followers' | 'public'
+    status        TEXT NOT NULL DEFAULT 'published',  -- 'draft' | 'published'
+    source        TEXT NOT NULL DEFAULT 'manual',     -- 'manual' | 'gpx' | 'garmin' | 'coros' | ...
+    source_id     TEXT,                               -- '{provider}:{activity_id}' for sync dedup
+    route_id      UUID,  -- optional link to the planned route followed; FK added with the routes migration
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_trips_route ON trips USING GIST(route);
-CREATE INDEX idx_trips_start_point ON trips USING GIST(start_point);
-CREATE INDEX idx_trips_activity_type ON trips(activity_type);
-CREATE INDEX idx_trips_user_id ON trips(user_id);
-CREATE INDEX idx_trips_status ON trips(status) WHERE status != 'published';
+CREATE INDEX idx_activities_track ON activities USING GIST(track);
+CREATE INDEX idx_activities_start_point ON activities USING GIST(start_point);
+CREATE INDEX idx_activities_activity_type ON activities(activity_type);
+CREATE INDEX idx_activities_user_id ON activities(user_id, started_at DESC NULLS LAST);
+CREATE INDEX idx_activities_status ON activities(status) WHERE status != 'published';
 ```
 
 All spatial columns use `GEOGRAPHY` (not `GEOMETRY`) so distance/length functions return meters by default.
 
 **Canonical activity types**: `ski`, `backcountry_ski`, `snowboard`, `trail_run`, `hike`, `climb`, `boulder`, `alpinism`, `bike`, `other`. Validated at the application layer (Go service).
 
-> **Climbing trip note**: For `climb` and `alpinism` activity types, the primary `route` field may be unreliable (GPS multipath on vertical walls). Structured data lives in the `trip_segments` table, where each climb segment contains pitch-level JSONB metadata. The `route` field still stores whatever GPS track is available for map display.
+> **Climbing activity note**: For `climb` and `alpinism` activity types, the primary `track` may be unreliable (GPS multipath on vertical walls). Structured data lives in the `activity_segments` table, where each climb segment contains pitch-level JSONB metadata. The `track` still stores whatever GPS path is available for map display.
 
 ```sql
--- Trip Photos
-CREATE TABLE trip_photos (
-    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    trip_id    UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
-    key        TEXT NOT NULL,  -- S3 object key (e.g. 'photos/{trip_id}/{uuid}.jpg')
-    caption    TEXT,
-    location   GEOGRAPHY(Point, 4326),
-    taken_at   TIMESTAMPTZ,
-    sort_order INTEGER NOT NULL DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+-- Activity Photos
+CREATE TABLE activity_photos (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    activity_id UUID NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+    key         TEXT NOT NULL,  -- S3 object key (e.g. 'photos/{activity_id}/{uuid}.jpg')
+    caption     TEXT,
+    location    GEOGRAPHY(Point, 4326),
+    taken_at    TIMESTAMPTZ,
+    sort_order  INTEGER NOT NULL DEFAULT 0,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+CREATE INDEX idx_activity_photos_activity_id ON activity_photos(activity_id);
+
+-- Routes (planned itineraries — designed here; built in a later route-planning phase)
+CREATE TABLE routes (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       UUID NOT NULL REFERENCES users(id),
+    title         TEXT NOT NULL,
+    description   TEXT,
+    activity_type TEXT NOT NULL,                -- a route is planned with an activity in mind
+    path          GEOGRAPHY(LineString, 4326),  -- planned / snapped line
+    waypoints     JSONB,                        -- ordered input waypoints [{lng, lat}, ...]
+    distance_m    FLOAT,
+    elevation_gain_m FLOAT,
+    elevation_loss_m FLOAT,
+    visibility    TEXT NOT NULL DEFAULT 'public',
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_routes_path ON routes USING GIST(path);
+CREATE INDEX idx_routes_user_id ON routes(user_id);
 
 -- Social: Follows
 CREATE TABLE follows (
@@ -1214,25 +1250,25 @@ CREATE TABLE follows (
 );
 
 -- Social: Likes
-CREATE TABLE trip_likes (
-    user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    trip_id    UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (user_id, trip_id)
+CREATE TABLE activity_likes (
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    activity_id UUID NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, activity_id)
 );
 
 -- Social: Saves (bookmarks)
-CREATE TABLE trip_saves (
-    user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    trip_id    UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (user_id, trip_id)
+CREATE TABLE activity_saves (
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    activity_id UUID NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, activity_id)
 );
 
 -- Social: Comments
 CREATE TABLE comments (
-    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    trip_id    UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    activity_id UUID NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
     user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     body       TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -1294,12 +1330,12 @@ CREATE TABLE device_providers (
     UNIQUE(user_id, provider)
 );
 
--- Tracks which provider activities map to which trips
+-- Tracks which provider activities map to which local activities
 CREATE TABLE synced_activities (
     id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     device_provider_id   UUID NOT NULL REFERENCES device_providers(id) ON DELETE CASCADE,
     provider_activity_id TEXT NOT NULL,
-    trip_id              UUID REFERENCES trips(id) ON DELETE SET NULL,
+    activity_id          UUID REFERENCES activities(id) ON DELETE SET NULL,
     fit_file_url         TEXT,
     synced_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     sync_status          TEXT NOT NULL DEFAULT 'success', -- success/failed/skipped
@@ -1308,24 +1344,15 @@ CREATE TABLE synced_activities (
 );
 ```
 
-**Trips table alterations** (added for device sync support):
+**Activity provenance**: the device-sync columns are part of the base `activities` table from the start (migration 003) — no Phase 5 `ALTER` needed. `source` values: `'manual'`, `'gpx'`, `'garmin'`, `'coros'`, `'suunto'`, `'apple_health'`, `'gps_recording'`. `source_id` holds `'{provider}:{activity_id}'` for sync dedup. The original synced FIT file is stored via `original_file_url` with `original_file_format = 'fit'`.
+
+### Climbing Activity Model
 
 ```sql
-ALTER TABLE trips ADD COLUMN source TEXT NOT NULL DEFAULT 'manual';
-  -- Values: 'manual', 'garmin', 'coros', 'suunto', 'apple_health', 'gps_recording', 'planned'
-ALTER TABLE trips ADD COLUMN source_id TEXT;
-  -- Format: '{provider}:{activity_id}' for dedup
-ALTER TABLE trips ADD COLUMN fit_file_url TEXT;
-  -- S3 URL to original FIT file
-```
-
-### Climbing Trip Model
-
-```sql
--- Trip segments (approach/climb/descent phases for climbing trips)
-CREATE TABLE trip_segments (
+-- Activity segments (approach/climb/descent phases for climbing activities)
+CREATE TABLE activity_segments (
     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    trip_id       UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+    activity_id   UUID NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
     segment_type  TEXT NOT NULL,  -- 'approach', 'climb', 'descent'
     segment_order INTEGER NOT NULL,
     track         GEOGRAPHY(LineString, 4326),
@@ -1336,7 +1363,7 @@ CREATE TABLE trip_segments (
     metadata      JSONB,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX idx_trip_segments_trip_id ON trip_segments(trip_id);
+CREATE INDEX idx_activity_segments_activity_id ON activity_segments(activity_id);
 
 -- Climbing routes at a crag
 CREATE TABLE climbing_routes (
@@ -1481,9 +1508,9 @@ Retention: keep 30 days of runs, prune older rows via a weekly cleanup query. At
 
 ### Data Retention
 
-**User Deletion**: Soft delete via `deleted_at TIMESTAMPTZ` column on `users` table. On delete: set display_name to "Deleted User", clear bio/avatar/email, keep trips as "by deleted user" unless user requests full data removal. GDPR export: `GET /api/v1/users/me/export` returns JSON dump of all user data.
+**User Deletion**: Soft delete via `deleted_at TIMESTAMPTZ` column on `users` table. On delete: set display_name to "Deleted User", clear bio/avatar/email, keep activities as "by deleted user" unless user requests full data removal. GDPR export: `GET /api/v1/users/me/export` returns JSON dump of all user data.
 
-**Trip Deletion**: Hard delete with `ON DELETE CASCADE` (photos, segments, likes, comments all removed).
+**Activity Deletion**: Hard delete with `ON DELETE CASCADE` (photos, segments, likes, comments all removed).
 
 **Data Cleanup**:
 
@@ -1517,21 +1544,21 @@ Retention: keep 30 days of runs, prune older rows via a weekly cleanup query. At
 
 ### Meilisearch
 
-Used for fast, typo-tolerant full-text search across trips, locations, and users.
+Used for fast, typo-tolerant full-text search across activities, locations, and users.
 
 **Indexes**:
 
 | Index | Searchable Fields | Filterable Fields |
 |---|---|---|
-| `trips` | title, description, location name | activity_type, user_id, created_at |
+| `activities` | title, description, location name | activity_type, user_id, started_at |
 | `locations` | name, region, country | type (resort, peak, trailhead) |
 | `users` | display_name, bio | — |
 | `crags` | name, region, rock_type, approach_description | type (crag), rock_type, location._geo |
 | `climbing_routes` | name, description, first_ascent | route_type, crag_id, grade (sortable) |
 
-**Sync Strategy**: After any trip/user create or update, push the updated document to Meilisearch. This can be async (via a small queue or goroutine).
+**Sync Strategy**: After any activity/user create or update, push the updated document to Meilisearch. This can be async (via a small queue or goroutine).
 
-**Geo Search**: Meilisearch supports `_geo` filtering, allowing "trips near me" queries with a radius.
+**Geo Search**: Meilisearch supports `_geo` filtering, allowing "activities near me" queries with a radius.
 
 ---
 
@@ -1544,8 +1571,8 @@ All user-uploaded files are stored in S3-compatible storage (AWS S3, MinIO, Clou
 | Bucket / Prefix | Contents | Access |
 |---|---|---|
 | `gpx/` | Raw GPX files | Private (signed URLs) |
-| `photos/` | Trip photos (original) | Public CDN |
-| `photos/thumb/` | Trip photos (thumbnails) | Public CDN |
+| `photos/` | Activity photos (original) | Public CDN |
+| `photos/thumb/` | Activity photos (thumbnails) | Public CDN |
 | `avatars/` | User profile photos | Public CDN |
 | `fit/` | Raw FIT files from device syncs | Private (signed URLs) |
 | `topos/` | Crag topo photos (originals) | Public CDN |
@@ -1553,13 +1580,13 @@ All user-uploaded files are stored in S3-compatible storage (AWS S3, MinIO, Clou
 
 **Upload Flows**:
 
-*GPX files* — single multipart `POST /api/v1/trips` with GPX file + metadata fields. The API parses the GPX server-side, stores the route in PostGIS, and optionally stores the original file in S3 (`gpx/{trip_id}.gpx`). No pre-signed URL needed — GPX files are small (<50 MB) and must be parsed before the trip is created.
+*Activity creation* — single multipart `POST /api/v1/activities` with metadata fields and an **optional** GPX file. If a GPX is attached, the API parses it server-side, derives the `track` + stats, and stores the original file in S3 (`gpx/{activity_id}.gpx`); without one, the activity is created from the submitted fields alone (manual entry). No pre-signed URL needed — GPX files are small (<50 MB) and must be parsed before the activity is created.
 
 *Photos and other large files* — pre-signed URL flow:
-1. Client requests a pre-signed upload URL from the API (`POST /api/v1/upload/url` with `{trip_id, file_ext, content_type}`). **The server generates the key** (`photos/{trip_id}/{uuid}.{ext}`) — clients never choose keys
+1. Client requests a pre-signed upload URL from the API (`POST /api/v1/upload/url` with `{activity_id, file_ext, content_type}`). **The server generates the key** (`photos/{activity_id}/{uuid}.{ext}`) — clients never choose keys
 2. Client uploads directly to S3 (no proxying through the API)
-3. Client sends the **S3 object key** (not an arbitrary URL) back to the API to associate with the trip (`POST /api/v1/trips/{id}/photos` with `{key, caption, sort_order}`)
-4. API validates the key matches the expected prefix (`photos/{trip_id}/`), fetches the object from S3 to extract EXIF metadata, and stores the photo record
+3. Client sends the **S3 object key** (not an arbitrary URL) back to the API to associate with the activity (`POST /api/v1/activities/{id}/photos` with `{key, caption, sort_order}`)
+4. API validates the key matches the expected prefix (`photos/{activity_id}/`), fetches the object from S3 to extract EXIF metadata, and stores the photo record
 5. Thumbnails: deferred — originals served initially in Phase 4c. Async thumbnail generation added in a later phase when traffic justifies it
 
 ---
@@ -1589,28 +1616,42 @@ All user-uploaded files are stored in S3-compatible storage (AWS S3, MinIO, Clou
 | `GET` | `/api/v1/users/me` | Get current user profile |
 | `PATCH` | `/api/v1/users/me` | Update current user profile |
 | `GET` | `/api/v1/users/:id` | Get user by ID |
-| `GET` | `/api/v1/users/:id/trips` | Get user's public trips |
+| `GET` | `/api/v1/users/:id/activities` | Get a user's activities (visibility-filtered) |
 | `GET` | `/api/v1/users/:id/followers` | Get user's followers |
 | `GET` | `/api/v1/users/:id/following` | Get users this user follows |
 | `GET` | `/api/v1/users/me/export` | Export all user data (GDPR) |
 | `DELETE` | `/api/v1/users/me` | Soft-delete current user account |
 
-### Trips
+### Activities
 
 | Method | Path | Description |
 |---|---|---|
-| `POST` | `/api/v1/trips` | Create a trip (multipart: GPX file + metadata, or JSON-only for manual entry) |
-| `GET` | `/api/v1/trips/:id` | Get trip details |
-| `PATCH` | `/api/v1/trips/:id` | Update a trip |
-| `DELETE` | `/api/v1/trips/:id` | Delete a trip |
-| `GET` | `/api/v1/trips` | List/search trips (filters: activity_type, bbox, status). Defaults to status=published |
-| `GET` | `/api/v1/map/trips` | Trip routes as GeoJSON FeatureCollection (`?bbox=w,s,e,n&zoom=z&limit=200`) — public, no auth. Zoom controls `ST_Simplify` tolerance; limit defaults 200, max 500 |
-| `POST` | `/api/v1/trips/:id/photos` | Associate uploaded photo with trip (body: `{key, caption, sort_order}`) |
-| `GET` | `/api/v1/trips/:id/photos` | List trip photos |
+| `POST` | `/api/v1/activities` | Create an activity (multipart: metadata + optional GPX file; a GPX pre-fills `track` + stats, otherwise manual entry) |
+| `GET` | `/api/v1/activities/:id` | Get activity details |
+| `PATCH` | `/api/v1/activities/:id` | Update an activity |
+| `DELETE` | `/api/v1/activities/:id` | Delete an activity |
+| `GET` | `/api/v1/activities` | List the caller's own activities (filters: activity_type, status; paginated) |
+| `GET` | `/api/v1/map/activities` | Activity tracks as GeoJSON FeatureCollection (`?bbox=w,s,e,n&zoom=z&limit=200`) — public, no auth, `visibility='public'` only. Zoom controls `ST_Simplify` tolerance; limit defaults 200, max 500 |
+| `POST` | `/api/v1/activities/:id/photos` | Associate uploaded photo with activity (body: `{key, caption, sort_order}`) |
+| `GET` | `/api/v1/activities/:id/photos` | List activity photos |
 | `DELETE` | `/api/v1/photos/:id` | Delete a photo |
-| `POST` | `/api/v1/upload/url` | Request pre-signed S3 upload URL (body: `{trip_id, file_ext, content_type}`, server generates key). **Authenticated, verifies caller owns trip_id** |
-| `GET` | `/api/v1/trips/trending` | Get trending trips |
-| `GET` | `/api/v1/trips/featured` | Get featured trips |
+| `POST` | `/api/v1/upload/url` | Request pre-signed S3 upload URL (body: `{activity_id, file_ext, content_type}`, server generates key). **Authenticated, verifies caller owns activity_id** |
+| `GET` | `/api/v1/activities/trending` | Get trending activities |
+| `GET` | `/api/v1/activities/featured` | Get featured activities |
+
+### Routes
+
+> Planned itineraries (the `routes` table). These endpoints are designed here but built in the route-planning phase — see Plan.md Phase 11.
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/v1/routes` | Create a planned route |
+| `GET` | `/api/v1/routes/:id` | Get a route |
+| `PATCH` | `/api/v1/routes/:id` | Update a route (owner only) |
+| `DELETE` | `/api/v1/routes/:id` | Delete a route (owner only) |
+| `GET` | `/api/v1/routes` | List the caller's own routes |
+| `GET` | `/api/v1/map/routes` | Public routes as a GeoJSON FeatureCollection (`?bbox=w,s,e,n`) |
+| `POST` | `/api/v1/routes/directions` | Proxy Mapbox Directions API for route snapping (also listed under Geo / Map) |
 
 ### Climbing
 
@@ -1629,9 +1670,10 @@ All user-uploaded files are stored in S3-compatible storage (AWS S3, MinIO, Clou
 | `POST` | `/api/v1/crags/:id/topos` | Upload topo photo + route overlays |
 | `PATCH` | `/api/v1/crag-topos/:id` | Update topo overlays |
 | `DELETE` | `/api/v1/crag-topos/:id` | Delete a topo |
-| `POST` | `/api/v1/trips/:id/segments` | Add segments to a trip |
-| `GET` | `/api/v1/trips/:id/segments` | Get trip segments with pitch data |
-| `PATCH` | `/api/v1/trip-segments/:id` | Update a trip segment |
+| `POST` | `/api/v1/activities/:id/segments` | Add segments to a climbing activity |
+| `GET` | `/api/v1/activities/:id/segments` | Get activity segments with pitch data |
+| `PATCH` | `/api/v1/activity-segments/:id` | Update an activity segment |
+| `DELETE` | `/api/v1/activity-segments/:id` | Delete an activity segment |
 
 ### Social
 
@@ -1639,12 +1681,12 @@ All user-uploaded files are stored in S3-compatible storage (AWS S3, MinIO, Clou
 |---|---|---|
 | `POST` | `/api/v1/users/:id/follow` | Follow a user |
 | `DELETE` | `/api/v1/users/:id/follow` | Unfollow a user |
-| `POST` | `/api/v1/trips/:id/like` | Like a trip |
-| `DELETE` | `/api/v1/trips/:id/like` | Unlike a trip |
-| `POST` | `/api/v1/trips/:id/save` | Save/bookmark a trip |
-| `DELETE` | `/api/v1/trips/:id/save` | Unsave a trip |
-| `GET` | `/api/v1/trips/:id/comments` | Get trip comments |
-| `POST` | `/api/v1/trips/:id/comments` | Add a comment |
+| `POST` | `/api/v1/activities/:id/like` | Like an activity |
+| `DELETE` | `/api/v1/activities/:id/like` | Unlike an activity |
+| `POST` | `/api/v1/activities/:id/save` | Save/bookmark an activity |
+| `DELETE` | `/api/v1/activities/:id/save` | Unsave an activity |
+| `GET` | `/api/v1/activities/:id/comments` | Get activity comments |
+| `POST` | `/api/v1/activities/:id/comments` | Add a comment |
 | `DELETE` | `/api/v1/comments/:id` | Delete a comment |
 | `GET` | `/api/v1/feed` | Activity feed for current user |
 
@@ -1671,7 +1713,7 @@ All user-uploaded files are stored in S3-compatible storage (AWS S3, MinIO, Clou
 
 ### Geo / Map
 
-> Canonical trip/photo/upload endpoints are in the [Trips](#trips) table above. This table covers non-trip map endpoints only.
+> Canonical activity/photo/upload endpoints are in the [Activities](#activities) table above. This table covers non-activity map endpoints only.
 
 | Method | Path | Description |
 |---|---|---|
@@ -1697,13 +1739,13 @@ All user-uploaded files are stored in S3-compatible storage (AWS S3, MinIO, Clou
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/v1/search` | Global search (trips, locations, users) |
-| `GET` | `/api/v1/search/trips` | Search trips |
+| `GET` | `/api/v1/search` | Global search (activities, locations, users) |
+| `GET` | `/api/v1/search/activities` | Search activities |
 | `GET` | `/api/v1/search/locations` | Search locations |
 
 ### Storage
 
-> Canonical upload endpoint is in the [Trips](#trips) table above (`POST /api/v1/upload/url`).
+> Canonical upload endpoint is in the [Activities](#activities) table above (`POST /api/v1/upload/url`).
 
 ---
 
@@ -1779,7 +1821,7 @@ Tables use standard PostgreSQL initially. When time-series data volume justifies
 
 ```dockerfile
 # apps/api/Dockerfile
-FROM golang:1.23-alpine AS builder
+FROM golang:1.26-alpine AS builder
 WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
@@ -1883,7 +1925,7 @@ Railway injects `REDIS_URL` automatically for the managed Redis plugin. `DATABAS
 **Local Development Workflow**:
 
 - `make dev` — starts docker-compose services + Go API (with `watchexec` or `air` for hot reload) + Vite dev server
-- `make seed` — loads sample data: 5 demo users, 20 trips across Alps/US, ski area data from OpenSkiData sample, sample crags
+- `make seed` — loads sample data: 5 demo users, 20 activities across Alps/US, ski area data from OpenSkiData sample, sample crags
 - `make test` — runs Go tests + frontend tests
 - `make db-migrate` — run pending migrations
 - `make db-reset` — drop and recreate from migrations + seed
@@ -1893,7 +1935,7 @@ Railway injects `REDIS_URL` automatically for the managed Redis plugin. `DATABAS
 **Seed Data**: Located in `data/seed/`. Contains:
 
 - `users.sql` — demo users with various profiles
-- `trips.sql` — sample trips with GPX routes (embedded as PostGIS LineStrings)
+- `activities.sql` — sample activities with tracks (embedded as PostGIS LineStrings)
 - `locations.sql` — sample resorts, peaks, trailheads
 - Sample GPX files in `data/seed/gpx/`
 
@@ -1932,7 +1974,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version: "1.26"
       - run: go test ./...
         working-directory: apps/api
         env:
@@ -2061,7 +2103,7 @@ Request → RequestID middleware → Logging middleware → Auth middleware → 
   "msg": "request",
   "request_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "method": "GET",
-  "path": "/api/v1/trips",
+  "path": "/api/v1/activities",
   "status": 200,
   "duration_ms": 12,
   "user_id": "550e8400-e29b-41d4-a716-446655440000",
@@ -2075,7 +2117,7 @@ Request → RequestID middleware → Logging middleware → Auth middleware → 
 |---|---|
 | **ERROR** | Unhandled errors, panic recovery, failed external API calls, database errors |
 | **WARN** | Deprecated endpoint usage, rate limit approaching, token refresh failures (before retry) |
-| **INFO** | Every HTTP request (on completion), pipeline run results, user actions (login, trip create) |
+| **INFO** | Every HTTP request (on completion), pipeline run results, user actions (login, activity create) |
 | **DEBUG** | SQL queries (dev only), external API request/response bodies, cache hit/miss |
 
 #### Sentry Integration

@@ -42,6 +42,7 @@
 - [x] Client-cancelled tile fetches no longer log as ERROR — handler returns 499 for `context.Canceled` (commit fc54703)
 - [x] Restore terrain exaggeration for the Mapbox provider — the Settings slider re-applies terrain via `setTerrain` against an app-owned DEM source
 - [ ] Sentry for error tracking (free tier)
+- [ ] Plan.md terminology sweep — Phase 4 docs and Plan.md Phases 5 & 11 are restructured to the Activity model (entity = `activity`; planned `route` is a separate, later entity); all model contradictions are resolved. Plan.md Phases 6, 9, 10, 12 still carry casual "trip" wording and planned component names (e.g. Phase 9's `TripDetailScreen.tsx`, `TripCard.tsx`) — terminology and naming only, no model contradictions. Rename to "activity" when each phase gets its detailed implementation pass.
 - [ ] Mapbox token URL restrictions (lock pk.* token to production domain)
 - [ ] Logger middleware drops optional http.ResponseWriter interfaces (Flush, Hijack, Push) — fix before adding SSE/WebSocket/streaming features
 - [ ] Add integration test for duplicate-email 409 path (requires real Postgres)
@@ -51,6 +52,13 @@
 - [ ] Overlay catalog expansion (Phase 3 follow-on — the `OVERLAY_SOURCES` + Overlays-tab pattern already surfaces a toggle per source by filter):
   - Global hiking trails — add Waymarked Trails (`https://tile.waymarkedtrails.org/hiking/{z}/{x}/{y}.png`): global OSM-derived hiking routes, transparent raster, the hiking analog of the OpenSnowMap pistes overlay. No `topoSourceFilter`, available on any base/provider. Community service — consider proxying (User-Agent + caching) like OpenTopoMap. Waymarked Trails also offers cycling / MTB / winter-slope layers for later.
   - Swiss shooting ranges / live-fire zones — safety overlay; swisstopo/GeoAdmin WMTS (army firing-notice layer), `topoSourceFilter: 'swisstopo'`, same pattern as ski-touring/snowshoe. Switzerland-only — no meaningful global equivalent.
+- [ ] Seasonal (winter) satellite via Sentinel-2 — the deferred `satellite-winter` feature. Build when prioritized. Pipeline:
+  1. Preview viability first in Copernicus Browser (`browser.dataspace.copernicus.eu`) — Dec–Feb, True Color, low cloud filter — winter mountain scenes are often cloud/shadow-heavy; confirm it's worth it for the target regions.
+  2. Composite a Dec–Feb cloud-filtered Sentinel-2 mosaic (Copernicus data is free) → Web-Mercator GeoTIFF with GDAL (`gdalwarp`/`gdal_merge`). Widen the date window or use multi-year scenes to fill cloud holes.
+  3. GeoTIFF → MBTiles: `gdal_translate -of MBTILES mosaic.tif winter.mbtiles` then `gdaladdo -r average winter.mbtiles 2 4 8 16 32`.
+  4. MBTiles → PMTiles: `pmtiles convert winter.mbtiles winter-YYYY.pmtiles` (go-pmtiles CLI).
+  5. Host `.pmtiles` on Cloudflare R2; front it with a Protomaps-style Cloudflare Worker exposing `{z}/{x}/{y}` so both runtimes consume it as a plain raster source. Versioned filename per year.
+  Render as a raster overlay **above** Mapbox Satellite (transparent nodata) so cloud/shadow gaps fall back to base imagery — Sentinel-2 covers all land ~56°S–84°N, but a winter composite will still have holes. See Architecture.md "Seasonal Satellite Imagery".
 - [ ] When the swisstopo-winter layer swap (`pixelkarte-grau` → `pixelkarte-farbe-winter`) deploys, clear the stale tile cache: `redis-cli --scan --pattern 'tile:swisstopo-w:*' | xargs -r redis-cli del` — otherwise old grayscale tiles serve until the 24h TTL expires
 - [x] Create custom Mapbox Studio winter style — done in Phase 3.5 M3 (Outdoors Winter, a custom style built on Mapbox Standard)
 - [ ] Imported Studio styles (Outdoors / Outdoors Winter) — two benign console warnings, investigated and accepted; both fixable only in the style JSON, not app code:
