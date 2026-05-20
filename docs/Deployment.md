@@ -254,6 +254,91 @@ This recreates all tables, data, and `schema_migrations`. Afterwards, deploy the
 
 ---
 
+## Container Strategy
+
+The Go API ships as a multi-stage Docker image built from `apps/api/Dockerfile`. Railway builds it on every deploy; CI does not build or push it.
+
+- **Builder stage**: `golang:1.26-alpine`, downloads modules, then `CGO_ENABLED=0 go build -o /api ./cmd/server`.
+- **Runtime stage**: `alpine:3.20` with `ca-certificates` and `tzdata`. The `/migrations` directory is copied in so the API can run `migrate.Up()` on startup.
+- **Exposed port**: 8080.
+
+Railway reads `apps/api/railway.toml` for the health check path (`/api/v1/health`), restart policy, and timeout. The Dockerfile is the source of truth for build steps — keep both in sync if you add system packages (e.g., for a future image-processing dependency).
+
+For the docker-compose definition used locally (`postgres`, `redis`), see `docker-compose.yml` in the repo root. MinIO/S3 (Phase 4) and Meilisearch (Phase 11) are added there when those phases ship.
+
+---
+
+## Local Development
+
+The Go API and Vite dev server run on the host (not containerized) for fast iteration and hot reload. Only the data services run in docker-compose.
+
+| Target | Effect |
+|---|---|
+| `make dev` | `docker compose up -d --wait` for postgres + redis, then `air` for the Go API and `pnpm dev` for the web app, side-by-side |
+| `make test` | `go test ./...` (unit) + `go test -tags=integration ./...` (integration) + `pnpm test` |
+| `make lint` | `golangci-lint`, `pnpm lint`, `pnpm format:check` |
+| `make build` | `pnpm turbo build --filter=@mtamta/web` |
+| `make check` | `make test` + `make lint` + `make build` — same gates as CI |
+| `make db-migrate` | `go run ./cmd/migrate up` against `$DATABASE_URL` |
+| `make db-reset` | `docker compose down -v` + bring services back up + `db-migrate` + `seed` |
+| `make seed` | `psql < data/seed/users.sql` (the only seed today; activities/locations are added with their phases) |
+
+**`.env.local`** (gitignored) is loaded by `make` via `-include .env` and exported, plus by the Go API and Vite at startup. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `VITE_MAPBOX_ACCESS_TOKEN`, `VITE_MAPTILER_API_KEY`, etc. The committed defaults point at the docker-compose services.
+
+---
+
+## Backup Strategy
+
+| Data | Strategy | Retention |
+|---|---|---|
+| **PostgreSQL** | Railway automatic daily backups + point-in-time recovery | Managed by Railway (varies by plan) |
+| **PostgreSQL** (additional) | Weekly `pg_dump` to R2 via GitHub Actions cron job (`.github/workflows/backup.yml`) | 30 days |
+| **Redis** | No backup — cache is ephemeral and rebuilt from Postgres | N/A |
+| **Meilisearch** (Phase 11) | No backup — search index is rebuilt from Postgres via bulk re-index | N/A |
+| **R2 (files)** | Durable by design (11 nines). No additional backup needed | Permanent |
+
+The scheduled workflow runs Sunday 02:00 UTC and on manual dispatch. Required GitHub Secrets: `BACKUP_DATABASE_URL` (Railway Postgres **public** URL — the GH runner can't reach the private network), `R2_ACCESS_KEY`, `R2_SECRET_KEY`, `R2_BUCKET`, `R2_ACCOUNT_ID`. Run the workflow manually once after changing any of these to confirm.
+
+For restoring a backup, see *Restoring the database from a backup* above.
+
+---
+
+## Platform Migration (Railway → elsewhere)
+
+The codebase is platform-independent: Railway is the current target but nothing in the app knows it. If Railway becomes a poor fit, this is what changes.
+
+**Portable (zero changes):**
+
+- Go API, web app, shared packages
+- `apps/api/Dockerfile`
+- `docker-compose.yml` (local dev)
+- CI test/build/lint jobs
+- Environment variable schema
+- Database migrations
+
+**Platform-specific (swap required):**
+
+| Component | Railway | Fly.io equivalent | VPS equivalent |
+|---|---|---|---|
+| Deploy step | Railway GitHub auto-deploy (Wait for CI) | `superfly/flyctl-actions/setup-flyctl` + `fly deploy` in CI | `ssh` + `docker compose pull && docker compose up -d` |
+| Platform config file | `apps/api/railway.toml` | `fly.toml` | `docker-compose.prod.yml` |
+| Managed Postgres | Railway plugin | Fly Postgres (or external Neon/Supabase) | Self-hosted container |
+| Managed Redis | Railway plugin | Fly Redis / Upstash | Self-hosted container |
+| Secrets management | Railway dashboard / CLI | `fly secrets set` | `.env` on server or Vault |
+
+**Migration steps** (estimate: half a day):
+
+1. Set up account on new platform; provision API service + Postgres + Redis equivalents.
+2. Swap the deploy mechanism in `.github/workflows/ci.yml` (a job replacement, ~10 lines).
+3. Write the new platform config file (`fly.toml` / `docker-compose.prod.yml`).
+4. Set environment variables on the new platform (`ENV`, `DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `WEB_ORIGIN`, `ALLOWED_EMAILS`, plus any optional ones in use).
+5. `pg_dump` Railway → `psql` restore on the new Postgres (see *Restoring the database from a backup*).
+6. R2 stays as-is — it's external to Railway and reached over HTTPS.
+7. Update DNS: `api.mtamta.app` → new platform.
+8. Verify `/api/v1/health` and run a sign-in smoke test before deleting the old Railway services.
+
+---
+
 ## Post-deploy TODO
 
 - [ ] Sentry for error tracking (free tier)
