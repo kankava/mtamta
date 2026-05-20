@@ -194,7 +194,7 @@ MapTiler provides pre-built styles accessible by ID:
 |----------|-------------|----------|
 | `outdoor-v2` | Outdoors with trails, contours, shading | Global summer basemap |
 | `winter-v2` | Winter palette, pistes, lifts, avalanche zones | Global winter basemap |
-| `satellite` | Satellite imagery with labels | Satellite basemap |
+| `hybrid` | Satellite imagery with roads, labels, borders | Satellite basemap (matches Mapbox Satellite Streets). Plain `satellite` is imagery only |
 | `topo-v2` | Operational/SAR-focused topo | Future: "Map Style" option in Settings |
 | `streets-v2` | Standard streets | Not used |
 | `basic-v2` | Minimal clean map | Not used |
@@ -205,7 +205,7 @@ MapTiler provides pre-built styles accessible by ID:
 // packages/map-core/src/styles.ts
 const MAPTILER_STYLE_IDS = {
   outdoors: { summer: 'outdoor-v2', winter: 'winter-v2' },
-  satellite: { summer: 'satellite', winter: 'satellite' },
+  satellite: { summer: 'hybrid', winter: 'hybrid' },
 }
 
 function resolveMaptilerStyle(baseLayer, season) {

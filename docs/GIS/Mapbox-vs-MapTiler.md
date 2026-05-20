@@ -17,9 +17,9 @@ Assess how well **Mapbox** and **MapTiler** fit mtamta's planned map stack:
 
 This should be read alongside:
 
-- [Architecture.md](Architecture.md)
-- [Plan.md](Plan.md)
-- [MapProviders.md](MapProviders.md)
+- [Architecture.md](../Architecture.md)
+- [Plan.md](../Plan.md)
+- [MapProviders.md](../MapProviders.md)
 
 ---
 
@@ -56,9 +56,12 @@ So the practical split is:
 Relevant roadmap areas:
 
 - **Phase 3.5**: dual-provider runtime and shared overlay system
-- **Phase 4**: trip routes + Mapbox-first search
-- **Phase 8**: live data layers (weather, wind, snow, avalanche, lifts, webcams)
-- **Phase 11**: route planning, elevation tools, offline/mobile-heavy features
+- **Phase 4**: activity system (GPX upload + activity tracks on the map) + Mapbox-first map search
+- **Phase 6**: route planning (`routes` entity, planner UI, directions proxy, elevation profile)
+- **Phase 7**: mobile app + offline (`@rnmapbox/maps`, downloadable map regions)
+- **Phase 8**: terrain analysis (slope / aspect / avalanche overlays + interactive filter)
+- **Phase 10**: live data layers (weather, wind, snow, avalanche, lifts, webcams)
+- **Phase 11**: search & discovery (Meilisearch, trending, OpenBeta crag seeding)
 
 The biggest differences between Mapbox and MapTiler matter in:
 
@@ -174,7 +177,7 @@ Most of your most valuable map features should remain shared regardless of provi
 - Open-Meteo-driven weather markers
 - custom slope/aspect/terrain filters
 
-These are exactly the right candidates for the shared `AppMapAdapter` path in [MapProviders.md](MapProviders.md).
+These are exactly the right candidates for the shared `AppMapAdapter` path in [MapProviders.md](../MapProviders.md).
 
 This matters because it means:
 
@@ -280,7 +283,7 @@ Publicly documented:
 - up to 25 coordinates
 - good fit for your waypoint-based planner
 
-This maps directly onto your planned route planner in [Architecture.md](Architecture.md) and [Plan.md](Plan.md).
+This maps directly onto your planned route planner in [Architecture.md](../Architecture.md) and [Plan.md](../Plan.md).
 
 ### MapTiler
 
@@ -312,7 +315,7 @@ Both providers support:
 - DEM-backed terrain rendering
 - outdoor-appropriate basemaps
 
-Phase 3.5's terrain-parity goal was met — both runtimes render 3D terrain (Mapbox verified in Chrome; see [Phase3_5.md](Phase3_5.md)).
+Phase 3.5's terrain-parity goal was met — both runtimes render 3D terrain (Mapbox verified in Chrome; see [Phase3_5.md](../Phase3_5.md)).
 
 ### Elevation tools
 
@@ -499,9 +502,9 @@ If you had to simplify it to one sentence:
 
 ### Project docs
 
-- [Architecture.md](Architecture.md)
-- [Plan.md](Plan.md)
-- [MapProviders.md](MapProviders.md)
+- [Architecture.md](../Architecture.md)
+- [Plan.md](../Plan.md)
+- [MapProviders.md](../MapProviders.md)
 
 ### Mapbox
 

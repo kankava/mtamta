@@ -217,9 +217,9 @@ Your roadmap already overlaps with several PeakVisor-like foundations:
 
 Related project docs:
 
-- [Architecture.md](Architecture.md)
-- [Plan.md](Plan.md)
-- [MapProviders.md](MapProviders.md)
+- [Architecture.md](../Architecture.md)
+- [Plan.md](../Plan.md)
+- [MapProviders.md](../MapProviders.md)
 
 ---
 

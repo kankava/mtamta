@@ -62,6 +62,8 @@ The platform combines rich interactive maps (topographic, satellite, 3D terrain)
 
 ### Libraries — Go
 
+> These dependency tables describe the intended end-state. Libraries for later phases (FIT parsing, S3, OAuth2, and on the frontend Radix, deck.gl, turf, etc.) are installed when that phase begins — not all are in `go.mod` / `package.json` today.
+
 | Library | Purpose |
 |---|---|
 | `golang.org/x/oauth2` | OAuth2 flows |
@@ -540,7 +542,7 @@ CREATE TABLE auth_providers (
 
 ### Stack
 
-- **React 19** with TypeScript 5.9
+- **React 19** with TypeScript 6.0
 - **Vite 8** (Rolldown) for development and builds
 - **Mapbox GL JS 3.x / MapTiler SDK** for map rendering (runtime-selected)
 - **Zustand 5** for state management
@@ -590,11 +592,11 @@ All app-generated layers (activity tracks, waypoints, user position) must be add
 
 ### State Management (Zustand)
 
-Key stores:
+Key stores (`mapStore` and `authStore` exist today; the rest land with their phases):
 - **`mapStore`** — viewport (center, zoom, bearing, pitch), active layers, selected features, selected map provider
 - **`authStore`** — current user, tokens, login/logout actions
-- **`activityStore`** — active activity, activity list, filters
-- **`uiStore`** — panel states, modals, loading indicators
+- **`activityStore`** *(Phase 4)* — active activity, activity list, filters
+- **`uiStore`** *(planned)* — panel states, modals, loading indicators
 
 ### Map Layer System
 
@@ -723,7 +725,7 @@ Both providers support 3D terrain with different DEM sources:
 | MapTiler | MapTiler Terrain RGB v2 | 512px | 12 | Terrarium encoding: `height = (R × 256 + G + B / 256) − 32768` |
 
 - **Default exaggeration**: 1.5 (adjustable via UI slider)
-- **Sky layer**: Enabled in 3D mode for atmospheric rendering
+- **Atmosphere**: Mapbox Standard renders sky/atmosphere natively in 3D — the pre-3.5 custom `sky` layer was removed
 
 Mapbox GL JS, MapTiler SDK, and `@rnmapbox/maps` all support 3D terrain natively. Combined with custom pitch/bearing controls for immersive flyover views.
 
@@ -1794,9 +1796,10 @@ All user-uploaded files are stored in S3-compatible storage (AWS S3, MinIO, Clou
 | Service | Type | Source | Notes |
 |---|---|---|---|
 | **api** | Docker | `apps/api/Dockerfile` | Go binary with background goroutines (ingest pipeline, sync scheduler) |
-| **postgres** | Docker | `timescale-postgis-ssl:pg17` | Railway TimescaleDB+PostGIS template. Extensions enabled via `001_init` migration. Regular tables initially; hypertables when data volume justifies it |
+| **postgres** | Docker | `timescale/timescaledb-ha:pg17` | Railway TimescaleDB + PostGIS image. Extensions enabled via `001_init` migration. Regular tables initially; hypertables when data volume justifies it |
 | **redis** | Railway plugin | Managed | Sessions, cache, rate limiting, sync locks |
-| **meilisearch** | Docker | `getmeili/meilisearch:v1.12` | With persistent Railway volume for data |
+
+> **Meilisearch** is added in Phase 11 (search) — not a current Railway service.
 
 Services communicate over Railway's private network (internal hostnames, no public exposure for databases).
 
@@ -1831,6 +1834,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /api ./cmd/server
 FROM alpine:3.20
 RUN apk add --no-cache ca-certificates tzdata
 COPY --from=builder /api /api
+COPY --from=builder /build/migrations /migrations  # startup migrations read these
 EXPOSE 8080
 CMD ["/api"]
 ```
@@ -1906,7 +1910,7 @@ GARMIN_CLIENT_ID=...
 GARMIN_CLIENT_SECRET=...
 
 # Sentinel Hub (Phase 3+)
-SENTINEL_INSTANCE_ID=...
+SENTINEL_HUB_INSTANCE_ID=...
 
 # External APIs
 WINDY_API_KEY=...
@@ -1924,7 +1928,7 @@ Railway injects `REDIS_URL` automatically for the managed Redis plugin. `DATABAS
 
 **Local Development Workflow**:
 
-- `make dev` — starts docker-compose services + Go API (with `watchexec` or `air` for hot reload) + Vite dev server
+- `make dev` — starts docker-compose services + Go API (with `air` for hot reload) + Vite dev server
 - `make seed` — loads sample data: 5 demo users, 20 activities across Alps/US, ski area data from OpenSkiData sample, sample crags
 - `make test` — runs Go tests + frontend tests
 - `make db-migrate` — run pending migrations
@@ -1932,98 +1936,20 @@ Railway injects `REDIS_URL` automatically for the managed Redis plugin. `DATABAS
 
 **`.env.example`**: Committed to repo root with all required env vars and safe local defaults (pointing to docker-compose services). Developers copy to `.env.local` (gitignored).
 
-**Seed Data**: Located in `data/seed/`. Contains:
+**Seed Data**: Located in `data/seed/`. Currently only `users.sql` exists; the rest are added with their phases:
 
 - `users.sql` — demo users with various profiles
-- `activities.sql` — sample activities with tracks (embedded as PostGIS LineStrings)
-- `locations.sql` — sample resorts, peaks, trailheads
-- Sample GPX files in `data/seed/gpx/`
+- `activities.sql` *(Phase 4)* — sample activities with tracks (embedded as PostGIS LineStrings)
+- `locations.sql` *(Phase 11)* — sample resorts, peaks, trailheads
+- Sample GPX files in `data/seed/gpx/` *(Phase 4)*
 
 ### CI/CD Pipeline
 
 GitHub Actions handles both CI and CD. The pipeline is platform-agnostic except for the final deploy step.
 
-```yaml
-# .github/workflows/ci.yml
-name: CI
+The pipeline lives in `.github/workflows/ci.yml`. On push / PR to `main` it runs four jobs in parallel — **test-api** (Go unit + integration tests against PostGIS + Redis service containers), **test-web** (TypeScript tests for `shared`, `map-core`, `web`), **build-web** (verifies the web build), and **lint** (golangci-lint, ESLint, Prettier). On a green push to `main`, **deploy-web** ships the web app to Cloudflare Pages via `wrangler`. The API is *not* deployed by CI — Railway auto-deploys it from its GitHub connection with "Wait for CI" enabled. Node version is pinned in `.nvmrc`; pnpm is enabled via corepack.
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
-jobs:
-  test-api:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: timescale/timescaledb-ha:pg17
-        env:
-          POSTGRES_DB: mtamta_test
-          POSTGRES_USER: mtamta
-          POSTGRES_PASSWORD: mtamta
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U mtamta"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.26"
-      - run: go test ./...
-        working-directory: apps/api
-        env:
-          DATABASE_URL: postgresql://mtamta:mtamta@localhost:5432/mtamta_test?sslmode=disable
-
-  build-web:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - run: npm ci
-      - run: npx turbo build --filter=web
-      - run: npx turbo lint --filter=web
-
-  # ── Deploy (only on push to main) ──────────────────────────
-  deploy-api:
-    needs: [test-api, build-web]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      # ┌─────────────────────────────────────────────────────┐
-      # │ PLATFORM-SPECIFIC: Only this step changes if you    │
-      # │ migrate away from Railway.                          │
-      # └─────────────────────────────────────────────────────┘
-      - uses: railwayapp/railway-github-link@v1
-        with:
-          railway_token: ${{ secrets.RAILWAY_TOKEN }}
-          service: api
-
-  deploy-web:
-    needs: [test-api, build-web]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - run: npm ci
-      - run: npx turbo build --filter=web
-      # Cloudflare Pages deploy
-      - uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: pages deploy apps/web/dist --project-name=mtamta
-```
+> The authoritative pipeline is `.github/workflows/ci.yml`; it is not duplicated here, to avoid drift.
 
 **Deploy flow**:
 1. Push to `main` (or merge PR)
@@ -2067,7 +1993,7 @@ The observability strategy is designed for a solo developer running a modular mo
 |---|---|---|
 | **Structured logging** | `slog` (Go stdlib) | JSON in production, human-readable in development |
 | **Request tracing** | Request ID middleware | UUID per request, propagated via `context.Context` |
-| **Error tracking** | Sentry | Go SDK (`sentry-go`) + React SDK (`@sentry/react`) |
+| **Error tracking** | Sentry | Go SDK (`sentry-go`, installed) + React SDK (`@sentry/react`, planned) |
 | **Pipeline monitoring** | Sentry Cron Monitors | Alerts when a pipeline misses its schedule |
 | **Uptime** | Uptime Robot (free) | Pings `/api/v1/health` every 5 min |
 | **Infra metrics** | Railway built-in | CPU, memory, network per service |
@@ -2199,18 +2125,15 @@ The `GET /api/v1/health` endpoint checks all configured dependencies. Services a
 
 ```json
 {
-  "status": "healthy",
-  "version": "abc1234",
-  "uptime_s": 86400,
-  "checks": {
+  "status": "ok",
+  "services": {
     "postgres": "ok",
-    "redis": "ok",
-    "meilisearch": "ok"
+    "redis": "ok"
   }
 }
 ```
 
-Returns HTTP 200 if all checks pass, HTTP 503 if any critical dependency is down (unconfigured services are omitted, not failed). Railway uses this for deployment health checks and automatic restarts.
+`status` is `ok` when every checked service is healthy and `degraded` otherwise (unconfigured services are omitted, not failed). Railway uses this endpoint for deployment health checks and automatic restarts.
 
 #### Alerting Summary
 
@@ -2234,33 +2157,7 @@ No PagerDuty or on-call rotation — this is a solo project. Email alerts are su
 | **Meilisearch** | No backup — search index is rebuilt from Postgres via bulk re-index | N/A |
 | **R2 (files)** | Durable by design (11 nines). No additional backup needed | Permanent |
 
-**Scheduled backup workflow** (GitHub Actions):
-
-```yaml
-# .github/workflows/backup.yml
-name: Database Backup
-
-on:
-  schedule:
-    - cron: "0 3 * * 0" # Weekly, Sunday 3am UTC
-
-jobs:
-  backup:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Dump database
-        run: |
-          pg_dump "$DATABASE_URL" | gzip > backup-$(date +%Y%m%d).sql.gz
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      - name: Upload to R2
-        run: |
-          aws s3 cp backup-*.sql.gz s3://mtamta-backups/ \
-            --endpoint-url ${{ secrets.S3_ENDPOINT }}
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
-```
+**Scheduled backup workflow** — `.github/workflows/backup.yml` runs weekly (Sunday 02:00 UTC) and on manual dispatch: install the PG 17 client (matching the server major), `pg_dump --no-owner --no-privileges` the database, gzip, and upload to Cloudflare R2 under `db-backups/`. Required secrets: `BACKUP_DATABASE_URL` (the Postgres **public** URL — the runner can't reach Railway's private network), `R2_ACCESS_KEY`, `R2_SECRET_KEY`, `R2_BUCKET`, `R2_ACCOUNT_ID`. See the workflow file for the exact steps; it is not duplicated here.
 
 ### Migration Playbook
 

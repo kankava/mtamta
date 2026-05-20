@@ -143,7 +143,7 @@ Repo → Settings → Secrets and variables → Actions:
 
 No `RAILWAY_TOKEN` needed — Railway auto-deploys via GitHub connection.
 
-The `BACKUP_*` / `R2_*` secrets feed the **Database Backup** workflow (`.github/workflows/backup.yml`) — weekly `pg_dump` to R2. Run it manually once (Actions → Database Backup → Run workflow) to confirm all six secrets are set correctly.
+The `BACKUP_*` / `R2_*` secrets feed the **Database Backup** workflow (`.github/workflows/backup.yml`) — weekly `pg_dump` to R2. Run it manually once (Actions → Database Backup → Run workflow) to confirm all five secrets are set correctly.
 
 ### Variables
 

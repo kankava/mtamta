@@ -205,9 +205,9 @@ The current roadmap already covers a lot of the serious map infrastructure that 
 
 Related project docs:
 
-- [Architecture.md](Architecture.md)
-- [Plan.md](Plan.md)
-- [MapProviders.md](MapProviders.md)
+- [Architecture.md](../Architecture.md)
+- [Plan.md](../Plan.md)
+- [MapProviders.md](../MapProviders.md)
 
 ### Particularly strong foundations vs onX-style needs
 

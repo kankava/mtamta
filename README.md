@@ -8,9 +8,9 @@ An outdoor adventure platform for logging, finding, and sharing extreme outdoor 
 |-------|-----------|---------|
 | Backend | Go (modular monolith), chi router, pgx/v5 | Go 1.26 |
 | Frontend | React + TypeScript + Vite | React 19, Vite 8 (Rolldown) |
-| Styling | Tailwind CSS (v4, Vite plugin) | 4.2 |
+| Styling | Tailwind CSS (v4, Vite plugin) | 4.3 |
 | State | Zustand | 5 |
-| Maps | Mapbox GL JS | 3.20 |
+| Maps | Mapbox GL JS | 3.23 |
 | Routing | React Router | 7 |
 | Testing | Vitest | 4 |
 | Mobile | React Native (planned) | — |
@@ -119,7 +119,6 @@ This starts Docker services, the Go API with [air](https://github.com/air-verse/
 | `WEB_ORIGIN` | No | `http://localhost:5173` | Allowed CORS origin |
 | `ALLOWED_EMAILS` | No | `""` | Comma-separated emails allowed to sign up (empty = allow all) |
 | `SENTRY_DSN` | No | `""` | Sentry error tracking DSN |
-| `IGN_API_KEY` | No | `""` | IGN Géoplateforme API key for France topo tiles |
 | `SENTINEL_HUB_INSTANCE_ID` | No | `""` | Sentinel Hub WMS instance ID for satellite tiles |
 | `SENTINEL_HUB_CLIENT_ID` | No | `""` | Sentinel Hub OAuth client ID |
 | `SENTINEL_HUB_CLIENT_SECRET` | No | `""` | Sentinel Hub OAuth client secret |
@@ -132,6 +131,7 @@ This starts Docker services, the Go API with [air](https://github.com/air-verse/
 | `VITE_GOOGLE_CLIENT_ID` | Google OAuth client ID (same as API) |
 | `VITE_MAPBOX_ACCESS_TOKEN` | Mapbox public token (`pk.*`) |
 | `VITE_MAPTILER_API_KEY` | MapTiler API key |
+| `VITE_DEV_AUTH` | **Dev only** — enables a local auth bypass (skip OAuth in development). Never set in production |
 
 ## Google OAuth Setup
 
@@ -195,7 +195,7 @@ pnpm lint
 | `POST` | `/api/v1/auth/apple` | Sign in with Apple ID token |
 | `POST` | `/api/v1/auth/refresh` | Refresh access token (cookie) |
 | `POST` | `/api/v1/auth/logout` | Logout and clear refresh token |
-| `GET` | `/api/v1/tiles/{provider}/{z}/{x}/{y}` | Tile proxy (swisstopo, opentopomap, ign) |
+| `GET` | `/api/v1/tiles/{provider}/{z}/{x}/{y}` | Tile proxy (swisstopo, swisstopo-winter, opentopomap) |
 | `GET` | `/api/v1/tiles/sentinel/{z}/{x}/{y}` | Sentinel Hub seasonal satellite tiles |
 
 ### Authenticated (Bearer token required)
@@ -239,17 +239,22 @@ See [docs/Deployment.md](docs/Deployment.md) for full deployment reference.
 
 Weekly automated backups to Cloudflare R2 (`.github/workflows/backup.yml`). Runs every Sunday at 2 AM UTC.
 
-Required GitHub secrets: `DATABASE_URL`, `R2_ACCESS_KEY`, `R2_SECRET_KEY`, `R2_BUCKET`, `R2_ACCOUNT_ID`
+Required GitHub secrets: `BACKUP_DATABASE_URL`, `R2_ACCESS_KEY`, `R2_SECRET_KEY`, `R2_BUCKET`, `R2_ACCOUNT_ID`
 
 ## Documentation
 
 - [Architecture](docs/Architecture.md) — tech stack, system design, database schema, API conventions
-- [Implementation Plan](docs/Plan.md) — 12-phase roadmap from foundation to launch
+- [Implementation Plan](docs/Plan.md) — 13-phase roadmap from foundation to launch
 - [Deployment](docs/Deployment.md) — production deployment setup and reference
 - [Upgrades](docs/Upgrades.md) — dependency upgrade plan and migration notes
 - [Phase 1 Spec](docs/Phase1.md) — foundation phase implementation spec
 - [Phase 2 Spec](docs/Phase2.md) — maps core implementation spec
 - [Phase 3 Spec](docs/Phase3.md) — map sources & overlays implementation spec
+- [Phase 3.5 Spec](docs/Phase3_5.md) — multi-provider (Mapbox + MapTiler) implementation spec
+- [Phase 4 Spec](docs/Phase4.md) — activity system implementation spec
+- [Map Providers](docs/MapProviders.md) — dual-provider architecture & capability matrix
+- [Manual Verification](docs/ManualVerification.md) — manual QA checklist
+- GIS notes (`docs/GIS/`) and competitor analysis (`docs/Alternatives/`)
 
 ## License
 

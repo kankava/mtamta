@@ -61,7 +61,7 @@
 - [ ] OpenTopoMap tiles proxied through `/api/v1/tiles/opentopomap/...`
 - [ ] IGN tiles load directly from `data.geopf.fr` (public PLANIGNV2 endpoint, no backend proxy)
 - [ ] _(Deferred)_ Sentinel-2 tiles proxied through backend (Instance ID not exposed)
-- [ ] Country topo tiles cached in Redis with 24-hour TTL
+- [ ] Proxied country topo tiles (swisstopo, swisstopo-winter, OpenTopoMap) cached in Redis with 24-hour TTL — direct sources (IGN, basemap.at, BKG, Kartverket, USGS) are not Redis-cached
 - [ ] _(Deferred)_ Sentinel-2 tiles cached in Redis with 7-day TTL
 
 ### UI
@@ -76,7 +76,7 @@
 - [ ] Settings shows "Map Engine" with provider name and "Change" button
 - [ ] "Change" button returns to provider gate
 - [ ] All overlays work after extraction (topo, pistes, ski touring, snowshoe)
-- [ ] Terrain and sky layer work
+- [ ] 3D terrain renders (Mapbox Standard provides the atmosphere/sky)
 - [ ] Style switching preserves overlays and terrain
 - [ ] Build produces clean chunks, no warnings
 
@@ -132,7 +132,7 @@ Select **Mapbox** from the gate.
 - [ ] Select "swisstopo Winter" → pixelkarte-farbe-winter base; pistes + ski touring/snowshoe overlays available to toggle in the Overlays tab
 - [ ] Switch to "Outdoors Summer" → topo removed, Mapbox Outdoors only
 - [ ] Test all 6 country topo sources (CH, FR, AT, DE, NO, US)
-- [ ] Enable terrain → 3D terrain and sky layer work
+- [ ] Enable 3D → terrain renders (atmosphere is built into Mapbox Standard)
 - [ ] Switch style with terrain on → terrain + overlays re-apply
 - [ ] Sidebar collapses/expands, map fills width when collapsed
 - [ ] Map state (center, zoom) persists across style switches
@@ -168,7 +168,7 @@ Select **MapTiler**.
 
 - [ ] OpenTopoMap tiles load through `/api/v1/tiles/opentopomap/...`
 - [ ] IGN tiles load directly from `data.geopf.fr` (no API key in browser requests)
-- [ ] Sentinel-2 tiles proxied (no Instance ID in browser requests)
+- [ ] _(Deferred)_ Sentinel-2 tiles proxied (no Instance ID in browser requests)
 - [ ] Second tile request faster (Redis cache hit)
 
 ### 9. Build verification

@@ -315,7 +315,7 @@ apps/web/src/
 
 3. **Map state extensions** (`apps/web/src/stores/mapStore.ts`)
    - Active topo source (`TopoSourceId | null` — null = no country topo overlay)
-   - `BasemapPreset` type and `BASEMAP_PRESETS` lookup table (11 presets)
+   - `BasemapPreset` type and `BASEMAP_PRESETS` lookup table (12 presets)
    - `selectBasemap(preset)` action — atomically sets baseLayer + season + topoSource
    - Sidebar state: `sidebarOpen`, `sidebarTab`
    - Sentinel year for seasonal satellite
@@ -338,9 +338,9 @@ apps/web/src/
    - Redis caching for country topo tiles (where proxied): `tile:{z}:{x}:{y}:{layer}`, 24-hour TTL
 
 6. **Tile proxy tests**
-   - Integration test: request IGN tile → verify Redis cache populated → second request served from cache
-   - Integration test: request Sentinel-2 tile → verify 7-day TTL in Redis
    - Integration test: request OpenTopoMap tile → verify 24h TTL in Redis
+   - Integration test: request Sentinel-2 tile → verify 7-day TTL in Redis _(deferred — backend handler exists, frontend disabled)_
+   - *(Historical: an IGN proxy test was planned here; IGN was switched to direct browser-side loading and the proxy + test were removed.)*
    - Unit test: verify proxy injects API keys and does not expose them in response
 
 ### Key Files

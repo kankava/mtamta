@@ -188,7 +188,7 @@ Same lifecycle pattern as Mapbox: ref + useEffect init, viewport sync on moveend
 Key API differences from Mapbox:
 - `import * as maptilersdk from '@maptiler/sdk'` + CSS import
 - `maptilersdk.config.apiKey = import.meta.env.VITE_MAPTILER_API_KEY`
-- Styles: season-aware — `'outdoor-v2'` (summer), `'winter-v2'` (winter), `'satellite'`
+- Styles: season-aware — `'outdoor-v2'` (summer), `'winter-v2'` (winter), `'hybrid'` (satellite)
 - Terrain: `map.enableTerrain(exaggeration)` / `map.disableTerrain()` (SDK manages DEM source internally)
 - Events: same as Mapbox (`load`, `style.load`, `moveend`)
 - Projection: `map.setProjection({ type: 'globe' })` (MapLibre v4+ API)
@@ -342,6 +342,8 @@ Issues found and fixed during the M3 verification pass — all on `main`:
 ---
 
 ## Critical Reference Files
+
+> Paths below are the *pre-refactor* (pre-M1) locations. The M1 refactor moved the map runtime under `apps/web/src/map/runtime/` (`runtime/mapbox/MapContainer.tsx`, `runtime/shared/rasterOverlays.ts`, etc.).
 
 - `apps/web/src/map/MapContainer.tsx` — source to extract (183 lines), current Mapbox init + style switching + terrain
 - `apps/web/src/map/useRasterOverlays.ts` — source to refactor behind adapter (191 lines), all `map.xxx()` calls

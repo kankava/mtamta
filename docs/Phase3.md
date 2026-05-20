@@ -6,7 +6,7 @@
 >
 > **Note**: Sub-milestone 3d replaced `LayerPanel.tsx` and `StyleSwitcher.tsx` with a collapsible sidebar, and removed `topoOpacity` (full opacity always). References to those in 3a–3c are historical.
 >
-> **Note**: IGN was later switched to a direct, key-less source. The public Géoplateforme `PLANIGNV2` WMTS endpoint (`data.geopf.fr`) needs no API key, so IGN now has `needsProxy: false` and loads directly from the client like the other country topo sources. The IGN backend proxy provider in 3b still exists but is unused by the web app. References to IGN being proxied in 3a–3c are historical.
+> **Note**: IGN was later switched to a direct, key-less source. The public Géoplateforme `PLANIGNV2` WMTS endpoint (`data.geopf.fr`) needs no API key, so IGN now has `needsProxy: false` and loads directly from the client like the other country topo sources. The IGN backend proxy provider was removed — `BuildProviders` no longer registers `ign`, and `IGN_API_KEY` is no longer a config var. References to IGN being proxied in 3a–3c are historical.
 
 ---
 
@@ -147,7 +147,7 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
 ### 1. Config fields — `apps/api/internal/config/config.go`
 
 - [x] Add optional env vars to `Config` struct:
-  - `IGNApiKey` (`IGN_API_KEY`)
+  - `IGNApiKey` (`IGN_API_KEY`) _— later removed; IGN switched to direct browser-side loading_
   - `SentinelHubInstanceID` (`SENTINEL_HUB_INSTANCE_ID`)
   - `SentinelHubClientID` (`SENTINEL_HUB_CLIENT_ID`)
   - `SentinelHubSecret` (`SENTINEL_HUB_CLIENT_SECRET`)
@@ -158,7 +158,7 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
 - [x] Create `Provider` struct: ID, UpstreamURL (Go format string), CacheTTL, CachePrefix, Headers
 - [x] `BuildProviders(cfg)` returns `map[string]*Provider`:
   - `opentopomap`: always registered, 24h TTL, User-Agent header
-  - `ign`: only if `IGN_API_KEY` set, 24h TTL, API key in query param
+  - `ign`: only if `IGN_API_KEY` set, 24h TTL, API key in query param _— later removed (see top of doc)_
 
 ### 3. Tile proxy handler — `apps/api/internal/tiles/handler.go`
 
@@ -287,6 +287,8 @@ Layer IDs: `topo-raster-source/layer`, `sentinel-source/layer`, `overlay-{id}-so
 
 - [x] Remove `SEASON_STYLE_OVERRIDES` — season does not affect Mapbox style URL
 - [x] Simplify `resolveStyleUrl` to return `STYLE_URLS[baseLayer]`
+
+> Superseded in Phase 3.5 (M3): the Mapbox runtime moved to a season-aware Outdoors / Outdoors Winter style pair, so `resolveStyleUrl` takes both base layer and season again.
 
 ### 7. Delete old files
 

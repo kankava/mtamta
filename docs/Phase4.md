@@ -939,7 +939,7 @@ Frontend dependency: `@openbeta/sandbag`
 - `apps/web/src/components/ui/ToastProvider.tsx`
 - `apps/web/src/components/PhotoGallery.tsx`
 
-**Modified files (Phase 4c — 9):**
+**Modified files (Phase 4c — 11):**
 - `apps/api/internal/config/config.go` — add S3 fields
 - `apps/api/internal/activity/repository.go` — add photo methods
 - `apps/api/internal/activity/service.go` — add photo methods + SetStorage + raw-file persistence
