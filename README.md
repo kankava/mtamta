@@ -243,9 +243,11 @@ Required GitHub secrets: `BACKUP_DATABASE_URL`, `R2_ACCESS_KEY`, `R2_SECRET_KEY`
 
 ## Documentation
 
-- [Architecture](docs/Architecture.md) — tech stack, system design, database schema, API conventions
+- [Architecture](docs/Architecture.md) — tech stack, system design, durable design decisions
+- [API Reference](docs/API.md) — per-endpoint catalogue with shipped/planned status
+- [Database Reference](docs/Database.md) — full DDL, retention rules, Redis key patterns
 - [Implementation Plan](docs/Plan.md) — 13-phase roadmap from foundation to launch
-- [Deployment](docs/Deployment.md) — production deployment setup and reference
+- [Deployment](docs/Deployment.md) — production deployment setup, runbook, platform-migration matrix
 - [Upgrades](docs/Upgrades.md) — dependency upgrade plan and migration notes
 - [Phase 1 Spec](docs/Phase1.md) — foundation phase implementation spec
 - [Phase 2 Spec](docs/Phase2.md) — maps core implementation spec

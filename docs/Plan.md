@@ -703,7 +703,7 @@ packages/shared/src/types/
 ### Technical Tasks
 
 1. **Routes migration** — `routes` table + `activities.route_id` FK
-   - `CREATE TABLE routes` per the Architecture.md schema (`path` GEOGRAPHY(LineString), `waypoints` JSONB, `activity_type`, distance/elevation, `visibility`)
+   - `CREATE TABLE routes` per the [Database.md `routes` schema](Database.md#routes) (`path` GEOGRAPHY(LineString), `waypoints` JSONB, `activity_type`, distance/elevation, `visibility`)
    - `ALTER TABLE activities ADD CONSTRAINT ... FOREIGN KEY (route_id) REFERENCES routes(id) ON DELETE SET NULL` — adds the deferred FK; the `route_id` column already exists (NULL-able, FK-less) from Phase 4's migration 003
    - Migration number: next available at implementation time (Phase 5 device-sync migrations land first)
 

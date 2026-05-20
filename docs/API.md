@@ -90,7 +90,7 @@ Errors: `401 AUTH_FAILED` (invalid ID token / refresh token), `403 SIGNUP_DISABL
 
 ## Climbing
 
-*Planned (Phase 12, Advanced Features).* See [`Architecture.md` → Climbing Activity Model](Architecture.md#climbing-activity-model) for the schema.
+*Planned (Phase 12, Advanced Features).* See [`Database.md` → Climbing](Database.md#climbing) for the schema.
 
 | Method | Path | Description |
 |---|---|---|

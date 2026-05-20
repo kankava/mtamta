@@ -81,7 +81,7 @@ Pure file move with import path fixes. NO logic changes **except** the cleanup f
   - `useMapStore`: `'../../stores/mapStore'` → `'../../../stores/mapStore'`
   - `useRasterOverlays`: `'./useRasterOverlays'` → `'../../useRasterOverlays'` (stays at old location until step 7)
   - `TerrainControl`: `'./TerrainControl'` → `'./terrain'`
-- [x] Fix cleanup: add `map.remove()` on real unmount (per `Architecture.md:564`). The current code skips it because React Strict Mode (dev) fires mount→unmount→mount synchronously, and Firefox can't recover a WebGL context after `map.remove()`. Both runtimes must use this pattern:
+- [x] Fix cleanup: add `map.remove()` on real unmount (per [`Architecture.md` → Map Integration](Architecture.md#map-integration), "Use `useRef` + `useEffect` pattern" bullet). The current code skips it because React Strict Mode (dev) fires mount→unmount→mount synchronously, and Firefox can't recover a WebGL context after `map.remove()`. Both runtimes must use this pattern:
 
 ```ts
 const mapRef = useRef<MapInstance | null>(null)

@@ -977,4 +977,4 @@ Frontend dependency: `@openbeta/sandbag`
 - `apps/api/cmd/server/main.go` — wiring point for all new handlers/services/repos
 - `apps/web/src/map/runtime/shared/rasterOverlays.ts` — exact pattern to follow for `activityTracks` (AppMapAdapter usage, style.load handling)
 - `apps/web/src/map/runtime/shared/mapAdapter.ts` — the `AppMapAdapter` interface that `activityTracks` targets
-- `docs/Architecture.md` → **Database Design** section — authoritative `activities`, `activity_photos`, and `activity_segments` schemas; **Climbing Activity Model** subsection for segments
+- `docs/Database.md` → **Activities** and **Climbing** sections — authoritative `activities`, `activity_photos`, and `activity_segments` schemas (the latter under Climbing). The entity overview and durable decisions live in `docs/Architecture.md` → [Data Model](Architecture.md#data-model)
