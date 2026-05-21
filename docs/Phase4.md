@@ -176,6 +176,8 @@ Methods:
 - `FindByBBox(ctx, west, south, east, north float64, zoom int, limit int) ([]*ActivityGeoJSON, error)` — see bbox query spec below
 - `ListByUser(ctx, userID string, limit, offset int) ([]*Activity, int, error)` — caller's own activities, with total count
 
+> **JSONB `metrics`:** pgx maps Go `map[string]any` ↔ Postgres `jsonb` natively when you pass it directly as a parameter and scan into a `*map[string]any`. No `json.Marshal`/`json.Unmarshal` glue needed in the repo — pgx's default codec handles it. On a NULL row, the destination map is `nil` — make sure the Activity struct stays `Metrics map[string]any` (nilable) and not a wrapper type.
+
 **Bbox query spec** (`FindByBBox`):
 
 ```sql
@@ -243,7 +245,8 @@ Validation: Title max 200 chars, Description max 5000 chars, ActivityType must b
 
 ### 7. Activity handler — `apps/api/internal/activity/handler.go`
 
-- [ ] Create `Handler` following `user/handler.go` patterns
+- [ ] Create `Handler` following `user/handler.go` patterns. Read `userID` from context via `middleware.UserIDFromContext(r.Context())`. Use `respond.JSON(w, status, v)` and `respond.Error(w, status, code, message)` for responses.
+- [ ] Error mapping: follow the `writeAuthError` shape in `auth/handler.go`. Map `activity.ErrNotFound` → 404 `NOT_FOUND`, `activity.ErrForbidden` → 403 `FORBIDDEN`, validation failures → 422 `VALIDATION_ERROR`, GPX parse errors → 422 with `INVALID_GPX` / `INVALID_FILE_TYPE` / `FILE_TOO_LARGE`. Anything else is logged and returns 500 `INTERNAL` — never let an infrastructure failure mask as a 4xx.
 
 Endpoints:
 
@@ -259,24 +262,35 @@ Endpoints:
 ### 8. Wiring in main.go — `apps/api/cmd/server/main.go`
 
 - [ ] Construct activity repo/service/handler (no S3 in 4a)
-- [ ] Register routes (authenticated group + public map endpoint)
+- [ ] Register routes — `/map/activities` is **public** (`visibility='public'` only). Everything else (including `GET /activities/{id}`) sits inside the existing `r.Group(Authenticate(…))` block that already wraps `/users/me`.
 
 ```go
-// Activities
+// Activities — wire alongside userHandler in main.go
 activityRepo := activity.NewRepository(pool)
 activityService := activity.NewService(activityRepo)
 activityHandler := activity.NewHandler(activityService)
 
-// Authenticated routes
-r.With(middleware.MaxBody(50 << 20)).Post("/api/v1/activities", activityHandler.CreateActivity)
-r.Get("/api/v1/activities/{id}", activityHandler.GetActivity)
-r.Patch("/api/v1/activities/{id}", activityHandler.UpdateActivity)
-r.Delete("/api/v1/activities/{id}", activityHandler.DeleteActivity)
-r.Get("/api/v1/activities", activityHandler.ListMyActivities)
-
-// Public
+// Public — outside the authenticated group, next to the tile proxy
 r.Get("/api/v1/map/activities", activityHandler.GetMapActivities)
+
+// Authenticated — add these inside the EXISTING r.Group that wraps /users/me
+r.Group(func(r chi.Router) {
+    r.Use(middleware.Authenticate(jwtValidator))
+    r.Use(middleware.CaptureContext)
+
+    // ... existing /users/me routes ...
+
+    r.With(middleware.MaxBody(50 << 20)).Post("/api/v1/activities", activityHandler.CreateActivity)
+    r.Get("/api/v1/activities/{id}", activityHandler.GetActivity)         // auth required even for public visibility
+    r.Patch("/api/v1/activities/{id}", activityHandler.UpdateActivity)
+    r.Delete("/api/v1/activities/{id}", activityHandler.DeleteActivity)
+    r.Get("/api/v1/activities", activityHandler.ListMyActivities)
+})
 ```
+
+The global `middleware.MaxBody(1 << 20)` is applied at the router level; `.With(middleware.MaxBody(50 << 20))` overrides it just for the GPX-upload route.
+
+> **Visibility decision (locked):** `GET /api/v1/activities/{id}` requires auth even for `visibility='public'` activities. Anonymous users can still discover public tracks via `/map/activities`, but full detail requires sign-in. Service-level visibility checks still apply: authenticated callers can see their own + followers' + public; non-owners requesting `private` get 404 (not 403, to avoid leaking existence).
 
 ### 9. Shared types — `packages/shared/src/types/activity.ts`
 
@@ -416,7 +430,10 @@ const ACTIVITY_COLORS: Record<ActivityType, string> = {
 
 ### 4. Capability matrix — `packages/map-core/src/`
 
-- [ ] Rename the `trip_routes` feature to `activity_tracks` in `providers.ts` (the `FeatureId` type) and `capabilities.ts`, and flip it from `coming_soon` to `available` for both providers — activity tracks ship in this sub-milestone via the shared `AppMapAdapter`
+- [ ] Rename the `trip_routes` feature to `activity_tracks` and flip from `coming_soon` → `available` for both providers — activity tracks ship in this sub-milestone via the shared `AppMapAdapter`. Touchpoints (verified by grep — 3 lines total):
+  - `packages/map-core/src/providers.ts:12` — the `FeatureId` union member `| 'trip_routes'`
+  - `packages/map-core/src/capabilities.ts:12` (mapbox) and `:27` (maptiler) — both entries, including the trailing `// flips to 'available' when Phase 4 tripLayers ships` comments that the rename obsoletes
+  - No consumer call sites yet (the feature is `coming_soon`, so nothing uses it); TypeScript will catch any stragglers once the union changes
 
 ### 5. Activity detail panel — `apps/web/src/map/ActivityDetailPanel.tsx`
 
